@@ -158,6 +158,8 @@ export default async function Dashboard() {
               ["phone", t.phone],
               ["kvk_number", t.kvkNumber],
               ["btw_number", t.btwNumber],
+              ["business_address", t.businessAddress],
+              ["business_email", t.businessEmail],
             ] as const
           ).map(([name, label]) => (
             <label key={name} className="block text-sm font-medium">

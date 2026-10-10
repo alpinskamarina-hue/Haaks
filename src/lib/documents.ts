@@ -10,6 +10,8 @@ export type Profile = {
   phone: string | null;
   kvk_number: string | null;
   btw_number: string | null;
+  business_address?: string | null;
+  business_email?: string | null;
   language: string;
   passport_token: string;
   passport_enabled: boolean;

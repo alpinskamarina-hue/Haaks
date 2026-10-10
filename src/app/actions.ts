@@ -40,6 +40,8 @@ export async function saveProfile(formData: FormData) {
       phone: text(formData, "phone"),
       kvk_number: text(formData, "kvk_number")?.replace(/\s/g, "") ?? null,
       btw_number: text(formData, "btw_number")?.replace(/\s/g, "").toUpperCase() ?? null,
+      business_address: text(formData, "business_address"),
+      business_email: text(formData, "business_email"),
     })
     .eq("id", user.id);
   revalidatePath("/dashboard");

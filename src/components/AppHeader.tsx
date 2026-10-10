@@ -3,7 +3,7 @@ import { signOut } from "@/app/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { Dict, Lang } from "@/lib/i18n";
 
-export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "passport" | "orders" }) {
+export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "passport" | "orders" | "quotes" }) {
   const tab = (isActive: boolean) =>
     `rounded-lg px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-900 text-white" : "text-slate-700"}`;
   return (
@@ -23,6 +23,9 @@ export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "p
         </Link>
         <Link href="/dashboard/orders" className={tab(active === "orders")}>
           {t.navOrders}
+        </Link>
+        <Link href="/dashboard/quotes" className={tab(active === "quotes")}>
+          {t.navQuotes}
         </Link>
       </nav>
     </header>

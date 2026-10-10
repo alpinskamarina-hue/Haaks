@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { setCurrentOrder, setOrderStatus } from "@/app/orders-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { ReceiptCard } from "@/components/ReceiptCard";
+import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
 import { euro, totals, type Order, type Receipt } from "@/lib/orders";
+import { quoteTotals, type Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -13,7 +15,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const { supabase, user, profile, lang, t } = await loadWorkspace();
 
-  const [{ data: order }, { data: openRows }, { data: receiptRows }] = await Promise.all([
+  const [{ data: order }, { data: openRows }, { data: receiptRows }, { data: quoteRows }] = await Promise.all([
     supabase.from("orders").select("*").eq("id", id).maybeSingle<Order>(),
     supabase
       .from("orders")
@@ -27,6 +29,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       .eq("order_id", id)
       .order("purchased_on", { ascending: false, nullsFirst: true })
       .returns<Receipt[]>(),
+    supabase
+      .from("quotes")
+      .select("*")
+      .eq("order_id", id)
+      .order("created_at", { ascending: false })
+      .returns<Quote[]>(),
   ]);
   if (!order) notFound();
 
@@ -78,6 +86,35 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             </button>
           </form>
         </div>
+      </section>
+
+      <section className={card}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">{t.quotesTitle}</h2>
+          <Link
+            href={`/dashboard/quotes?order=${order.id}`}
+            className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white"
+          >
+            + {t.newQuote}
+          </Link>
+        </div>
+        {(quoteRows ?? []).length === 0 && <p className="text-slate-600">{t.noQuotes}</p>}
+        <ul className="divide-y divide-slate-100">
+          {(quoteRows ?? []).map((q) => (
+            <li key={q.id}>
+              <Link href={`/dashboard/quotes/${q.id}`} className="flex items-center justify-between gap-3 py-2">
+                <span>
+                  <span className="block font-medium">{q.title}</span>
+                  <span className="text-sm text-slate-500">{q.number}</span>
+                </span>
+                <span className="text-right">
+                  <span className="block font-semibold">{euro(quoteTotals(q.lines).incl)}</span>
+                  <QuoteStatusBadge status={q.status} t={t} />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {order.status === "open" && (

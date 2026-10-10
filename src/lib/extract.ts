@@ -142,3 +142,75 @@ export async function extractReceipt(
   if (response.stop_reason === "refusal") return null;
   return response.parsed_output ?? null;
 }
+
+const DraftedQuote = z.object({
+  title: z.string(),
+  intro: z.string(),
+  lines: z.array(
+    z.object({
+      kind: z.enum(["labour", "material", "other"]),
+      description: z.string(),
+      quantity: z.number(),
+      unit: z.string(),
+      unit_price: z.number(),
+      vat_rate: z.number(),
+    }),
+  ),
+  notes: z.array(z.string()),
+});
+
+export type DraftedQuote = z.infer<typeof DraftedQuote>;
+
+// Turns the worker's description and site photos into a first quote draft for the client.
+export async function draftQuote(input: {
+  description: string;
+  photos: { base64: string; mimeType: string }[];
+  hourlyRate: number;
+  vatRate: number;
+  clientName: string | null;
+  address: string | null;
+  lang: Lang;
+}): Promise<DraftedQuote | null> {
+  client ??= new Anthropic();
+  const response = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    output_config: {
+      effort: "medium",
+      format: zodOutputFormat(DraftedQuote),
+    },
+    system:
+      "You help a self-employed construction worker (ZZP) in the Netherlands write a quote (offerte) for a client. " +
+      "The worker describes the job, possibly in their own language and possibly with photos of the site. " +
+      "Write title, intro and every line description in clear, polite Dutch for the Dutch client. " +
+      "Break the job into concrete lines: labour lines (kind labour, unit 'uur', unit_price = the worker's hourly rate), " +
+      "material lines (kind material, realistic quantities with units like m², m, stuk, zak, liter, and typical current " +
+      "Dutch building store prices excluding btw), and other costs such as waste removal or transport (kind other). " +
+      "All unit_price values exclude btw. Use the given btw rate for every line unless the job clearly falls under " +
+      "another Dutch rate. Do not invent work the description and photos do not support. " +
+      "intro is two or three sentences restating what will be done. " +
+      `notes are for the worker, written in ${LANG_NAMES[input.lang]}: list the assumptions you made ` +
+      "(measurements read from photos, material choices, hours) and what the worker should check or ask the client " +
+      "before sending. Keep each note short.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          ...input.photos.map(fileBlock),
+          {
+            type: "text",
+            text:
+              `Job description from the worker:\n${input.description}\n\n` +
+              `Hourly rate excl. btw: €${input.hourlyRate}\nBtw rate: ${input.vatRate}%\n` +
+              (input.clientName ? `Client: ${input.clientName}\n` : "") +
+              (input.address ? `Site address: ${input.address}\n` : "") +
+              "Draft the quote.",
+          },
+        ],
+      },
+    ],
+  });
+
+  if (response.stop_reason === "refusal") return null;
+  return response.parsed_output ?? null;
+}
