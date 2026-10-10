@@ -214,3 +214,70 @@ export async function draftQuote(input: {
   if (response.stop_reason === "refusal") return null;
   return response.parsed_output ?? null;
 }
+
+const AnalyzedLead = z.object({
+  is_job: z.boolean(),
+  title: z.string(),
+  summary: z.string(),
+  trade: z.string().nullable(),
+  city: z.string().nullable(),
+  client_name: z.string().nullable(),
+  client_contact: z.string().nullable(),
+  timing: z.string().nullable(),
+  match_score: z.number(),
+  match_reason: z.string(),
+  reply_nl: z.string().nullable(),
+});
+
+export type AnalyzedLead = z.infer<typeof AnalyzedLead>;
+
+// Reads a post or message where someone looks for a builder and judges it for this worker.
+export async function analyzeLead(input: {
+  text: string;
+  image: { base64: string; mimeType: string } | null;
+  worker: { name: string | null; trade: string | null; city: string | null; regions: string | null };
+  passportUrl: string | null;
+  lang: Lang;
+}): Promise<AnalyzedLead | null> {
+  client ??= new Anthropic();
+  const response = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: {
+      effort: "low",
+      format: zodOutputFormat(AnalyzedLead),
+    },
+    system:
+      "You help a self-employed construction worker (ZZP) in the Netherlands find clients. You get a post, message " +
+      "or publication (from a Facebook or Telegram group, WhatsApp, Marktplaats, an e-mail alert or a building permit " +
+      "publication) and decide whether someone is looking for construction or renovation work to be done. " +
+      "is_job is false for advertisements of builders offering services, permanent job vacancies, spam or unrelated posts. " +
+      `Write title (max 8 words) and summary (2 or 3 sentences: what, where, when, size) in ${LANG_NAMES[input.lang]}. ` +
+      "trade is the Dutch trade name (tegelzetter, timmerman, stukadoor, schilder, loodgieter, elektricien, " +
+      "metselaar, dakdekker, klusjesman...). Copy client_name and client_contact (phone, e-mail) only if printed. " +
+      "match_score 0-100: how well the job fits this worker's trade and regions; match_reason explains it in one " +
+      `sentence in ${LANG_NAMES[input.lang]}. ` +
+      "reply_nl: if is_job, a short polite reply in Dutch the worker can send themselves: greet, say what you can do, " +
+      "ask one or two practical questions or propose to come and look, mention being a registered ZZP with KvK" +
+      (input.passportUrl ? ` and include this link to the worker's documents: ${input.passportUrl}` : "") +
+      ". No exaggerated claims. Otherwise null.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          ...(input.image ? [fileBlock(input.image)] : []),
+          {
+            type: "text",
+            text:
+              `Worker: ${input.worker.name ?? "—"}, trade: ${input.worker.trade ?? "unknown"}, ` +
+              `based in ${input.worker.city ?? "unknown"}, works in: ${input.worker.regions ?? input.worker.city ?? "unknown"}.\n\n` +
+              `Post:\n${input.text || "(see image)"}`,
+          },
+        ],
+      },
+    ],
+  });
+
+  if (response.stop_reason === "refusal") return null;
+  return response.parsed_output ?? null;
+}
