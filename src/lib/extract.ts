@@ -1,0 +1,86 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
+import { LANG_NAMES, type Lang } from "./i18n";
+
+const ExtractedDocument = z.object({
+  doc_type_detected: z.string(),
+  holder_name: z.string().nullable(),
+  company_name: z.string().nullable(),
+  kvk_number: z.string().nullable(),
+  btw_number: z.string().nullable(),
+  document_number: z.string().nullable(),
+  issued_on: z.string().nullable(),
+  expires_on: z.string().nullable(),
+  insurer: z.string().nullable(),
+  coverage_amount: z.string().nullable(),
+  summary: z.string(),
+  warnings: z.array(z.string()),
+});
+
+export type ExtractedDocument = z.infer<typeof ExtractedDocument>;
+
+const MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5-5";
+
+let client: Anthropic | null = null;
+
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+type ImageType = (typeof IMAGE_TYPES)[number];
+
+function isImageType(mime: string): mime is ImageType {
+  return (IMAGE_TYPES as readonly string[]).includes(mime);
+}
+
+// Reads a KvK extract, VCA certificate or insurance policy and returns its key fields.
+export async function extractDocument(
+  file: { base64: string; mimeType: string },
+  expectedType: string,
+  lang: Lang,
+): Promise<ExtractedDocument | null> {
+  const source: Anthropic.ContentBlockParam = isImageType(file.mimeType)
+    ? { type: "image", source: { type: "base64", media_type: file.mimeType, data: file.base64 } }
+    : {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: file.base64 },
+      };
+
+  client ??= new Anthropic();
+  const response = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: {
+      effort: "low",
+      format: zodOutputFormat(ExtractedDocument),
+    },
+    system:
+      "You read Dutch business documents uploaded by self-employed construction workers (ZZP): " +
+      "KvK extracts (uittreksel Handelsregister), VCA certificates (B-VCA, VOL-VCA, VIL-VCU) and " +
+      "insurance policies (AVB bedrijfsaansprakelijkheid, CAR). Extract only what is printed on the document; " +
+      "use null when a field is missing or unreadable. Dates must be YYYY-MM-DD. " +
+      "For a KvK extract, issued_on is the extract date (datum uittreksel). " +
+      "For insurance, expires_on is the end of the current insurance period if printed. " +
+      `Write summary and warnings in ${LANG_NAMES[lang]}, in plain words a worker understands. ` +
+      "Add a warning if the document is expired, unreadable, not the expected type, or seems to be an ID card or passport.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          source,
+          {
+            type: "text",
+            text: `The worker uploaded this as: ${expectedType}. Extract the fields.`,
+          },
+        ],
+      },
+    ],
+  });
+
+  if (response.stop_reason === "refusal") return null;
+  return response.parsed_output ?? null;
+}
+
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+
+export function cleanDate(value: string | null): string | null {
+  return value && isoDate.test(value) && !Number.isNaN(Date.parse(value)) ? value : null;
+}
