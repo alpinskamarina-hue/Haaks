@@ -4,19 +4,11 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ACCEPTED_MIME, DOC_TYPES, type DocType } from "@/lib/documents";
 import { cleanDate, extractDocument } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-  return { supabase, user };
-}
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);

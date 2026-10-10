@@ -5,12 +5,11 @@ import {
   regeneratePassportLink,
   saveProfile,
   setPassportEnabled,
-  signOut,
   toggleDocument,
   updateDocument,
 } from "@/app/actions";
 import { CopyButton } from "@/components/CopyButton";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { AppHeader } from "@/components/AppHeader";
 import { UploadForm } from "@/components/UploadForm";
 import {
   docStatus,
@@ -58,15 +57,7 @@ export default async function Dashboard() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <header className="flex items-center justify-between gap-3">
-        <span className="text-lg font-bold">ZZP Paspoort</span>
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher current={lang} label={t.language} />
-          <form action={signOut}>
-            <button className="text-sm text-slate-600 underline">{t.signOut}</button>
-          </form>
-        </div>
-      </header>
+      <AppHeader lang={lang} t={t} active="passport" />
 
       <section className={card}>
         <h2 className="text-xl font-semibold">{t.passportTitle}</h2>
