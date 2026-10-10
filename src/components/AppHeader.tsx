@@ -3,9 +3,9 @@ import { signOut } from "@/app/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { Dict, Lang } from "@/lib/i18n";
 
-export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "passport" | "orders" | "quotes" }) {
+export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "passport" | "orders" | "quotes" | "invoices" }) {
   const tab = (isActive: boolean) =>
-    `rounded-lg px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-900 text-white" : "text-slate-700"}`;
+    `shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-900 text-white" : "text-slate-700"}`;
   return (
     <header className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -17,7 +17,7 @@ export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "p
           </form>
         </div>
       </div>
-      <nav className="flex gap-2">
+      <nav className="-mx-1 flex gap-1 overflow-x-auto px-1">
         <Link href="/dashboard" className={tab(active === "passport")}>
           {t.navPassport}
         </Link>
@@ -26,6 +26,9 @@ export function AppHeader({ lang, t, active }: { lang: Lang; t: Dict; active: "p
         </Link>
         <Link href="/dashboard/quotes" className={tab(active === "quotes")}>
           {t.navQuotes}
+        </Link>
+        <Link href="/dashboard/invoices" className={tab(active === "invoices")}>
+          {t.navInvoices}
         </Link>
       </nav>
     </header>

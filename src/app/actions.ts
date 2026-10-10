@@ -42,6 +42,7 @@ export async function saveProfile(formData: FormData) {
       btw_number: text(formData, "btw_number")?.replace(/\s/g, "").toUpperCase() ?? null,
       business_address: text(formData, "business_address"),
       business_email: text(formData, "business_email"),
+      iban: text(formData, "iban")?.replace(/\s/g, "").toUpperCase() ?? null,
     })
     .eq("id", user.id);
   revalidatePath("/dashboard");

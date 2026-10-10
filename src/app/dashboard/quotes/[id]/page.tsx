@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createInvoice } from "@/app/invoices-actions";
 import { deleteQuote, setQuoteStatus } from "@/app/quotes-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { CopyButton } from "@/components/CopyButton";
@@ -82,6 +83,14 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           {quote.status !== "draft" && (
             <form action={setQuoteStatus.bind(null, quote.id, "draft")}>
               <button className={button}>{t.backToDraft}</button>
+            </form>
+          )}
+          {quote.status === "accepted" && (
+            <form action={createInvoice}>
+              <input type="hidden" name="quote_id" value={quote.id} />
+              <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                {t.makeInvoice}
+              </button>
             </form>
           )}
           <form action={deleteQuote.bind(null, quote.id)}>

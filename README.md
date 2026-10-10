@@ -32,12 +32,23 @@
 - Предложение привязывается к заказу и видно на его странице.
 - Цены от ИИ — только черновик: рабочий обязан проверить их перед отправкой.
 
+### Счета (facturen)
+
+- Реквизиты рабочего (название, адрес, KvK, btw‑id, IBAN, телефон, email) подставляются из профиля. Если чего‑то не хватает, в счёте видно предупреждение.
+- Счёт создаётся из заказа (можно сразу добавить материалы из его чеков) или из принятого коммерческого предложения. Данные заказчика (адрес, KvK, btw‑id) и режим НДС берутся из прошлого счёта этому заказчику.
+- Три режима НДС:
+  - **с НДС** 21% / 9% по строкам;
+  - **btw verlegd** — для субподряда в строительстве: НДС не начисляется, в счёте обязательно btw‑номер заказчика и пометка о verleggingsregeling;
+  - **KOR** — без НДС для тех, кто зарегистрирован в kleineondernemersregeling.
+- Номер идёт по порядку внутри года и подстраивается под формат рабочего (после 2026-09 будет 2026-10). Номер можно поменять вручную.
+- Заказчик получает ссылку `/f/<token>` со счётом на нидерландском. PDF делается через «Печать → Сохранить как PDF». Статусы: черновик, отправлен, оплачен.
+
 Чего пока нет: подписки и оплаты, напоминаний о сроках, водяных знаков на файлах, проверки через KvK API.
 
 ## Запуск
 
 1. Создайте проект на [supabase.com](https://supabase.com) в регионе ЕС (например, Frankfurt).
-2. Откройте в Supabase **SQL Editor** и выполните по очереди [`supabase/schema.sql`](supabase/schema.sql) [`supabase/002_orders_receipts.sql`](supabase/002_orders_receipts.sql) и [`supabase/003_quotes.sql`](supabase/003_quotes.sql). Они создадут таблицы, правила доступа и закрытое хранилище `documents`.
+2. Откройте в Supabase **SQL Editor** и выполните по очереди [`supabase/schema.sql`](supabase/schema.sql), [`supabase/002_orders_receipts.sql`](supabase/002_orders_receipts.sql), [`supabase/003_quotes.sql`](supabase/003_quotes.sql) и [`supabase/004_invoices.sql`](supabase/004_invoices.sql). Они создадут таблицы, правила доступа и закрытое хранилище `documents`.
 3. В **Authentication → URL Configuration** укажите адрес сайта (Site URL) и добавьте `https://<ваш-сайт>/auth/callback` в Redirect URLs. Для локального запуска: `http://localhost:3000/auth/callback`.
 4. Скопируйте `.env.example` в `.env.local` и заполните ключи из **Project Settings → API** и ключ Claude API из [console.anthropic.com](https://console.anthropic.com). Без ключа Claude документы сохраняются, но не читаются автоматически.
 5. Запустите:
@@ -61,6 +72,7 @@ npm run dev
 - `src/app/orders-actions.ts` — серверные действия: заказы и чеки.
 - `src/app/dashboard/quotes/` — коммерческие предложения, `src/app/quotes-actions.ts` — их серверные действия.
 - `src/app/q/[token]/page.tsx` — предложение для заказчика с кнопкой «Akkoord».
+- `src/app/dashboard/invoices/` и `src/app/invoices-actions.ts` — счета, `src/app/f/[token]/page.tsx` — счёт для заказчика и PDF.
 - `src/lib/extract.ts` — чтение документов и чеков и черновики предложений через Claude API (модель задаётся `CLAUDE_MODEL`).
 - `src/lib/documents.ts` — типы документов, статусы, требования для стройки.
 - `src/lib/i18n.ts` — тексты интерфейса.

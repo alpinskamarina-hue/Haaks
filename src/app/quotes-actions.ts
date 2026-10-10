@@ -5,34 +5,24 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { cleanDate, draftQuote } from "@/lib/extract";
 import { getDict, isLang, type Lang } from "@/lib/i18n";
-import { addDays, DEFAULT_TERMS_NL, LINE_KINDS, MAX_QUOTE_PHOTOS, PHOTO_MIME, type Quote, type QuoteLine } from "@/lib/quotes";
+import {
+  addDays,
+  cleanLines,
+  DEFAULT_TERMS_NL,
+  MAX_QUOTE_PHOTOS,
+  money,
+  PHOTO_MIME,
+  short,
+  type Quote,
+  type QuoteLine,
+} from "@/lib/quotes";
 import { createAdminClient } from "@/lib/supabase/server";
-
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
 function refresh() {
   revalidatePath("/dashboard/quotes", "layout");
   revalidatePath("/dashboard/orders", "layout");
-}
-
-const money = (v: unknown) => {
-  const n = Number(typeof v === "string" ? v.replace(",", ".") : v);
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
-};
-
-const short = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
-
-function cleanLines(lines: unknown): QuoteLine[] {
-  if (!Array.isArray(lines)) return [];
-  return lines.slice(0, 100).map((l) => ({
-    kind: (LINE_KINDS as readonly string[]).includes(l?.kind) ? l.kind : "other",
-    description: short(l?.description, 500),
-    quantity: money(l?.quantity),
-    unit: short(l?.unit, 20) || "stuk",
-    unit_price: money(l?.unit_price),
-    vat_rate: [21, 9, 0].includes(Number(l?.vat_rate)) ? Number(l.vat_rate) : 21,
-  }));
 }
 
 // OFF-2026-001, OFF-2026-002, ... per worker and year.

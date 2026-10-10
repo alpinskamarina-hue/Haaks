@@ -146,7 +146,7 @@ export default async function Dashboard() {
         </ul>
       </section>
 
-      <section className={card}>
+      <section id="profile" className={card}>
         <h2 className="mb-4 text-xl font-semibold">{t.profileTitle}</h2>
         <form action={saveProfile} className="grid gap-3 sm:grid-cols-2">
           {(
@@ -160,6 +160,7 @@ export default async function Dashboard() {
               ["btw_number", t.btwNumber],
               ["business_address", t.businessAddress],
               ["business_email", t.businessEmail],
+              ["iban", t.iban],
             ] as const
           ).map(([name, label]) => (
             <label key={name} className="block text-sm font-medium">
