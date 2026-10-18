@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { QuoteRequestForm } from "@/components/QuoteRequestForm";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { euro } from "@/lib/orders";
@@ -10,7 +9,7 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function QuotesPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const { order } = await searchParams;
-  const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, t } = await loadWorkspace();
 
   const [{ data: openRows }, { data: quoteRows }] = await Promise.all([
     supabase
@@ -34,7 +33,6 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="quotes" />
 
       <section className={card}>
         <h1 className="mb-3 text-2xl font-bold">{t.newQuote}</h1>

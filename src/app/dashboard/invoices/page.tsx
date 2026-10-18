@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createInvoice } from "@/app/invoices-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
@@ -36,7 +35,6 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="invoices" />
 
       <section className={card}>
         <h1 className="mb-3 text-2xl font-bold">{t.newInvoice}</h1>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteInvoice, setInvoiceStatus } from "@/app/invoices-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { CopyButton } from "@/components/CopyButton";
 import { InvoiceEditor } from "@/components/InvoiceEditor";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
@@ -13,7 +12,7 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, profile, lang, t } = await loadWorkspace();
+  const { supabase, profile, t } = await loadWorkspace();
 
   const { data: invoice } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle<Invoice>();
   if (!invoice) notFound();
@@ -36,7 +35,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="invoices" />
       <Link
         href={order ? `/dashboard/orders/${order.id}` : "/dashboard/invoices"}
         className="text-sm text-slate-600 underline"
@@ -48,7 +46,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm">
           <p className="font-semibold">⚠ {t.invoiceMissingDetails}</p>
           <p className="mt-1">{missing.join(", ")}</p>
-          <Link href="/dashboard#profile" className="mt-2 inline-block underline">
+          <Link href="/dashboard/passport#profile" className="mt-2 inline-block underline">
             {t.fillProfile}
           </Link>
         </section>

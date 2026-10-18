@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setCurrentOrder, setOrderStatus } from "@/app/orders-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
@@ -15,7 +14,7 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, t } = await loadWorkspace();
 
   const [{ data: order }, { data: openRows }, { data: receiptRows }, { data: quoteRows }, { data: invoiceRows }] = await Promise.all([
     supabase.from("orders").select("*").eq("id", id).maybeSingle<Order>(),
@@ -55,7 +54,6 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="orders" />
       <Link href="/dashboard/orders" className="text-sm text-slate-600 underline">
         ← {t.back}
       </Link>

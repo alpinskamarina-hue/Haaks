@@ -6,6 +6,15 @@
 
 ## Что умеет
 
+Все сервисы собраны в один кабинет Haaks: на компьютере меню слева, на телефоне панель вкладок снизу. Разделы: Главная, Поиск заказчиков, Предложения, Заказы и чеки, Счета, Паспорт. Главная показывает новых заказчиков, предложения без ответа, неоплаченные счета, НДС за квартал, текущий заказ и готовность паспорта, плюс быстрые кнопки «Фото чека», «Добавить объявление», «Новое предложение», «Новый счёт».
+
+### Поиск заказчиков
+
+- Рабочий вставляет текст или скриншот объявления из Facebook, WhatsApp, Telegram или Marktplaats. Claude определяет, заказ ли это, профессию, город, сроки и контакт, ставит оценку, насколько заказ подходит (по профессии и регионам из профиля), пересказывает на языке рабочего и пишет ответ на нидерландском со ссылкой на ZZP‑паспорт.
+- Ответ рабочий отправляет сам: копирует текст, открывает WhatsApp (если в объявлении есть номер 06…) или email. Haaks не пишет людям от имени рабочего.
+- Кнопка «Сделать предложение» превращает объявление в заказ и открывает форму коммерческого предложения.
+- Автоматические источники (Telegram‑группы, omgevingsvergunningen, email‑уведомления) пока показаны как следующий шаг; таблица `leads` уже хранит поле `source` для них. План: `plans/ai-agent-poisk-zakazov.md` в файлах проекта.
+
 - Вход по ссылке на email, без пароля и SMS.
 - Загрузка документа фото с камеры или PDF (до 8 МБ). Файлы лежат в закрытом хранилище.
 - Чтение документа через Claude API: номер, даты выдачи и окончания, страховщик, сумма покрытия, краткое пояснение и предупреждения на языке рабочего. Пустые поля профиля (название фирмы, KvK, btw) заполняются из выписки KvK.
@@ -48,7 +57,7 @@
 ## Запуск
 
 1. Создайте проект на [supabase.com](https://supabase.com) в регионе ЕС (например, Frankfurt).
-2. Откройте в Supabase **SQL Editor** и выполните по очереди [`supabase/schema.sql`](supabase/schema.sql), [`supabase/002_orders_receipts.sql`](supabase/002_orders_receipts.sql), [`supabase/003_quotes.sql`](supabase/003_quotes.sql) и [`supabase/004_invoices.sql`](supabase/004_invoices.sql). Они создадут таблицы, правила доступа и закрытое хранилище `documents`.
+2. Откройте в Supabase **SQL Editor** и выполните по очереди [`supabase/schema.sql`](supabase/schema.sql), [`supabase/002_orders_receipts.sql`](supabase/002_orders_receipts.sql), [`supabase/003_quotes.sql`](supabase/003_quotes.sql), [`supabase/004_invoices.sql`](supabase/004_invoices.sql) и [`supabase/005_leads.sql`](supabase/005_leads.sql). Они создадут таблицы, правила доступа и закрытое хранилище `documents`.
 3. В **Authentication → URL Configuration** укажите адрес сайта (Site URL) и добавьте `https://<ваш-сайт>/auth/callback` в Redirect URLs. Для локального запуска: `http://localhost:3000/auth/callback`.
 4. Скопируйте `.env.example` в `.env.local` и заполните ключи из **Project Settings → API** и ключ Claude API из [console.anthropic.com](https://console.anthropic.com). Без ключа Claude документы сохраняются, но не читаются автоматически.
 5. Запустите:
@@ -65,7 +74,9 @@ npm run dev
 ## Устройство
 
 - `src/app/page.tsx` — вход.
-- `src/app/dashboard/page.tsx` — кабинет рабочего.
+- `src/app/dashboard/layout.tsx` — общий каркас кабинета (меню), `src/app/dashboard/page.tsx` — главная.
+- `src/app/dashboard/passport/page.tsx` — паспорт и документы.
+- `src/app/dashboard/leads/` и `src/app/leads-actions.ts` — поиск заказчиков.
 - `src/app/p/[token]/page.tsx` — публичный паспорт для заказчика.
 - `src/app/dashboard/orders/` — заказы и чеки.
 - `src/app/actions.ts` — серверные действия: профиль, документы, паспорт.

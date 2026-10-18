@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createInvoice } from "@/app/invoices-actions";
 import { deleteQuote, setQuoteStatus } from "@/app/quotes-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { CopyButton } from "@/components/CopyButton";
 import { QuoteEditor } from "@/components/QuoteEditor";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
@@ -30,7 +29,6 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="quotes" />
       <Link href={order ? `/dashboard/orders/${order.id}` : "/dashboard/quotes"} className="text-sm text-slate-600 underline">
         ← {order ? order.title : t.back}
       </Link>
