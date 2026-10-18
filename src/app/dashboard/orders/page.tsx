@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createOrder, setCurrentOrder } from "@/app/orders-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
 import { euro, inQuarter, quarterOf, totals, type Order, type Receipt } from "@/lib/orders";
@@ -10,7 +9,7 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 const input = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base";
 
 export default async function OrdersPage() {
-  const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, t } = await loadWorkspace();
 
   const [{ data: orderRows }, { data: receiptRows }] = await Promise.all([
     supabase
@@ -70,7 +69,6 @@ export default async function OrdersPage() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="orders" />
 
       <section className={card}>
         <h2 className="mb-3 text-xl font-semibold">{t.addReceipts}</h2>
