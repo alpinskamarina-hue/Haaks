@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ZZP Paspoort",
+  title: "Haaks",
   description: "All documents of a self-employed construction worker in one link.",
 };
 

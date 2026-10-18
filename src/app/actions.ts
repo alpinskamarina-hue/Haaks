@@ -42,9 +42,10 @@ export async function saveProfile(formData: FormData) {
       btw_number: text(formData, "btw_number")?.replace(/\s/g, "").toUpperCase() ?? null,
       business_address: text(formData, "business_address"),
       business_email: text(formData, "business_email"),
+      iban: text(formData, "iban")?.replace(/\s/g, "").toUpperCase() ?? null,
     })
     .eq("id", user.id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 // Called after the browser has uploaded the file to the user's storage folder.
@@ -76,7 +77,7 @@ export async function addDocument(input: {
 
   if (!process.env.ANTHROPIC_API_KEY) {
     await supabase.from("documents").update({ ai_status: "skipped" }).eq("id", doc.id);
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "layout");
     return;
   }
 
@@ -127,7 +128,7 @@ export async function addDocument(input: {
     await supabase.from("documents").update({ ai_status: "failed" }).eq("id", doc.id);
   }
 
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function updateDocument(formData: FormData) {
@@ -142,13 +143,13 @@ export async function updateDocument(formData: FormData) {
       expires_on: cleanDate(text(formData, "expires_on")),
     })
     .eq("id", id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function toggleDocument(id: string, show: boolean) {
   const { supabase } = await requireUser();
   await supabase.from("documents").update({ show_in_passport: show }).eq("id", id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function deleteDocument(id: string) {
@@ -157,13 +158,13 @@ export async function deleteDocument(id: string) {
   if (!doc) return;
   await supabase.storage.from("documents").remove([doc.file_path]);
   await supabase.from("documents").delete().eq("id", id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function setPassportEnabled(enabled: boolean) {
   const { supabase, user } = await requireUser();
   await supabase.from("profiles").update({ passport_enabled: enabled }).eq("id", user.id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 // A new token makes every previously shared link stop working.
@@ -173,7 +174,7 @@ export async function regeneratePassportLink() {
     .from("profiles")
     .update({ passport_token: randomBytes(18).toString("hex") })
     .eq("id", user.id);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function signOut() {

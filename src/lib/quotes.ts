@@ -75,3 +75,23 @@ export const DEFAULT_TERMS_NL =
 export function addDays(days: number, from = new Date()) {
   return new Date(from.getTime() + days * 864e5).toISOString().slice(0, 10);
 }
+
+export const money = (v: unknown) => {
+  const n = Number(typeof v === "string" ? v.replace(",", ".") : v);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+};
+
+export const short = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+// Validates lines coming from the browser or from the AI draft.
+export function cleanLines(lines: unknown): QuoteLine[] {
+  if (!Array.isArray(lines)) return [];
+  return lines.slice(0, 100).map((l) => ({
+    kind: (LINE_KINDS as readonly string[]).includes(l?.kind) ? l.kind : "other",
+    description: short(l?.description, 2000),
+    quantity: money(l?.quantity),
+    unit: short(l?.unit, 20) || "stuk",
+    unit_price: money(l?.unit_price),
+    vat_rate: [21, 9, 0].includes(Number(l?.vat_rate)) ? Number(l.vat_rate) : 21,
+  }));
+}

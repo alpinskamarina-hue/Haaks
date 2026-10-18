@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setCurrentOrder, setOrderStatus } from "@/app/orders-actions";
-import { AppHeader } from "@/components/AppHeader";
 import { ReceiptCard } from "@/components/ReceiptCard";
+import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
+import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { euro, totals, type Order, type Receipt } from "@/lib/orders";
 import { quoteTotals, type Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
@@ -13,9 +14,9 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, t } = await loadWorkspace();
 
-  const [{ data: order }, { data: openRows }, { data: receiptRows }, { data: quoteRows }] = await Promise.all([
+  const [{ data: order }, { data: openRows }, { data: receiptRows }, { data: quoteRows }, { data: invoiceRows }] = await Promise.all([
     supabase.from("orders").select("*").eq("id", id).maybeSingle<Order>(),
     supabase
       .from("orders")
@@ -35,6 +36,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       .eq("order_id", id)
       .order("created_at", { ascending: false })
       .returns<Quote[]>(),
+    supabase
+      .from("invoices")
+      .select("*")
+      .eq("order_id", id)
+      .order("invoice_date", { ascending: false })
+      .returns<Invoice[]>(),
   ]);
   if (!order) notFound();
 
@@ -47,7 +54,6 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <AppHeader lang={lang} t={t} active="orders" />
       <Link href="/dashboard/orders" className="text-sm text-slate-600 underline">
         ← {t.back}
       </Link>
@@ -110,6 +116,32 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <span className="text-right">
                   <span className="block font-semibold">{euro(quoteTotals(q.lines).incl)}</span>
                   <QuoteStatusBadge status={q.status} t={t} />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={card}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">{t.invoicesTitle}</h2>
+          <Link
+            href={`/dashboard/invoices?order=${order.id}`}
+            className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+          >
+            + {t.newInvoice}
+          </Link>
+        </div>
+        {(invoiceRows ?? []).length === 0 && <p className="text-slate-600">{t.noInvoices}</p>}
+        <ul className="divide-y divide-slate-100">
+          {(invoiceRows ?? []).map((inv) => (
+            <li key={inv.id}>
+              <Link href={`/dashboard/invoices/${inv.id}`} className="flex items-center justify-between gap-3 py-2">
+                <span className="font-medium">{inv.number}</span>
+                <span className="text-right">
+                  <span className="block font-semibold">{euro(invoiceTotals(inv.lines, inv.vat_mode).incl)}</span>
+                  <InvoiceStatusBadge status={inv.status} t={t} />
                 </span>
               </Link>
             </li>
