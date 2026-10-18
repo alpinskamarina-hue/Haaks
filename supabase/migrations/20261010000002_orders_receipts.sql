@@ -1,4 +1,4 @@
--- Orders (jobs) and purchase receipts. Run after schema.sql.
+-- Orders (jobs) and purchase receipts. Applied after the previous migration.
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),

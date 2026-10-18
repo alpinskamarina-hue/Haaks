@@ -1,4 +1,4 @@
--- Invoices (facturen). Run after 003_quotes.sql.
+-- Invoices (facturen). Applied after the previous migration.
 
 -- Bank account printed on invoices.
 alter table public.profiles add column if not exists iban text;

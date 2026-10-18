@@ -1,4 +1,4 @@
--- Quotes (offertes) for clients. Run after 002_orders_receipts.sql.
+-- Quotes (offertes) for clients. Applied after the previous migration.
 
 -- Business contact details printed on the quote.
 alter table public.profiles add column if not exists business_address text;

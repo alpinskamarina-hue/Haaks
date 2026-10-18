@@ -1,5 +1,5 @@
 -- ZZP Paspoort: database schema for Supabase.
--- Run once in the Supabase SQL editor (project in an EU region).
+-- Applied by `supabase db push` (see README). Project in an EU region.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users on delete cascade,

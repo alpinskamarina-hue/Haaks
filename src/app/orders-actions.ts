@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { ACCEPTED_MIME } from "@/lib/documents";
 import { cleanDate, extractReceipt } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
+import { claudeEnabled } from "@/lib/env";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -99,7 +100,7 @@ export async function addReceipt(input: {
     .single();
   if (error || !receipt) throw new Error(error?.message ?? "Insert failed");
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!claudeEnabled()) {
     await supabase.from("receipts").update({ ai_status: "skipped" }).eq("id", receipt.id);
     refresh();
     return;

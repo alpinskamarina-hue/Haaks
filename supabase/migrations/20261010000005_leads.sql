@@ -1,4 +1,4 @@
--- Client search (leads). Run after 004_invoices.sql.
+-- Client search (leads). Applied after the previous migration.
 
 -- Where the worker wants work, e.g. "Utrecht, Amersfoort, Zeist".
 alter table public.profiles add column if not exists lead_regions text;
