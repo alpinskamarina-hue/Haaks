@@ -8,6 +8,7 @@ import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import type { Lead } from "@/lib/leads";
 import { PHOTO_MIME, short } from "@/lib/quotes";
+import { claudeEnabled } from "@/lib/env";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -30,7 +31,7 @@ export async function addLead(input: { text: string; image: { path: string; mime
     .single();
   if (error || !lead) throw new Error(error?.message ?? "Insert failed");
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!claudeEnabled()) {
     await supabase.from("leads").update({ ai_status: "skipped" }).eq("id", lead.id);
     refresh();
     return { id: lead.id };

@@ -17,6 +17,7 @@ import {
   type QuoteLine,
 } from "@/lib/quotes";
 import { createAdminClient } from "@/lib/supabase/server";
+import { claudeEnabled } from "@/lib/env";
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
@@ -74,7 +75,7 @@ export async function generateQuote(input: {
     notes: [t.aiUnavailable],
   };
 
-  if (process.env.ANTHROPIC_API_KEY) {
+  if (claudeEnabled()) {
     try {
       const files = await Promise.all(
         photos.map(async (p) => {

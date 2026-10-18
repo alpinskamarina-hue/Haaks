@@ -57,7 +57,9 @@
 ## Запуск
 
 1. Создайте проект на [supabase.com](https://supabase.com) в регионе ЕС (например, Frankfurt).
-2. Откройте в Supabase **SQL Editor** и выполните по очереди [`supabase/schema.sql`](supabase/schema.sql), [`supabase/002_orders_receipts.sql`](supabase/002_orders_receipts.sql), [`supabase/003_quotes.sql`](supabase/003_quotes.sql), [`supabase/004_invoices.sql`](supabase/004_invoices.sql) и [`supabase/005_leads.sql`](supabase/005_leads.sql). Они создадут таблицы, правила доступа и закрытое хранилище `documents`.
+2. Создайте таблицы, правила доступа и закрытое хранилище `documents` из файлов [`supabase/migrations/`](supabase/migrations). Есть два способа:
+   - **автоматически:** добавьте в GitHub (**Settings → Secrets and variables → Actions**) секреты `SUPABASE_ACCESS_TOKEN` ([токен](https://supabase.com/dashboard/account/tokens)), `SUPABASE_PROJECT_ID` (ID проекта из адреса панели) и `SUPABASE_DB_PASSWORD` (пароль базы). После этого каждое новое изменение базы в `main` применяется само (`.github/workflows/db.yml`); первый раз запустите его вручную на вкладке **Actions**;
+   - **вручную:** `npx supabase link --project-ref <ID>` и `npx supabase db push`.
 3. В **Authentication → URL Configuration** укажите адрес сайта (Site URL) и добавьте `https://<ваш-сайт>/auth/callback` в Redirect URLs. Для локального запуска: `http://localhost:3000/auth/callback`.
 4. Скопируйте `.env.example` в `.env.local` и заполните ключи из **Project Settings → API** и ключ Claude API из [console.anthropic.com](https://console.anthropic.com). Без ключа Claude документы сохраняются, но не читаются автоматически.
 5. Запустите:
@@ -87,7 +89,9 @@ npm run dev
 - `src/lib/extract.ts` — чтение документов и чеков и черновики предложений через Claude API (модель задаётся `CLAUDE_MODEL`).
 - `src/lib/documents.ts` — типы документов, статусы, требования для стройки.
 - `src/lib/i18n.ts` — тексты интерфейса.
-- `supabase/schema.sql` — база данных.
+- `supabase/migrations/` — база данных, по файлу на каждое изменение; новое изменение добавляется новым файлом.
+- `src/lib/env.ts` — проверка переменных окружения: если ключа нет, сайт сообщает, какого именно.
+- `.github/workflows/ci.yml` — на каждый PR проверяет линтер, типы и сборку.
 
 ## Персональные данные
 

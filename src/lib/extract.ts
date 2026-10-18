@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { claudeModel } from "./env";
 import { LANG_NAMES, type Lang } from "./i18n";
 
 const ExtractedDocument = z.object({
@@ -20,7 +21,6 @@ const ExtractedDocument = z.object({
 
 export type ExtractedDocument = z.infer<typeof ExtractedDocument>;
 
-const MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5-5";
 
 let client: Anthropic | null = null;
 
@@ -46,7 +46,7 @@ export async function extractDocument(
   const source = fileBlock(file);
   client ??= new Anthropic();
   const response = await client.messages.parse({
-    model: MODEL,
+    model: claudeModel(),
     max_tokens: 4000,
     output_config: {
       effort: "low",
@@ -112,7 +112,7 @@ export async function extractReceipt(
 ): Promise<ExtractedReceipt | null> {
   client ??= new Anthropic();
   const response = await client.messages.parse({
-    model: MODEL,
+    model: claudeModel(),
     max_tokens: 8000,
     output_config: {
       effort: "low",
@@ -173,7 +173,7 @@ export async function draftQuote(input: {
 }): Promise<DraftedQuote | null> {
   client ??= new Anthropic();
   const response = await client.messages.parse({
-    model: MODEL,
+    model: claudeModel(),
     max_tokens: 16000,
     output_config: {
       effort: "medium",
@@ -241,7 +241,7 @@ export async function analyzeLead(input: {
 }): Promise<AnalyzedLead | null> {
   client ??= new Anthropic();
   const response = await client.messages.parse({
-    model: MODEL,
+    model: claudeModel(),
     max_tokens: 4000,
     output_config: {
       effort: "low",

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ACCEPTED_MIME, DOC_TYPES, type DocType } from "@/lib/documents";
 import { cleanDate, extractDocument } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
+import { claudeEnabled } from "@/lib/env";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -75,7 +76,7 @@ export async function addDocument(input: {
     .single();
   if (error || !doc) throw new Error(error?.message ?? "Insert failed");
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!claudeEnabled()) {
     await supabase.from("documents").update({ ai_status: "skipped" }).eq("id", doc.id);
     revalidatePath("/dashboard", "layout");
     return;
