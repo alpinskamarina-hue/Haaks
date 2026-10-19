@@ -25,19 +25,23 @@ export type LandingDict = {
   faq: { q: string; a: string }[];
   signupTitle: string;
   signupText: string;
+  leadCard: { found: string; match: string; reply: string };
   footer: string;
 };
 
 const icons: IconName[] = ["passport", "quote", "invoice", "camera", "search", "home"];
 
-const withIcons = (items: Item[]) => items.map((item, i) => ({ ...item, icon: icons[i] }));
+// Finding clients is the main reason to join, so it is shown first.
+const order = [4, 0, 1, 2, 3, 5];
+
+const withIcons = (items: Item[]) => order.map((i) => ({ ...items[i], icon: icons[i] }));
 
 const en: LandingDict = {
   login: "Sign in",
   badge: "For self-employed construction workers in the Netherlands",
-  title: "Your ZZP paperwork done in your own language",
+  title: "Find clients and handle all ZZP paperwork in your language",
   subtitle:
-    "Documents for contractors, quotes, invoices and receipts in one place. You work in your language, your client gets everything in correct Dutch.",
+    "Haaks shows you jobs that fit you and helps you reply in Dutch. Quotes, invoices, receipts and documents for contractors in one place.",
   cta: "Sign up for free",
   ctaNote: "Free. No card needed. Only your email.",
   problemsTitle: "Sound familiar?",
@@ -88,7 +92,7 @@ const en: LandingDict = {
   ]),
   stepsTitle: "How it works",
   steps: [
-    { title: "Sign up", text: "Enter your email and open the link we send. No password." },
+    { title: "Sign up", text: "Enter your email and choose a password." },
     { title: "Fill in your profile", text: "KvK number, VAT number, trade and documents. It takes about 10 minutes." },
     { title: "Work", text: "Send the passport link to contractors, make quotes and invoices in minutes." },
   ],
@@ -116,15 +120,16 @@ const en: LandingDict = {
   ],
   signupTitle: "Start for free",
   signupText: "Choose an email and password. Confirm your address once with the link we send, then just sign in with your password.",
+  leadCard: { found: "New job for you", match: "fits you", reply: "Reply in Dutch" },
   footer: "Haaks: tools for self-employed construction workers in the Netherlands.",
 };
 
 const ru: LandingDict = {
   login: "Войти",
   badge: "Для самозанятых строителей в Нидерландах",
-  title: "Все бумаги ZZP на вашем родном языке",
+  title: "Находите заказчиков и ведите все бумаги ZZP на родном языке",
   subtitle:
-    "Документы для подрядчиков, предложения, счета и чеки в одном месте. Вы работаете на своём языке, а заказчик получает всё на правильном нидерландском.",
+    "Haaks показывает подходящие заказы и помогает ответить клиенту на нидерландском. Сметы, счета, чеки и документы для подрядчиков в одном месте.",
   cta: "Зарегистрироваться бесплатно",
   ctaNote: "Бесплатно. Без карты. Нужна только почта.",
   problemsTitle: "Знакомо?",
@@ -175,7 +180,7 @@ const ru: LandingDict = {
   ]),
   stepsTitle: "Как это работает",
   steps: [
-    { title: "Регистрация", text: "Введите почту и откройте ссылку из письма. Без пароля." },
+    { title: "Регистрация", text: "Введите почту и придумайте пароль." },
     { title: "Заполните профиль", text: "Номер KvK, номер НДС, профессия и документы. Около 10 минут." },
     { title: "Работайте", text: "Отправляйте ссылку на паспорт подрядчикам, делайте предложения и счета за минуты." },
   ],
@@ -203,15 +208,16 @@ const ru: LandingDict = {
   ],
   signupTitle: "Начните бесплатно",
   signupText: "Укажите почту и пароль. Один раз подтвердите адрес по ссылке из письма, дальше просто входите по паролю.",
+  leadCard: { found: "Новый заказ для вас", match: "подходит", reply: "Ответить на нидерландском" },
   footer: "Haaks: инструменты для самозанятых строителей в Нидерландах.",
 };
 
 const uk: LandingDict = {
   login: "Увійти",
   badge: "Для самозайнятих будівельників у Нідерландах",
-  title: "Усі папери ZZP рідною мовою",
+  title: "Знаходьте замовників і ведіть усі папери ZZP рідною мовою",
   subtitle:
-    "Документи для підрядників, пропозиції, рахунки та чеки в одному місці. Ви працюєте своєю мовою, а замовник отримує все правильною нідерландською.",
+    "Haaks показує замовлення, що вам підходять, і допомагає відповісти клієнту нідерландською. Кошториси, рахунки, чеки й документи для підрядників в одному місці.",
   cta: "Зареєструватися безкоштовно",
   ctaNote: "Безкоштовно. Без картки. Потрібна лише пошта.",
   problemsTitle: "Знайомо?",
@@ -262,7 +268,7 @@ const uk: LandingDict = {
   ]),
   stepsTitle: "Як це працює",
   steps: [
-    { title: "Реєстрація", text: "Введіть пошту й відкрийте посилання з листа. Без пароля." },
+    { title: "Реєстрація", text: "Введіть пошту й придумайте пароль." },
     { title: "Заповніть профіль", text: "Номер KvK, номер ПДВ, професія та документи. Близько 10 хвилин." },
     { title: "Працюйте", text: "Надсилайте посилання на паспорт підрядникам, робіть пропозиції й рахунки за хвилини." },
   ],
@@ -290,15 +296,16 @@ const uk: LandingDict = {
   ],
   signupTitle: "Почніть безкоштовно",
   signupText: "Вкажіть пошту й пароль. Один раз підтвердьте адресу за посиланням із листа, далі просто входьте за паролем.",
+  leadCard: { found: "Нове замовлення для вас", match: "підходить", reply: "Відповісти нідерландською" },
   footer: "Haaks: інструменти для самозайнятих будівельників у Нідерландах.",
 };
 
 const pl: LandingDict = {
   login: "Zaloguj się",
   badge: "Dla samozatrudnionych budowlańców w Holandii",
-  title: "Cała papierologia ZZP w Twoim języku",
+  title: "Znajduj klientów i prowadź całą papierologię ZZP w swoim języku",
   subtitle:
-    "Dokumenty dla wykonawców, oferty, faktury i paragony w jednym miejscu. Pracujesz w swoim języku, a klient dostaje wszystko w poprawnym niderlandzkim.",
+    "Haaks pokazuje zlecenia, które do Ciebie pasują, i pomaga odpowiedzieć po niderlandzku. Oferty, faktury, paragony i dokumenty dla wykonawców w jednym miejscu.",
   cta: "Zarejestruj się za darmo",
   ctaNote: "Za darmo. Bez karty. Wystarczy e-mail.",
   problemsTitle: "Brzmi znajomo?",
@@ -349,7 +356,7 @@ const pl: LandingDict = {
   ]),
   stepsTitle: "Jak to działa",
   steps: [
-    { title: "Rejestracja", text: "Wpisz e-mail i otwórz link z wiadomości. Bez hasła." },
+    { title: "Rejestracja", text: "Wpisz e-mail i wymyśl hasło." },
     { title: "Uzupełnij profil", text: "Numer KvK, numer VAT, zawód i dokumenty. Około 10 minut." },
     { title: "Pracuj", text: "Wysyłaj link do paszportu wykonawcom, rób oferty i faktury w kilka minut." },
   ],
@@ -377,15 +384,16 @@ const pl: LandingDict = {
   ],
   signupTitle: "Zacznij za darmo",
   signupText: "Podaj e-mail i hasło. Raz potwierdź adres linkiem z wiadomości, potem logujesz się hasłem.",
+  leadCard: { found: "Nowe zlecenie dla Ciebie", match: "pasuje", reply: "Odpowiedz po niderlandzku" },
   footer: "Haaks: narzędzia dla samozatrudnionych budowlańców w Holandii.",
 };
 
 const ro: LandingDict = {
   login: "Autentificare",
   badge: "Pentru constructorii independenți din Țările de Jos",
-  title: "Toate actele de ZZP în limba ta",
+  title: "Găsește clienți și ține toate actele de ZZP în limba ta",
   subtitle:
-    "Documente pentru antreprenori, oferte, facturi și bonuri într-un singur loc. Tu lucrezi în limba ta, iar clientul primește totul într-o olandeză corectă.",
+    "Haaks îți arată lucrările potrivite și te ajută să răspunzi în olandeză. Oferte, facturi, bonuri și documente pentru antreprenori într-un singur loc.",
   cta: "Înregistrează-te gratuit",
   ctaNote: "Gratuit. Fără card. Doar adresa de e-mail.",
   problemsTitle: "Îți sună cunoscut?",
@@ -436,7 +444,7 @@ const ro: LandingDict = {
   ]),
   stepsTitle: "Cum funcționează",
   steps: [
-    { title: "Înregistrare", text: "Scrie adresa de e-mail și deschide linkul primit. Fără parolă." },
+    { title: "Înregistrare", text: "Scrie adresa de e-mail și alege o parolă." },
     { title: "Completează profilul", text: "Număr KvK, cod TVA, meserie și documente. Cam 10 minute." },
     { title: "Lucrează", text: "Trimite linkul pașaportului antreprenorilor, fă oferte și facturi în câteva minute." },
   ],
@@ -464,15 +472,16 @@ const ro: LandingDict = {
   ],
   signupTitle: "Începe gratuit",
   signupText: "Alege e-mailul și parola. Confirmă o dată adresa cu linkul primit, apoi intri doar cu parola.",
+  leadCard: { found: "Lucrare nouă pentru tine", match: "potrivire", reply: "Răspunde în olandeză" },
   footer: "Haaks: unelte pentru constructorii independenți din Țările de Jos.",
 };
 
 const nl: LandingDict = {
   login: "Inloggen",
   badge: "Voor zzp'ers in de bouw in Nederland",
-  title: "Je zzp-administratie in je eigen taal",
+  title: "Vind klanten en regel je zzp-administratie in je eigen taal",
   subtitle:
-    "Documenten voor opdrachtgevers, offertes, facturen en bonnetjes op één plek. Jij werkt in je eigen taal, je klant krijgt alles in correct Nederlands.",
+    "Haaks laat klussen zien die bij je passen en helpt je in het Nederlands te reageren. Offertes, facturen, bonnetjes en documenten voor opdrachtgevers op één plek.",
   cta: "Gratis aanmelden",
   ctaNote: "Gratis. Geen creditcard. Alleen je e-mailadres.",
   problemsTitle: "Herkenbaar?",
@@ -523,7 +532,7 @@ const nl: LandingDict = {
   ]),
   stepsTitle: "Zo werkt het",
   steps: [
-    { title: "Aanmelden", text: "Vul je e-mailadres in en open de link die je krijgt. Geen wachtwoord." },
+    { title: "Aanmelden", text: "Vul je e-mailadres in en kies een wachtwoord." },
     { title: "Profiel invullen", text: "KvK-nummer, btw-id, vak en documenten. Ongeveer 10 minuten." },
     { title: "Aan het werk", text: "Stuur de paspoortlink naar opdrachtgevers, maak offertes en facturen in een paar minuten." },
   ],
@@ -551,6 +560,7 @@ const nl: LandingDict = {
   ],
   signupTitle: "Begin gratis",
   signupText: "Kies je e-mailadres en wachtwoord. Bevestig je adres één keer via de link in de mail, daarna log je in met je wachtwoord.",
+  leadCard: { found: "Nieuwe klus voor jou", match: "match", reply: "Reageer in het Nederlands" },
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
 
