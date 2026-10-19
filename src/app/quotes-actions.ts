@@ -16,7 +16,7 @@ import {
   type Quote,
   type QuoteLine,
 } from "@/lib/quotes";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createServerAccountClient } from "@/lib/supabase/server";
 import { claudeEnabled } from "@/lib/env";
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
@@ -175,7 +175,7 @@ export async function deleteQuote(id: string) {
 export async function acceptQuote(token: string, formData: FormData) {
   const name = short(formData.get("name"), 200);
   if (!name) return;
-  const admin = createAdminClient();
+  const admin = await createServerAccountClient();
   const today = new Date().toISOString().slice(0, 10);
   await admin
     .from("quotes")

@@ -10,7 +10,7 @@ import {
   type Profile,
 } from "@/lib/documents";
 import { getPassportDict, type PassportDict } from "@/lib/i18n";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export default async function PassportPage({
   const lang = (await searchParams).lang === "en" ? "en" : "nl";
   const t = getPassportDict(lang);
 
-  const admin = createAdminClient();
+  const admin = await createServerAccountClient();
   const { data: profile } = await admin
     .from("profiles")
     .select("*")

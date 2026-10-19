@@ -10,7 +10,8 @@ const publicSchema = z.object({
 });
 
 const serverSchema = z.object({
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  HAAKS_SERVER_EMAIL: z.email(),
+  HAAKS_SERVER_PASSWORD: z.string().min(1),
 });
 
 function parse<T extends z.ZodType>(schema: T, values: Record<string, string | undefined>): z.output<T> {
@@ -43,7 +44,8 @@ export function publicEnv() {
 // Server only. The browser bundle never has these values.
 export function serverEnv() {
   serverCache ??= parse(serverSchema, {
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    HAAKS_SERVER_EMAIL: process.env.HAAKS_SERVER_EMAIL,
+    HAAKS_SERVER_PASSWORD: process.env.HAAKS_SERVER_PASSWORD,
   });
   return serverCache;
 }
