@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { HeroScene } from "@/components/HeroScene";
+import { HeroDocs } from "@/components/HeroDocs";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LoginForm } from "@/components/LoginForm";
@@ -50,24 +50,25 @@ export default async function Home({
       </header>
 
       <main>
-        <section className="relative isolate overflow-hidden bg-[#0b1224] text-white">
-          <HeroScene className="absolute bottom-0 right-0 -z-20 h-[420px] w-full sm:h-[520px] lg:h-full" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1224] via-[#0b1224]/80 via-55% to-transparent to-75% lg:bg-gradient-to-r lg:from-slate-950/95 lg:via-slate-950/60 lg:to-transparent" />
-          <div className="mx-auto max-w-5xl px-4 pb-[300px] pt-12 sm:pb-[380px] sm:pt-20 lg:flex lg:min-h-[680px] lg:flex-col lg:items-start lg:justify-center lg:pb-24 lg:pt-16">
-            <p className="inline-block rounded-full bg-orange-500/20 px-3 py-1 text-sm font-medium text-orange-200 ring-1 ring-orange-400/40 backdrop-blur">
-              {l.badge}
-            </p>
-            <h1 className="mt-5 max-w-2xl text-4xl font-bold leading-tight [text-shadow:0_2px_12px_rgba(0,0,0,.5)] sm:text-5xl">
-              {l.title}
-            </h1>
-            <p className="mt-5 max-w-xl text-lg text-slate-200 [text-shadow:0_1px_8px_rgba(0,0,0,.6)]">{l.subtitle}</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <a href="#signup" className={ctaClass}>
-                {l.cta}
-                <Icon name="arrow" />
-              </a>
-              <span className="text-sm text-slate-300">{l.ctaNote}</span>
+        <section className="relative isolate overflow-hidden bg-slate-950 text-white">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_75%_45%,rgba(234,88,12,.45),transparent_55%),radial-gradient(circle_at_10%_0%,rgba(30,64,175,.35),transparent_45%)]" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+          <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 pb-10 pt-12 sm:pt-16 lg:grid-cols-[1fr_540px] lg:gap-4 lg:py-20">
+            <div>
+              <p className="inline-block rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium sm:text-sm text-orange-200 ring-1 ring-orange-400/40">
+                {l.badge}
+              </p>
+              <h1 className="mt-5 max-w-2xl text-3xl font-bold leading-tight sm:text-5xl">{l.title}</h1>
+              <p className="mt-4 max-w-xl text-base text-slate-300 sm:mt-5 sm:text-lg">{l.subtitle}</p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a href="#signup" className={ctaClass}>
+                  {l.cta}
+                  <Icon name="arrow" />
+                </a>
+                <span className="text-sm text-slate-400">{l.ctaNote}</span>
+              </div>
             </div>
+            <HeroDocs lead={l.leadCard} />
           </div>
         </section>
 
@@ -88,13 +89,22 @@ export default async function Home({
           <div className="mx-auto max-w-5xl px-4 py-14">
             <h2 className="text-3xl font-bold">{l.featuresTitle}</h2>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {l.features.map((f) => (
-                <div key={f.title} className={`rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-5 shadow-[0_10px_30px_-12px_rgba(15,23,42,.25)] ${tilt}`}>
-                  <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-[inset_0_2px_0_rgba(255,255,255,.35),inset_0_-5px_0_rgba(124,45,18,.35),0_10px_18px_-6px_rgba(234,88,12,.6)] [transform:perspective(300px)_rotateX(12deg)_rotateY(-12deg)]">
+              {l.features.map((f, i) => (
+                <div
+                  key={f.title}
+                  className={`rounded-2xl border p-5 shadow-[0_10px_30px_-12px_rgba(15,23,42,.25)] ${tilt} ${
+                    i === 0
+                      ? "border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50 ring-2 ring-orange-400 sm:col-span-2 sm:flex sm:items-start sm:gap-5 lg:col-span-3"
+                      : `border-slate-200 bg-gradient-to-b from-white to-slate-50 ${i === 5 ? "sm:col-span-2 lg:col-span-2" : ""}`
+                  }`}
+                >
+                  <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-[inset_0_2px_0_rgba(255,255,255,.35),inset_0_-5px_0_rgba(124,45,18,.35),0_10px_18px_-6px_rgba(234,88,12,.6)] [transform:perspective(300px)_rotateX(12deg)_rotateY(-12deg)]">
                     <Icon name={f.icon} className="h-7 w-7 drop-shadow" />
                   </span>
-                  <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
-                  <p className="mt-2 text-slate-600">{f.text}</p>
+                  <div>
+                    <h3 className={`mt-4 font-semibold ${i === 0 ? "text-2xl sm:mt-0" : "text-lg"}`}>{f.title}</h3>
+                    <p className={`mt-2 text-slate-600 ${i === 0 ? "max-w-2xl text-lg" : ""}`}>{f.text}</p>
+                  </div>
                 </div>
               ))}
             </div>
