@@ -1,0 +1,4 @@
+{
+  "site_url": "https://haaks-nl.vercel.app",
+  "uri_allow_list": "https://haaks-nl.vercel.app/**,https://haaks.vercel.app/**"
+}
