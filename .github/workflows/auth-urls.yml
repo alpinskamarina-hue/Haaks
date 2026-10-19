@@ -30,9 +30,14 @@ jobs:
       - name: Apply auth URLs
         if: steps.secrets.outputs.ready == 'true'
         run: |
-          curl --fail-with-body -sS -X PATCH \
+          status=$(curl -sS -o response.json -w '%{http_code}' -X PATCH \
             "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            --data @supabase/auth-urls.json \
-            | jq '{site_url, uri_allow_list}'
+            --data @supabase/auth-urls.json)
+          if [ "$status" != "200" ]; then
+            echo "Supabase answered HTTP $status:"
+            cat response.json
+            exit 1
+          fi
+          jq '{site_url, uri_allow_list}' response.json
