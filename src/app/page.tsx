@@ -4,8 +4,10 @@ import { HeroDocs } from "@/components/HeroDocs";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LoginForm } from "@/components/LoginForm";
+import { SiteFooter } from "@/components/SiteFooter";
 import { getDict } from "@/lib/i18n";
 import { getLanding } from "@/lib/landing";
+import { legalSummary } from "@/lib/legal";
 import { requestLang } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
 
@@ -153,16 +155,40 @@ export default async function Home({
               <h2 className="text-2xl font-bold">{l.signupTitle}</h2>
               <p className="mb-5 mt-2 text-slate-600">{l.signupText}</p>
               {error && <p className="mb-3 text-sm text-red-700">{t.loginError}</p>}
-              <LoginForm key={mode} t={t} initialMode={mode === "signin" ? "signin" : "signup"} />
+              <LoginForm
+                key={mode}
+                t={t}
+                initialMode={mode === "signin" ? "signin" : "signup"}
+                consent={<SignupConsent lang={lang} />}
+              />
               <p className="mt-4 text-xs text-slate-500">{t.privacyNote}</p>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <p className="mx-auto max-w-5xl px-4 py-6 text-sm text-slate-500">{l.footer}</p>
-      </footer>
+      <SiteFooter lang={lang} note={l.footer} />
     </div>
+  );
+}
+
+// "By creating an account you accept the Terms and have read the Privacy statement."
+function SignupConsent({ lang }: { lang: Parameters<typeof legalSummary>[0] }) {
+  const s = legalSummary(lang);
+  const link = (href: string, label: string) => (
+    <Link href={href} target="_blank" className="underline">
+      {label}
+    </Link>
+  );
+  const [before, rest] = s.signupConsent.split("{terms}");
+  const [middle, after] = rest.split("{privacy}");
+  return (
+    <>
+      {before}
+      {link("/terms", s.consentLinks.terms)}
+      {middle}
+      {link("/privacy", s.consentLinks.privacy)}
+      {after}
+    </>
   );
 }

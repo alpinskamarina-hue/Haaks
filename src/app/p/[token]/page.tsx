@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicFooter } from "@/components/PublicFooter";
 import { headers } from "next/headers";
 import Link from "next/link";
 import {
@@ -129,6 +130,7 @@ export default async function PassportPage({
       </section>
 
       <p className="text-xs text-slate-500">{t.disclaimer}</p>
+      <PublicFooter />
     </main>
   );
 }
