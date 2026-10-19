@@ -115,7 +115,7 @@ const en: LandingDict = {
     },
   ],
   signupTitle: "Start for free",
-  signupText: "Enter your email. We send a link, open it and you are in.",
+  signupText: "Choose an email and password. Confirm your address once with the link we send, then just sign in with your password.",
   footer: "Haaks: tools for self-employed construction workers in the Netherlands.",
 };
 
@@ -202,7 +202,7 @@ const ru: LandingDict = {
     },
   ],
   signupTitle: "Начните бесплатно",
-  signupText: "Введите почту. Мы пришлём ссылку, откройте её, и вы внутри.",
+  signupText: "Укажите почту и пароль. Один раз подтвердите адрес по ссылке из письма, дальше просто входите по паролю.",
   footer: "Haaks: инструменты для самозанятых строителей в Нидерландах.",
 };
 
@@ -289,7 +289,7 @@ const uk: LandingDict = {
     },
   ],
   signupTitle: "Почніть безкоштовно",
-  signupText: "Введіть пошту. Ми надішлемо посилання, відкрийте його, і ви всередині.",
+  signupText: "Вкажіть пошту й пароль. Один раз підтвердьте адресу за посиланням із листа, далі просто входьте за паролем.",
   footer: "Haaks: інструменти для самозайнятих будівельників у Нідерландах.",
 };
 
@@ -376,7 +376,7 @@ const pl: LandingDict = {
     },
   ],
   signupTitle: "Zacznij za darmo",
-  signupText: "Wpisz e-mail. Wyślemy link, otwórz go i gotowe.",
+  signupText: "Podaj e-mail i hasło. Raz potwierdź adres linkiem z wiadomości, potem logujesz się hasłem.",
   footer: "Haaks: narzędzia dla samozatrudnionych budowlańców w Holandii.",
 };
 
@@ -463,7 +463,7 @@ const ro: LandingDict = {
     },
   ],
   signupTitle: "Începe gratuit",
-  signupText: "Scrie adresa de e-mail. Îți trimitem un link, îl deschizi și ai intrat.",
+  signupText: "Alege e-mailul și parola. Confirmă o dată adresa cu linkul primit, apoi intri doar cu parola.",
   footer: "Haaks: unelte pentru constructorii independenți din Țările de Jos.",
 };
 
@@ -550,7 +550,7 @@ const nl: LandingDict = {
     },
   ],
   signupTitle: "Begin gratis",
-  signupText: "Vul je e-mailadres in. We sturen een link, open hem en je bent binnen.",
+  signupText: "Kies je e-mailadres en wachtwoord. Bevestig je adres één keer via de link in de mail, daarna log je in met je wachtwoord.",
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
 

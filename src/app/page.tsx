@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -14,7 +15,7 @@ const ctaClass =
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; mode?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -25,7 +26,7 @@ export default async function Home({
   const lang = await requestLang();
   const t = getDict(lang);
   const l = getLanding(lang);
-  const { error } = await searchParams;
+  const { error, mode } = await searchParams;
 
   return (
     <div className="min-h-screen">
@@ -36,9 +37,9 @@ export default async function Home({
           </span>
           <div className="flex items-center gap-3">
             <LanguageSwitcher current={lang} label={t.language} />
-            <a href="#signup" className="hidden text-sm font-semibold text-orange-700 sm:inline">
+            <Link href="/?mode=signin#signup" className="hidden text-sm font-semibold text-orange-700 sm:inline">
               {l.login}
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -132,7 +133,7 @@ export default async function Home({
               <h2 className="text-2xl font-bold">{l.signupTitle}</h2>
               <p className="mb-5 mt-2 text-slate-600">{l.signupText}</p>
               {error && <p className="mb-3 text-sm text-red-700">{t.loginError}</p>}
-              <LoginForm t={t} />
+              <LoginForm key={mode} t={t} initialMode={mode === "signin" ? "signin" : "signup"} />
               <p className="mt-4 text-xs text-slate-500">{t.privacyNote}</p>
             </div>
           </div>
