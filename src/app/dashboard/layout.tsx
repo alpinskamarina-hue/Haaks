@@ -35,6 +35,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="mt-auto space-y-3 border-t border-slate-200 px-3 pt-4">
           <p className="truncate text-sm font-medium">{name}</p>
           <LanguageSwitcher current={lang} label={t.language} />
+          <Link href="/dashboard/password" className="flex items-center gap-2 text-sm text-slate-600">
+            <Icon name="key" className="h-4 w-4" />
+            {t.navPassword}
+          </Link>
           <form action={signOut}>
             <button className="flex items-center gap-2 text-sm text-slate-600">
               <Icon name="logout" className="h-4 w-4" />
@@ -52,6 +56,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher current={lang} label={t.language} />
+            <Link href="/dashboard/password" className="p-1 text-slate-500" aria-label={t.navPassword}>
+              <Icon name="key" />
+            </Link>
             <form action={signOut}>
               <button className="p-1 text-slate-500" aria-label={t.signOut}>
                 <Icon name="logout" />
