@@ -3,6 +3,7 @@ import { signOut } from "@/app/actions";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
+import { legalSummary } from "@/lib/legal";
 import { loadWorkspace } from "@/lib/workspace";
 
 // One cabinet for every service: sidebar on a computer, tab bar on a phone.
@@ -45,6 +46,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {t.signOut}
             </button>
           </form>
+          <nav className="flex flex-wrap gap-x-3 text-xs text-slate-400">
+            <Link href="/privacy">{legalSummary(lang).links.privacy}</Link>
+            <Link href="/terms">{legalSummary(lang).links.terms}</Link>
+          </nav>
         </div>
       </aside>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicFooter } from "@/components/PublicFooter";
 import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
 import { invoiceTotals, vatNote, type Invoice } from "@/lib/invoices";
@@ -172,6 +173,7 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
         {invoice.notes && <p className="whitespace-pre-line">{invoice.notes}</p>}
         <p className="pt-2">{company}</p>
       </footer>
+      <PublicFooter />
     </main>
   );
 }

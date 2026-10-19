@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicFooter } from "@/components/PublicFooter";
 import { acceptQuote } from "@/app/quotes-actions";
 import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
@@ -177,6 +178,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           </form>
         )}
       </section>
+      <PublicFooter />
     </main>
   );
 }

@@ -12,7 +12,15 @@ const linkButton = "text-left text-sm font-medium text-orange-700 underline-offs
 
 // Email + password sign-in and sign-up. A forgotten password falls back to a
 // one-time login link that opens the page for setting a new password.
-export function LoginForm({ t, initialMode = "signin" }: { t: Dict; initialMode?: LoginMode }) {
+export function LoginForm({
+  t,
+  initialMode = "signin",
+  consent,
+}: {
+  t: Dict;
+  initialMode?: LoginMode;
+  consent?: React.ReactNode;
+}) {
   const [mode, setMode] = useState<LoginMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,6 +115,7 @@ export function LoginForm({ t, initialMode = "signin" }: { t: Dict; initialMode?
       <button type="submit" disabled={busy} className={button}>
         {mode === "signin" ? t.signInButton : mode === "signup" ? t.signUpButton : t.sendLink}
       </button>
+      {mode === "signup" && consent && <p className="text-xs text-slate-500">{consent}</p>}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="flex flex-col items-start gap-2 pt-1">
         {mode !== "signup" && (
