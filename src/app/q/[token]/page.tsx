@@ -4,7 +4,7 @@ import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
 import { euro } from "@/lib/orders";
 import { lineTotal, quoteTotals, type Quote } from "@/lib/quotes";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ const date = (value: string) =>
 // What the client sees: always in Dutch, printable, with an "Akkoord" button.
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const admin = createAdminClient();
+  const admin = await createServerAccountClient();
   const { data: quote } = await admin.from("quotes").select("*").eq("public_token", token).maybeSingle<Quote>();
 
   if (!quote) {

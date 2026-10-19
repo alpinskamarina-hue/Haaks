@@ -4,7 +4,7 @@ import type { Profile } from "@/lib/documents";
 import { invoiceTotals, vatNote, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
 import { lineTotal } from "@/lib/quotes";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ const qty = (n: number) => Number(n).toLocaleString("nl-NL");
 // The invoice as the client receives it: Dutch, A4-friendly, saved as PDF through the print dialog.
 export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const admin = createAdminClient();
+  const admin = await createServerAccountClient();
   const { data: invoice } = await admin
     .from("invoices")
     .select("*")
