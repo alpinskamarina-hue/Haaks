@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HtmlLang } from "@/components/HtmlLang";
 import { PublicFooter } from "@/components/PublicFooter";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -75,7 +76,8 @@ export default async function PassportPage({
   const hasVca = documents.some((d) => d.doc_type === "vca");
 
   return (
-    <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
+    <main lang={lang} className="mx-auto max-w-2xl space-y-5 px-4 py-6">
+      <HtmlLang lang={lang} />
       <header className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">{t.title}</p>
