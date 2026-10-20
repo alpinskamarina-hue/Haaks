@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HtmlLang } from "@/components/HtmlLang";
 import { PublicFooter } from "@/components/PublicFooter";
 import { acceptQuote } from "@/app/quotes-actions";
 import { PrintButton } from "@/components/PrintButton";
@@ -38,7 +39,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const company = worker?.company_name || worker?.full_name || "";
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 print:px-0 print:py-0">
+    <main lang="nl" className="mx-auto max-w-3xl space-y-6 px-4 py-6 print:px-0 print:py-0">
+      <HtmlLang lang="nl" />
       {quote.status === "draft" && (
         <p className="rounded-lg bg-slate-100 p-3 text-center text-sm text-slate-700 print:hidden">
           Concept: deze offerte is nog niet verstuurd.

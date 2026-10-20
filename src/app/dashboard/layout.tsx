@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
+import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
@@ -26,7 +27,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const name = profile.company_name || profile.full_name || user.email;
 
   return (
-    <div className="min-h-screen lg:flex">
+    <div lang={lang} className="min-h-screen lg:flex">
+      <HtmlLang lang={lang} />
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-4 lg:sticky lg:top-0 lg:flex lg:h-screen print:hidden">
         <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-3 text-xl font-bold">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-600 text-white">H</span>

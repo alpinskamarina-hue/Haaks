@@ -8,6 +8,7 @@ import {
   toggleDocument,
   updateDocument,
 } from "@/app/actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { UploadForm } from "@/components/UploadForm";
 import {
@@ -20,6 +21,7 @@ import {
 import { getDict, isLang, type Dict } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
+import { signedUrls } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 const input = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base";
@@ -53,6 +55,7 @@ export default async function Dashboard() {
   const doneCount = REQUIREMENTS.filter((r) => ready[r]).length;
   const passportUrl = `${await siteUrl()}/p/${profile.passport_token}`;
   const qr = await QRCode.toDataURL(passportUrl, { margin: 1, width: 240 });
+  const fileUrls = await signedUrls(supabase, documents.map((d) => d.file_path));
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
@@ -90,7 +93,9 @@ export default async function Dashboard() {
                 </button>
               </form>
               <form action={regeneratePassportLink}>
-                <button className="rounded-lg border border-slate-300 px-3 py-2">{t.newLink}</button>
+                <ConfirmButton message={t.confirmNewLink} className="rounded-lg border border-slate-300 px-3 py-2">
+                  {t.newLink}
+                </ConfirmButton>
               </form>
             </div>
             <p className="text-sm text-slate-600">
@@ -139,7 +144,7 @@ export default async function Dashboard() {
         {documents.length === 0 && <p className="text-slate-600">{t.noDocs}</p>}
         <ul className="space-y-4">
           {documents.map((doc) => (
-            <DocumentItem key={doc.id} doc={doc} t={t} />
+            <DocumentItem key={doc.id} doc={doc} t={t} fileUrl={fileUrls.get(doc.file_path)} />
           ))}
         </ul>
       </section>
@@ -185,14 +190,24 @@ function StatusBadge({ doc, t }: { doc: DocumentRow; t: Dict }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>{label}</span>;
 }
 
-function DocumentItem({ doc, t }: { doc: DocumentRow; t: Dict }) {
+function DocumentItem({ doc, t, fileUrl }: { doc: DocumentRow; t: Dict; fileUrl?: string }) {
+  // Without AI reading the file, the number and expiry date are only known
+  // once the worker types them, so the editor starts open with a hint.
+  const needsDates = (doc.ai_status === "skipped" || doc.ai_status === "failed") && !doc.expires_on;
   return (
     <li className="rounded-xl border border-slate-200 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-semibold">{t[`docType_${doc.doc_type}`]}</span>
         <StatusBadge doc={doc} t={t} />
       </div>
-      <p className="truncate text-xs text-slate-500">{doc.file_name}</p>
+      <p className="truncate text-xs text-slate-500">
+        {fileUrl ? (
+          <a href={fileUrl} target="_blank" rel="noopener" className="font-medium text-orange-700 underline">
+            {t.openFile}
+          </a>
+        ) : null}{" "}
+        {doc.file_name}
+      </p>
 
       {doc.ai_summary && <p className="mt-2 text-sm">{doc.ai_summary}</p>}
       {doc.ai_warnings.map((w) => (
@@ -217,7 +232,8 @@ function DocumentItem({ doc, t }: { doc: DocumentRow; t: Dict }) {
         )}
       </dl>
 
-      <details className="mt-3">
+      {needsDates && <p className="mt-2 text-sm text-amber-800">{t.fillDatesHint}</p>}
+      <details className="mt-3" open={needsDates}>
         <summary className="cursor-pointer text-sm text-slate-600">
           {t.number}: {doc.document_number ?? "—"} · {t.issued}: {doc.issued_on ?? "—"} ·{" "}
           {t.expires}: {doc.expires_on ?? "—"} — {t.editDates}
@@ -249,7 +265,9 @@ function DocumentItem({ doc, t }: { doc: DocumentRow; t: Dict }) {
           </button>
         </form>
         <form action={deleteDocument.bind(null, doc.id)}>
-          <button className="rounded-lg border border-red-200 px-3 py-1 text-red-700">{t.delete}</button>
+          <ConfirmButton message={t.confirmDelete} className="rounded-lg border border-red-200 px-3 py-1 text-red-700">
+            {t.delete}
+          </ConfirmButton>
         </form>
       </div>
     </li>

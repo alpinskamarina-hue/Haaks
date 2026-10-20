@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HtmlLang } from "@/components/HtmlLang";
 import { PublicFooter } from "@/components/PublicFooter";
 import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
@@ -41,7 +42,8 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
   const note = vatNote(invoice);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 bg-white px-4 py-6 text-[15px] print:max-w-none print:px-0 print:py-0">
+    <main lang="nl" className="mx-auto max-w-3xl space-y-8 bg-white px-4 py-6 text-[15px] print:max-w-none print:px-0 print:py-0">
+      <HtmlLang lang="nl" />
       {invoice.status === "draft" && (
         <p className="rounded-lg bg-slate-100 p-3 text-center text-sm text-slate-700 print:hidden">
           Concept: deze factuur is nog niet verstuurd.
