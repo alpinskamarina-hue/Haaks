@@ -3,13 +3,13 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addLead } from "@/app/leads-actions";
-import { MAX_FILE_BYTES } from "@/lib/documents";
 import type { Dict } from "@/lib/i18n";
+import { prepareUpload } from "@/lib/prepare-upload";
 import { PHOTO_MIME } from "@/lib/quotes";
 import { createClient } from "@/lib/supabase/client";
 
 // Paste a post from a Facebook/WhatsApp/Telegram group, or a screenshot of it.
-export function LeadForm({ t, userId }: { t: Dict; userId: string }) {
+export function LeadForm({ t, userId, aiEnabled }: { t: Dict; userId: string; aiEnabled: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
@@ -22,21 +22,31 @@ export function LeadForm({ t, userId }: { t: Dict; userId: string }) {
     if (!text.trim() && !image) return;
     setBusy(true);
     setError(null);
+    const supabase = createClient();
+    let uploaded: { path: string; mimeType: string } | null = null;
     try {
-      let uploaded = null;
       if (image) {
-        const ext = image.name.includes(".") ? image.name.split(".").pop() : "jpg";
-        const path = `${userId}/leads/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadError } = await createClient()
-          .storage.from("documents")
-          .upload(path, image, { contentType: image.type });
-        if (uploadError) throw new Error(uploadError.message);
-        uploaded = { path, mimeType: image.type };
+        const prepared = await prepareUpload(image);
+        if ("error" in prepared || !PHOTO_MIME.includes(prepared.mimeType)) {
+          setError("error" in prepared && prepared.error === "too_big" ? t.fileTooBig : t.unsupportedFile);
+          setBusy(false);
+          return;
+        }
+        const path = `${userId}/leads/${crypto.randomUUID()}.${prepared.ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("documents")
+          .upload(path, prepared.file, { contentType: prepared.mimeType });
+        if (uploadError) throw uploadError;
+        uploaded = { path, mimeType: prepared.mimeType };
       }
-      const { id } = await addLead({ text, image: uploaded });
-      router.push(`/dashboard/leads/${id}`);
+      const result = await addLead({ text, image: uploaded });
+      if ("error" in result) throw new Error("addLead failed");
+      router.push(`/dashboard/leads/${result.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      console.error(err);
+      // Do not leave a screenshot in storage that no lead points to.
+      if (uploaded) await supabase.storage.from("documents").remove([uploaded.path]);
+      setError(t.uploadFailed);
       setBusy(false);
     }
   }
@@ -56,29 +66,27 @@ export function LeadForm({ t, userId }: { t: Dict; userId: string }) {
           type="button"
           disabled={busy}
           onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="max-w-full truncate rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
         >
           🖼 {image ? image.name : t.leadScreenshot}
         </button>
         <input
           ref={fileRef}
           type="file"
-          accept={PHOTO_MIME.join(",")}
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={(e) => {
-            const f = e.target.files?.[0] ?? null;
-            if (f && (f.size > MAX_FILE_BYTES || !PHOTO_MIME.includes(f.type))) {
-              setError(f.size > MAX_FILE_BYTES ? t.fileTooBig : "JPG, PNG, WEBP");
-              return;
-            }
-            setImage(f);
+            setError(null);
+            setImage(e.target.files?.[0] ?? null);
+            // Lets the same file be picked again after an error.
+            e.target.value = "";
           }}
         />
         <button
           disabled={busy || (!text.trim() && !image)}
           className="ml-auto rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
-          {busy ? t.leadAnalyzing : `✨ ${t.leadAnalyze}`}
+          {aiEnabled ? (busy ? t.leadAnalyzing : `✨ ${t.leadAnalyze}`) : busy ? t.uploading : t.leadSave}
         </button>
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}

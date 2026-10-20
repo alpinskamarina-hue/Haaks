@@ -1,3 +1,5 @@
+import { dutchToday } from "./quotes";
+
 export type Order = {
   id: string;
   user_id: string;
@@ -58,10 +60,11 @@ export function euro(value: number | string | null) {
 
 // Calendar quarter of a date, used for the quarterly VAT return.
 export function quarterOf(date: Date) {
-  const q = Math.floor(date.getMonth() / 3);
-  const start = new Date(Date.UTC(date.getFullYear(), q * 3, 1));
-  const end = new Date(Date.UTC(date.getFullYear(), q * 3 + 3, 1));
-  return { label: `Q${q + 1} ${date.getFullYear()}`, start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  const [year, month] = dutchToday(date).split("-").map(Number);
+  const q = Math.floor((month - 1) / 3);
+  const start = new Date(Date.UTC(year, q * 3, 1));
+  const end = new Date(Date.UTC(year, q * 3 + 3, 1));
+  return { label: `Q${q + 1} ${year}`, start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
 export function inQuarter(receipt: Receipt, quarter: { start: string; end: string }) {

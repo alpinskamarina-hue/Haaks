@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createInvoice } from "@/app/invoices-actions";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
+import { SubmitButton } from "@/components/SubmitButton";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
 import { loadWorkspace } from "@/lib/workspace";
@@ -55,9 +56,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <input type="checkbox" name="with_receipts" />
             {t.addReceiptMaterials}
           </label>
-          <button className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white">
+          <SubmitButton className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-60">
             + {t.newInvoice}
-          </button>
+          </SubmitButton>
         </form>
       </section>
 

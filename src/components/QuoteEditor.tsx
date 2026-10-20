@@ -22,12 +22,14 @@ export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
   });
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof Editable>(key: K, value: Editable[K]) => {
     setData((d) => ({ ...d, [key]: value }));
     setDirty(true);
     setSaved(false);
+    setSaveError(null);
   };
   const sum = quoteTotals(data.lines);
   const field = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2";
@@ -108,15 +110,22 @@ export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
         </label>
       </div>
 
-      <div className="sticky bottom-3 flex items-center gap-3">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] flex items-center gap-3 lg:bottom-3">
         <button
           type="button"
           disabled={pending || !dirty}
           onClick={() =>
             startTransition(async () => {
-              await saveQuote(quote.id, data);
-              setDirty(false);
-              setSaved(true);
+              try {
+                const result = await saveQuote(quote.id, data);
+                if (!result.ok) return setSaveError(t.saveFailed);
+                setDirty(false);
+                setSaved(true);
+              } catch (err) {
+                // No connection or the session ran out: keep the edits on screen.
+                console.error(err);
+                setSaveError(t.saveFailed);
+              }
             })
           }
           className="rounded-lg bg-slate-900 px-5 py-3 font-semibold text-white shadow disabled:opacity-60"
@@ -124,6 +133,7 @@ export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
           {pending ? "…" : t.save}
         </button>
         {saved && <span className="text-sm text-green-700">✓ {t.saved}</span>}
+        {saveError && <span className="rounded bg-white px-2 py-1 text-sm text-red-700">{saveError}</span>}
       </div>
     </div>
   );

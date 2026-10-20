@@ -7,6 +7,7 @@ import { cleanDate, draftQuote } from "@/lib/extract";
 import { getDict, isLang, type Lang } from "@/lib/i18n";
 import {
   addDays,
+  dutchToday,
   cleanLines,
   DEFAULT_TERMS_NL,
   MAX_QUOTE_PHOTOS,
@@ -28,13 +29,11 @@ function refresh() {
 
 // OFF-2026-001, OFF-2026-002, ... per worker and year.
 async function nextNumber(supabase: Supabase, userId: string) {
-  const year = new Date().getFullYear();
-  const { count } = await supabase
-    .from("quotes")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .like("number", `OFF-${year}-%`);
-  return `OFF-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+  const year = dutchToday().slice(0, 4);
+  const { data } = await supabase.from("quotes").select("number").eq("user_id", userId).like("number", `OFF-${year}-%`);
+  // Highest number + 1, so a deleted quote does not make the next number repeat.
+  const max = Math.max(0, ...(data ?? []).map((q) => Number(q.number.split("-")[2]) || 0));
+  return `OFF-${year}-${String(max + 1).padStart(3, "0")}`;
 }
 
 // Called after the browser has uploaded the site photos to the user's storage folder.
@@ -72,7 +71,7 @@ export async function generateQuote(input: {
     lines: [
       { kind: "labour", description: "Arbeid", quantity: 1, unit: "uur", unit_price: hourlyRate, vat_rate: vatRate },
     ],
-    notes: [t.aiUnavailable],
+    notes: [],
   };
 
   if (claudeEnabled()) {
@@ -131,7 +130,7 @@ export async function saveQuote(
   data: Pick<Quote, "title" | "client_name" | "client_address" | "intro" | "terms" | "valid_until" | "lines">,
 ) {
   const { supabase } = await requireUser();
-  await supabase
+  const { error } = await supabase
     .from("quotes")
     .update({
       title: short(data.title, 200) || "Offerte",
@@ -144,7 +143,12 @@ export async function saveQuote(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
+  if (error) {
+    console.error("Quote save failed", error);
+    return { ok: false as const };
+  }
   refresh();
+  return { ok: true as const };
 }
 
 export async function setQuoteStatus(id: string, status: Quote["status"]) {
@@ -176,7 +180,7 @@ export async function acceptQuote(token: string, formData: FormData) {
   const name = short(formData.get("name"), 200);
   if (!name) return;
   const admin = await createServerAccountClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dutchToday();
   await admin
     .from("quotes")
     .update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_name: name })

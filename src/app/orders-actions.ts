@@ -6,6 +6,7 @@ import { ACCEPTED_MIME } from "@/lib/documents";
 import { cleanDate, extractReceipt } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
 import { claudeEnabled } from "@/lib/env";
+import { parseAmount, roundCents } from "@/lib/quotes";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -15,8 +16,8 @@ function text(formData: FormData, key: string) {
 function amount(formData: FormData, key: string) {
   const raw = text(formData, key);
   if (!raw) return null;
-  const value = Number(raw.replace(",", "."));
-  return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+  const value = parseAmount(raw);
+  return Number.isFinite(value) ? roundCents(value) : null;
 }
 
 function refresh() {
@@ -185,7 +186,9 @@ export async function deleteReceipt(id: string) {
   const { supabase } = await requireUser();
   const { data: receipt } = await supabase.from("receipts").select("file_path").eq("id", id).single();
   if (!receipt) return;
+  // Row first: if that fails, the file is still there for the receipt.
+  const { error } = await supabase.from("receipts").delete().eq("id", id);
+  if (error) throw new Error(error.message);
   await supabase.storage.from("documents").remove([receipt.file_path]);
-  await supabase.from("receipts").delete().eq("id", id);
   refresh();
 }

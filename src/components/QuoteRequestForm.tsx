@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateQuote } from "@/app/quotes-actions";
-import { MAX_FILE_BYTES } from "@/lib/documents";
 import type { Dict } from "@/lib/i18n";
-import { MAX_QUOTE_PHOTOS, PHOTO_MIME, VAT_RATES } from "@/lib/quotes";
+import { prepareUpload } from "@/lib/prepare-upload";
+import { MAX_QUOTE_PHOTOS, parseAmount, PHOTO_MIME, VAT_RATES } from "@/lib/quotes";
 import { createClient } from "@/lib/supabase/client";
 
 type OrderOption = { id: string; title: string };
@@ -17,12 +17,14 @@ export function QuoteRequestForm({
   orders,
   defaultOrderId,
   defaultRate,
+  aiEnabled,
 }: {
   t: Dict;
   userId: string;
   orders: OrderOption[];
   defaultOrderId: string | null;
   defaultRate: number | null;
+  aiEnabled: boolean;
 }) {
   const router = useRouter();
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -37,9 +39,11 @@ export function QuoteRequestForm({
 
   function addPhotos(list: FileList | null) {
     const picked = Array.from(list ?? []);
-    const bad = picked.find((f) => f.size > MAX_FILE_BYTES || !PHOTO_MIME.includes(f.type));
-    setError(bad ? `${bad.name}: ${bad.size > MAX_FILE_BYTES ? t.fileTooBig : "JPG, PNG, WEBP"}` : null);
-    const ok = picked.filter((f) => f.size <= MAX_FILE_BYTES && PHOTO_MIME.includes(f.type));
+    // Photos are checked and made smaller when the quote is made (prepareUpload).
+    const isPhoto = (f: File) => f.type.startsWith("image/") || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name);
+    const bad = picked.find((f) => !isPhoto(f));
+    setError(bad ? `${bad.name}: ${t.unsupportedFile}` : null);
+    const ok = picked.filter(isPhoto);
     setPhotos((prev) => [...prev, ...ok].slice(0, MAX_QUOTE_PHOTOS));
     if (cameraRef.current) cameraRef.current.value = "";
     if (filesRef.current) filesRef.current.value = "";
@@ -50,28 +54,35 @@ export function QuoteRequestForm({
     if (!description.trim() && !photos.length) return;
     setBusy(true);
     setError(null);
+    const supabase = createClient();
+    const uploaded: { path: string; mimeType: string }[] = [];
     try {
-      const supabase = createClient();
-      const uploaded = [];
       for (const file of photos) {
-        const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-        const path = `${userId}/quotes/${crypto.randomUUID()}.${ext}`;
+        const prepared = await prepareUpload(file);
+        if ("error" in prepared || !PHOTO_MIME.includes(prepared.mimeType)) {
+          throw new Error(`${file.name}: ${"error" in prepared && prepared.error === "too_big" ? t.fileTooBig : t.unsupportedFile}`);
+        }
+        const path = `${userId}/quotes/${crypto.randomUUID()}.${prepared.ext}`;
         const { error: uploadError } = await supabase.storage
           .from("documents")
-          .upload(path, file, { contentType: file.type });
-        if (uploadError) throw new Error(`${file.name}: ${uploadError.message}`);
-        uploaded.push({ path, mimeType: file.type });
+          .upload(path, prepared.file, { contentType: prepared.mimeType });
+        if (uploadError) throw uploadError;
+        uploaded.push({ path, mimeType: prepared.mimeType });
       }
       const { id } = await generateQuote({
         orderId: orderId || null,
         description,
         photos: uploaded,
-        hourlyRate: Number(rate.replace(",", ".")) || 0,
+        hourlyRate: parseAmount(rate) || 0,
         vatRate,
       });
       router.push(`/dashboard/quotes/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      console.error(err);
+      // Do not leave photos in storage that no quote points to.
+      if (uploaded.length) await supabase.storage.from("documents").remove(uploaded.map((p) => p.path));
+      const message = err instanceof Error ? err.message : "";
+      setError(message.includes(t.fileTooBig) || message.includes(t.unsupportedFile) ? message : t.uploadFailed);
       setBusy(false);
     }
   }
@@ -81,7 +92,7 @@ export function QuoteRequestForm({
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <p className="text-sm text-slate-600">{t.quoteHelp}</p>
+      <p className="text-sm text-slate-600">{aiEnabled ? t.quoteHelp : t.quoteHelpNoAi}</p>
       <label className="block text-sm font-medium">
         {t.quoteOrder}
         <select value={orderId} onChange={(e) => setOrderId(e.target.value)} disabled={busy} className={field}>
@@ -158,7 +169,7 @@ export function QuoteRequestForm({
           ref={filesRef}
           type="file"
           multiple
-          accept={PHOTO_MIME.join(",")}
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={(e) => addPhotos(e.target.files)}
         />
@@ -197,7 +208,7 @@ export function QuoteRequestForm({
         disabled={busy || (!description.trim() && !photos.length)}
         className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-60"
       >
-        {busy ? t.drafting : `✨ ${t.makeDraft}`}
+        {aiEnabled ? (busy ? t.drafting : `✨ ${t.makeDraft}`) : busy ? t.uploading : t.makeQuoteManual}
       </button>
       {error && <p className="text-sm text-red-700">{error}</p>}
     </form>

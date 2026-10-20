@@ -5,7 +5,7 @@ import { acceptQuote } from "@/app/quotes-actions";
 import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
 import { euro } from "@/lib/orders";
-import { lineTotal, quoteTotals, type Quote } from "@/lib/quotes";
+import { dutchToday, lineTotal, quoteTotals, type Quote } from "@/lib/quotes";
 import { createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
   const { data: worker } = await admin.from("profiles").select("*").eq("id", quote.user_id).single<Profile>();
   const sum = quoteTotals(quote.lines);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dutchToday();
   const expired = !!quote.valid_until && quote.valid_until < today;
   const company = worker?.company_name || worker?.full_name || "";
 
@@ -148,7 +148,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
       <section className="rounded-2xl border border-slate-200 bg-white p-5 print:hidden">
         {quote.status === "accepted" ? (
           <p className="text-green-800">
-            ✓ Akkoord gegeven door {quote.accepted_name}
+            ✓ Akkoord gegeven{quote.accepted_name ? ` door ${quote.accepted_name}` : ""}
             {quote.accepted_at ? ` op ${date(quote.accepted_at)}` : ""}.
           </p>
         ) : quote.status === "declined" ? (

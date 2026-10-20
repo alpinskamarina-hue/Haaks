@@ -19,12 +19,12 @@ export function LeadCard({ lead, t, lang }: { lead: Lead; t: Dict; lang: string 
             </span>
           )}
         </div>
-        <p className="mt-2 font-semibold">{lead.title ?? lead.raw_text.slice(0, 80)}</p>
+        <p className="mt-2 break-words font-semibold">{lead.title || lead.raw_text.slice(0, 80) || t.leadScreenshot}</p>
         <p className="text-sm text-slate-500">
           {[lead.city, lead.trade, lead.timing].filter(Boolean).join(" · ") ||
             (lead.ai_status === "skipped" ? t.leadNotAnalyzed : "—")}
         </p>
-        {lead.summary && <p className="mt-2 line-clamp-2 text-sm text-slate-700">{lead.summary}</p>}
+        {lead.summary && <p className="mt-2 line-clamp-2 break-words text-sm text-slate-700">{lead.summary}</p>}
       </Link>
     </li>
   );

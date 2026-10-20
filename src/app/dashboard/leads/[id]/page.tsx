@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteLead, leadToQuote, setLeadStatus } from "@/app/leads-actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { emailLink, scoreColor, SOURCE_LABELS, whatsappLink, type Lead } from "@/lib/leads";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
@@ -42,7 +44,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             </a>
           )}
         </div>
-        <h1 className="mt-2 text-2xl font-bold">{lead.title ?? t.leadsTitle}</h1>
+        <h1 className="mt-2 break-words text-2xl font-bold">{lead.title || lead.raw_text.slice(0, 80) || t.leadsTitle}</h1>
         {lead.match_score !== null && (
           <p className="mt-2 flex items-start gap-2 text-sm">
             <span className={`rounded-full px-2 py-0.5 font-semibold ${scoreColor(lead.match_score)}`}>
@@ -51,8 +53,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             <span className="text-slate-600">{lead.match_reason}</span>
           </p>
         )}
-        {lead.summary && <p className="mt-3 text-slate-800">{lead.summary}</p>}
-        {lead.ai_status === "skipped" && <p className="mt-3 text-sm text-amber-700">{t.aiUnavailable}</p>}
+        {lead.summary && <p className="mt-3 break-words text-slate-800">{lead.summary}</p>}
+        {lead.ai_status === "skipped" && <p className="mt-3 text-sm text-amber-700">{t.leadAiOff}</p>}
         {lead.ai_status === "failed" && <p className="mt-3 text-sm text-amber-700">{t.leadFailed}</p>}
         {lead.is_job === false && <p className="mt-3 text-sm text-slate-600">{t.leadNotJob}</p>}
 
@@ -62,16 +64,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             .map(([k, v]) => (
               <div key={k}>
                 <dt className="text-xs text-slate-500">{k}</dt>
-                <dd className="font-medium">{v}</dd>
+                <dd className="break-words font-medium">{v}</dd>
               </div>
             ))}
         </dl>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <form action={leadToQuote.bind(null, lead.id)}>
-            <button className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+            <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
               {t.leadMakeQuote}
-            </button>
+            </SubmitButton>
           </form>
           {lead.status !== "replied" && (
             <form action={setLeadStatus.bind(null, lead.id, "replied")}>
@@ -88,7 +90,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             </form>
           )}
           <form action={deleteLead.bind(null, lead.id)}>
-            <button className={`${button} text-red-700`}>{t.delete}</button>
+            <ConfirmButton message={t.confirmDeleteLead} className={`${button} text-red-700`}>
+              {t.delete}
+            </ConfirmButton>
           </form>
         </div>
       </section>
@@ -97,7 +101,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         <section className={card}>
           <h2 className="font-semibold">{t.leadReplyTitle}</h2>
           <p className="mb-3 text-sm text-slate-600">{t.leadReplyHint}</p>
-          <p className="whitespace-pre-line rounded-xl bg-slate-50 p-4 text-sm">{lead.reply_nl}</p>
+          <p className="whitespace-pre-line break-words rounded-xl bg-slate-50 p-4 text-sm">{lead.reply_nl}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <CopyButton value={lead.reply_nl} label={t.copyText} />
             {wa && (
@@ -115,9 +119,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       )}
 
       <section className={card}>
-        <details>
+        {/* Without AI the original post is all there is, so it starts open. */}
+        <details open={lead.ai_status !== "done"}>
           <summary className="cursor-pointer font-semibold">{t.leadOriginal}</summary>
-          {lead.raw_text && <p className="mt-3 whitespace-pre-line text-sm text-slate-700">{lead.raw_text}</p>}
+          {lead.raw_text && (
+            <p className="mt-3 whitespace-pre-line break-words text-sm text-slate-700">{lead.raw_text}</p>
+          )}
           {image && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" className="mt-3 max-h-96 rounded-lg" />

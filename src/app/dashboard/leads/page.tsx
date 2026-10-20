@@ -2,6 +2,7 @@ import Link from "next/link";
 import { saveLeadRegions } from "@/app/leads-actions";
 import { LeadCard } from "@/components/LeadCard";
 import { LeadForm } from "@/components/LeadForm";
+import { claudeEnabled } from "@/lib/env";
 import type { Lead } from "@/lib/leads";
 import { loadWorkspace } from "@/lib/workspace";
 
@@ -46,8 +47,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <div className="space-y-5">
           <section className={card}>
             <h2 className="mb-1 font-semibold">{t.leadPasteTitle}</h2>
-            <p className="mb-3 text-sm text-slate-600">{t.leadPasteHint}</p>
-            <LeadForm t={t} userId={user.id} />
+            <p className="mb-3 text-sm text-slate-600">{claudeEnabled() ? t.leadPasteHint : t.leadPasteHintNoAi}</p>
+            <LeadForm t={t} userId={user.id} aiEnabled={claudeEnabled()} />
           </section>
 
           <section className={card}>

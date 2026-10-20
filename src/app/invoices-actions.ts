@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { cleanDate } from "@/lib/extract";
 import { nextInvoiceNumber, VAT_MODES, type Invoice, type VatMode } from "@/lib/invoices";
 import type { Receipt } from "@/lib/orders";
-import { addDays, cleanLines, short, type Quote, type QuoteLine } from "@/lib/quotes";
+import { addDays, cleanLines, roundCents, short, type Quote, type QuoteLine } from "@/lib/quotes";
 
 function refresh() {
   revalidatePath("/dashboard/invoices", "layout");
@@ -22,6 +22,12 @@ export async function createInvoice(formData: FormData) {
   const orderId = short(formData.get("order_id"), 64) || null;
   const quoteId = short(formData.get("quote_id"), 64) || null;
   const withReceipts = formData.get("with_receipts") === "on";
+
+  // One invoice per accepted quote: pressing the button again opens it.
+  if (quoteId) {
+    const { data: existing } = await supabase.from("invoices").select("id").eq("quote_id", quoteId).limit(1).maybeSingle();
+    if (existing) redirect(`/dashboard/invoices/${existing.id}`);
+  }
 
   const [{ data: profile }, { data: numbers }] = await Promise.all([
     supabase.from("profiles").select("hourly_rate").eq("id", user.id).single(),
@@ -68,7 +74,7 @@ export async function createInvoice(formData: FormData) {
         description: ["Materialen", r.store_name, r.purchased_on].filter(Boolean).join(" "),
         quantity: 1,
         unit: "stuk",
-        unit_price: Math.round(excl * 100) / 100,
+        unit_price: roundCents(excl),
         vat_rate: 21,
       });
     }
@@ -133,7 +139,7 @@ export async function saveInvoice(
 ) {
   const { supabase } = await requireUser();
   const mode: VatMode = (VAT_MODES as readonly string[]).includes(data.vat_mode) ? data.vat_mode : "normal";
-  await supabase
+  const { error } = await supabase
     .from("invoices")
     .update({
       number: short(data.number, 40) || "—",
@@ -151,7 +157,13 @@ export async function saveInvoice(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
+  if (error) {
+    console.error("Invoice save failed", error);
+    // 23505: this number is already used by another invoice.
+    return { ok: false as const, duplicate: error.code === "23505" };
+  }
   refresh();
+  return { ok: true as const };
 }
 
 export async function setInvoiceStatus(id: string, status: Invoice["status"]) {
@@ -168,9 +180,10 @@ export async function setInvoiceStatus(id: string, status: Invoice["status"]) {
   refresh();
 }
 
+// Only drafts: a sent or paid invoice must be kept (and its number stays used).
 export async function deleteInvoice(id: string) {
   const { supabase } = await requireUser();
-  await supabase.from("invoices").delete().eq("id", id);
+  await supabase.from("invoices").delete().eq("id", id).eq("status", "draft");
   refresh();
   redirect("/dashboard/invoices");
 }
