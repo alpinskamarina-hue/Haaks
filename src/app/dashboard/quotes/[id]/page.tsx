@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createInvoice } from "@/app/invoices-actions";
 import { deleteQuote, setQuoteStatus } from "@/app/quotes-actions";
+import { SubmitButton } from "@/components/SubmitButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { QuoteEditor } from "@/components/QuoteEditor";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
@@ -80,19 +82,27 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           )}
           {quote.status !== "draft" && (
             <form action={setQuoteStatus.bind(null, quote.id, "draft")}>
-              <button className={button}>{t.backToDraft}</button>
+              {quote.status === "accepted" ? (
+                <ConfirmButton message={t.confirmBackToDraft} className={button}>
+                  {t.backToDraft}
+                </ConfirmButton>
+              ) : (
+                <button className={button}>{t.backToDraft}</button>
+              )}
             </form>
           )}
           {quote.status === "accepted" && (
             <form action={createInvoice}>
               <input type="hidden" name="quote_id" value={quote.id} />
-              <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+              <SubmitButton className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 {t.makeInvoice}
-              </button>
+              </SubmitButton>
             </form>
           )}
           <form action={deleteQuote.bind(null, quote.id)}>
-            <button className={`${button} text-red-700`}>{t.delete}</button>
+            <ConfirmButton message={t.confirmDeleteQuote} className={`${button} text-red-700`}>
+              {t.delete}
+            </ConfirmButton>
           </form>
         </div>
       </section>

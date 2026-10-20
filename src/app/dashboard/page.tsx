@@ -5,7 +5,7 @@ import { readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import type { Lead } from "@/lib/leads";
 import { euro, inQuarter, quarterOf, totals, type Order, type Receipt } from "@/lib/orders";
-import type { Quote } from "@/lib/quotes";
+import { dutchToday, type Quote } from "@/lib/quotes";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -14,11 +14,11 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 export default async function Home() {
   const { supabase, user, profile, lang, t } = await loadWorkspace();
 
-  const [{ data: leadRows }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }] =
+  const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }] =
     await Promise.all([
       supabase
         .from("leads")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("user_id", user.id)
         .eq("status", "new")
         .order("match_score", { ascending: false, nullsFirst: false })
@@ -40,7 +40,7 @@ export default async function Home() {
   const leads = leadRows ?? [];
   const waitingQuotes = (quoteRows ?? []).filter((q) => q.status === "sent").length;
   const unpaid = (invoiceRows ?? []).filter((i) => i.status === "sent");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dutchToday();
   const overdue = unpaid.filter((i) => i.due_date && i.due_date < today).length;
   const quarter = quarterOf(new Date());
   const vatPaid = totals((receiptRows ?? []).filter((r) => inQuarter(r, quarter))).vat;
@@ -49,7 +49,7 @@ export default async function Home() {
   const firstName = profile.full_name?.split(" ")[0];
 
   const stats: { href: string; label: string; value: string; note?: string; warn?: boolean }[] = [
-    { href: "/dashboard/leads", label: t.homeNewLeads, value: String(leads.length) },
+    { href: "/dashboard/leads", label: t.homeNewLeads, value: String(newLeadCount ?? leads.length) },
     { href: "/dashboard/quotes", label: t.homeQuotesWaiting, value: String(waitingQuotes) },
     {
       href: "/dashboard/invoices",
@@ -79,7 +79,7 @@ export default async function Home() {
         {stats.map((s) => (
           <Link key={s.label} href={s.href} className={`${card} !p-4 hover:border-orange-300`}>
             <p className="text-xs font-medium text-slate-500">{s.label}</p>
-            <p className="mt-1 text-2xl font-bold">{s.value}</p>
+            <p className="mt-1 break-words text-xl font-bold sm:text-2xl">{s.value}</p>
             {s.note && <p className={`text-xs ${s.warn ? "text-red-700" : "text-slate-500"}`}>{s.note}</p>}
           </Link>
         ))}

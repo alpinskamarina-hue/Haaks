@@ -50,3 +50,29 @@ export function scoreColor(score: number | null) {
   if (score >= 40) return "bg-amber-100 text-amber-800";
   return "bg-slate-100 text-slate-600";
 }
+
+// Without AI: pick a phone number or e-mail address out of the pasted post,
+// so the WhatsApp and e-mail buttons still work.
+export function findContact(text: string) {
+  const email = text.match(/[^\s@<>()]+@[^\s@<>()]+\.[a-z]{2,}/i)?.[0];
+  if (email) return email;
+  const phone = text.match(/(?:\+31|0031|0)[\s-]?6(?:[\s-]?\d){8}/)?.[0];
+  return phone ?? null;
+}
+
+// A short Dutch reply the worker can send as is, when AI did not write one.
+export function replyTemplate(worker: { name: string | null; passportUrl: string | null }) {
+  return [
+    "Goedendag,",
+    "",
+    "Ik zag uw bericht over de klus. Ik ben zelfstandig vakman (ZZP) en help u graag.",
+    worker.passportUrl ? `Mijn KvK, VCA en verzekering kunt u hier bekijken: ${worker.passportUrl}` : null,
+    "Wanneer kan ik langskomen om de klus te bekijken? Daarna stuur ik u een vrijblijvende offerte.",
+    "",
+    "Met vriendelijke groet,",
+    worker.name ?? "",
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
+    .trim();
+}

@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { analyzeLead } from "@/lib/extract";
-import { isLang, type Lang } from "@/lib/i18n";
+import { getDict, isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
-import type { Lead } from "@/lib/leads";
+import { findContact, replyTemplate, type Lead } from "@/lib/leads";
 import { PHOTO_MIME, short } from "@/lib/quotes";
 import { claudeEnabled } from "@/lib/env";
 
@@ -15,26 +15,26 @@ function refresh() {
 }
 
 // The worker pastes a post from a group or chat (text and/or screenshot); Claude reads it.
-export async function addLead(input: { text: string; image: { path: string; mimeType: string } | null }) {
+export async function addLead(input: {
+  text: string;
+  image: { path: string; mimeType: string } | null;
+}): Promise<{ id: string } | { error: true }> {
   const { supabase, user } = await requireUser();
   const text = short(input.text, 8000);
   const image =
     input.image && input.image.path.startsWith(`${user.id}/leads/`) && PHOTO_MIME.includes(input.image.mimeType)
       ? input.image
       : null;
-  if (!text && !image) throw new Error("Empty lead");
+  if (!text && !image) return { error: true };
 
   const { data: lead, error } = await supabase
     .from("leads")
     .insert({ user_id: user.id, source: "manual", raw_text: text, image_path: image?.path ?? null })
     .select("id")
     .single();
-  if (error || !lead) throw new Error(error?.message ?? "Insert failed");
-
-  if (!claudeEnabled()) {
-    await supabase.from("leads").update({ ai_status: "skipped" }).eq("id", lead.id);
-    refresh();
-    return { id: lead.id };
+  if (error || !lead) {
+    console.error("Lead insert failed", error);
+    return { error: true };
   }
 
   const { data: profile } = await supabase
@@ -43,6 +43,22 @@ export async function addLead(input: { text: string; image: { path: string; mime
     .eq("id", user.id)
     .single();
   const lang: Lang = isLang(profile?.language) ? profile.language : "en";
+  const passportUrl = profile?.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
+
+  if (!claudeEnabled()) {
+    // No AI yet: still give the worker a contact and a ready Dutch reply.
+    await supabase
+      .from("leads")
+      .update({
+        ai_status: "skipped",
+        title: short(text.split("\n").find((line) => line.trim()), 80) || null,
+        client_contact: findContact(text),
+        reply_nl: replyTemplate({ name: profile?.company_name || profile?.full_name || null, passportUrl }),
+      })
+      .eq("id", lead.id);
+    refresh();
+    return { id: lead.id };
+  }
 
   try {
     let file = null;
@@ -60,7 +76,7 @@ export async function addLead(input: { text: string; image: { path: string; mime
         city: profile?.city ?? null,
         regions: profile?.lead_regions ?? null,
       },
-      passportUrl: profile?.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null,
+      passportUrl,
       lang,
     });
     if (!result) throw new Error("No result");
@@ -107,21 +123,24 @@ export async function leadToQuote(id: string) {
 
   let orderId = lead.order_id;
   if (!orderId) {
-    const { data: order } = await supabase
+    const { data: profile } = await supabase.from("profiles").select("language").eq("id", user.id).single();
+    const t = getDict(isLang(profile?.language) ? profile.language : "en");
+    const { data: order, error } = await supabase
       .from("orders")
       .insert({
         user_id: user.id,
-        title: short(lead.title, 200) || "Nieuwe opdracht",
+        title: short(lead.title, 200) || t.newOrder,
         client_name: lead.client_name,
         address: lead.city,
       })
       .select("id")
       .single();
-    orderId = order?.id ?? null;
+    if (error || !order) throw new Error(error?.message ?? "Order insert failed");
+    orderId = order.id;
   }
   await supabase.from("leads").update({ status: "won", order_id: orderId }).eq("id", id);
   refresh();
-  redirect(orderId ? `/dashboard/quotes?order=${orderId}` : "/dashboard/quotes");
+  redirect(`/dashboard/quotes?order=${orderId}`);
 }
 
 export async function saveLeadRegions(formData: FormData) {

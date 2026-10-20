@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { claudeEnabled } from "@/lib/env";
 import { QuoteRequestForm } from "@/components/QuoteRequestForm";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { euro } from "@/lib/orders";
@@ -28,7 +29,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   const orders = openRows ?? [];
   const quotes = quoteRows ?? [];
   const defaultOrderId =
-    (order && orders.some((o) => o.id === order) ? order : null) ?? profile.current_order_id ?? null;
+    [order, profile.current_order_id].find((id) => id && orders.some((o) => o.id === id)) ?? null;
   const rate = (profile as { hourly_rate?: number | string | null }).hourly_rate;
 
   return (
@@ -42,6 +43,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
           orders={orders}
           defaultOrderId={defaultOrderId}
           defaultRate={rate ? Number(rate) : null}
+          aiEnabled={claudeEnabled()}
         />
       </section>
 

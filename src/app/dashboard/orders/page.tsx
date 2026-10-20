@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createOrder, setCurrentOrder } from "@/app/orders-actions";
 import { ReceiptCard } from "@/components/ReceiptCard";
+import { SubmitButton } from "@/components/SubmitButton";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
+import { claudeEnabled } from "@/lib/env";
 import { euro, inQuarter, quarterOf, totals, type Order, type Receipt } from "@/lib/orders";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
@@ -74,6 +76,7 @@ export default async function OrdersPage() {
         <h2 className="mb-3 text-xl font-semibold">{t.addReceipts}</h2>
         {!currentId && <p className="mb-3 text-sm text-slate-600">{t.noCurrentOrder}</p>}
         <ReceiptUpload
+          aiEnabled={claudeEnabled()}
           t={t}
           userId={user.id}
           orders={openOrders.map((o) => ({ id: o.id, title: o.title }))}
@@ -108,7 +111,9 @@ export default async function OrdersPage() {
               {t.address}
               <input name="address" className={input} />
             </label>
-            <button className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white">{t.createOrder}</button>
+            <SubmitButton className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-60">
+              {t.createOrder}
+            </SubmitButton>
           </form>
         </details>
         {closedOrders.length > 0 && (

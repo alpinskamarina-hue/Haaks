@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Dict } from "@/lib/i18n";
 import { euro } from "@/lib/orders";
-import { LINE_KINDS, lineTotal, VAT_RATES, type QuoteLine } from "@/lib/quotes";
+import { LINE_KINDS, lineTotal, parseAmount, VAT_RATES, type QuoteLine } from "@/lib/quotes";
 
 // Editable work/material lines, shared by quotes and invoices.
 export function LinesEditor({
@@ -24,7 +24,7 @@ export function LinesEditor({
 
   const kindLabel = { labour: t.kindLabour, material: t.kindMaterial, other: t.kindOther };
   const small = "w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm";
-  const num = (v: string) => Number(v.replace(",", ".")) || 0;
+  const num = (v: string) => parseAmount(v) || 0;
 
   return (
     <div>

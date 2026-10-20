@@ -1,4 +1,5 @@
 import { deleteReceipt, moveReceipt, updateReceipt } from "@/app/orders-actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import type { Dict } from "@/lib/i18n";
 import { euro, type Order, type Receipt } from "@/lib/orders";
 
@@ -15,11 +16,15 @@ export function ReceiptCard({
   fileUrl?: string;
   t: Dict;
 }) {
+  // Without AI reading the receipt, the amounts are only known once the
+  // worker types them, so the editor starts open with a hint.
+  const needsAmounts =
+    (receipt.ai_status === "skipped" || receipt.ai_status === "failed") && receipt.total_incl_vat === null;
   return (
     <li className="rounded-xl border border-slate-200 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-semibold">{receipt.store_name ?? receipt.file_name}</p>
+          <p className="break-words font-semibold">{receipt.store_name ?? receipt.file_name}</p>
           <p className="text-sm text-slate-600">
             {receipt.purchased_on ?? "—"}
             {receipt.store_city ? ` · ${receipt.store_city}` : ""}
@@ -65,7 +70,8 @@ export function ReceiptCard({
         </details>
       )}
 
-      <details className="mt-2">
+      {needsAmounts && <p className="mt-2 text-sm text-amber-800">{t.fillAmountsHint}</p>}
+      <details className="mt-2" open={needsAmounts}>
         <summary className="cursor-pointer text-sm text-slate-600">{t.editDates}</summary>
         <form action={updateReceipt} className="mt-2 grid grid-cols-2 gap-2">
           <input type="hidden" name="id" value={receipt.id} />
@@ -112,7 +118,9 @@ export function ReceiptCard({
           </a>
         )}
         <form action={deleteReceipt.bind(null, receipt.id)}>
-          <button className="rounded-lg border border-red-200 px-3 py-1 text-red-700">{t.delete}</button>
+          <ConfirmButton message={t.confirmDeleteReceipt} className="rounded-lg border border-red-200 px-3 py-1 text-red-700">
+            {t.delete}
+          </ConfirmButton>
         </form>
       </div>
     </li>

@@ -6,6 +6,7 @@ import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
+import { claudeEnabled } from "@/lib/env";
 import { euro, totals, type Order, type Receipt } from "@/lib/orders";
 import { quoteTotals, type Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
@@ -153,6 +154,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <section className={card}>
           <h2 className="mb-3 text-xl font-semibold">{t.addReceipts}</h2>
           <ReceiptUpload
+            aiEnabled={claudeEnabled()}
             t={t}
             userId={user.id}
             orders={[{ id: order.id, title: order.title }]}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteInvoice, setInvoiceStatus } from "@/app/invoices-actions";
 import { CopyButton } from "@/components/CopyButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { InvoiceEditor } from "@/components/InvoiceEditor";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import type { Invoice } from "@/lib/invoices";
@@ -97,9 +98,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <button className={button}>{t.backToDraft}</button>
             </form>
           )}
-          <form action={deleteInvoice.bind(null, invoice.id)}>
-            <button className={`${button} text-red-700`}>{t.delete}</button>
-          </form>
+          {/* A sent or paid invoice is kept: its number must stay in the sequence. */}
+          {invoice.status === "draft" && (
+            <form action={deleteInvoice.bind(null, invoice.id)}>
+              <ConfirmButton message={t.confirmDeleteInvoice} className={`${button} text-red-700`}>
+                {t.delete}
+              </ConfirmButton>
+            </form>
+          )}
         </div>
       </section>
 

@@ -1,4 +1,4 @@
-import { quoteTotals, type QuoteLine } from "./quotes";
+import { dutchToday, quoteTotals, type QuoteLine } from "./quotes";
 
 export const VAT_MODES = ["normal", "reverse", "kor"] as const;
 export type VatMode = (typeof VAT_MODES)[number];
@@ -35,7 +35,7 @@ export function invoiceTotals(lines: QuoteLine[], mode: VatMode) {
 }
 
 // Next number in the worker's own sequence: 2026-009 after 2026-008, 2026-10 after 2026-09.
-export function nextInvoiceNumber(existing: string[], year = new Date().getFullYear()) {
+export function nextInvoiceNumber(existing: string[], year = Number(dutchToday().slice(0, 4))) {
   let max = 0;
   let width = 3;
   for (const number of existing) {

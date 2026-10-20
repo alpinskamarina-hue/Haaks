@@ -16,12 +16,11 @@ import {
   readiness,
   REQUIREMENTS,
   type DocumentRow,
-  type Profile,
 } from "@/lib/documents";
 import { getDict, isLang, type Dict } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
-import { signedUrls } from "@/lib/workspace";
+import { ensureProfile, signedUrls } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 const input = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base";
@@ -34,7 +33,7 @@ export default async function Dashboard() {
   if (!user) redirect("/");
 
   const [{ data: profile }, { data: docs }, { count: views }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
+    ensureProfile(supabase, user.id).then((data) => ({ data })),
     supabase
       .from("documents")
       .select("*")
@@ -46,7 +45,7 @@ export default async function Dashboard() {
       .select("id", { count: "exact", head: true })
       .eq("profile_id", user.id),
   ]);
-  if (!profile) redirect("/");
+  if (!profile) throw new Error("Profile not found");
 
   const lang = isLang(profile.language) ? profile.language : "en";
   const t = getDict(lang);

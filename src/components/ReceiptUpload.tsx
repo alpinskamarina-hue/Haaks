@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addReceipt } from "@/app/orders-actions";
-import { ACCEPTED_MIME, MAX_FILE_BYTES } from "@/lib/documents";
 import type { Dict } from "@/lib/i18n";
+import { prepareUpload } from "@/lib/prepare-upload";
 import { createClient } from "@/lib/supabase/client";
 
 type OrderOption = { id: string; title: string };
@@ -16,12 +16,14 @@ export function ReceiptUpload({
   orders,
   defaultOrderId,
   fixedOrder = false,
+  aiEnabled = true,
 }: {
   t: Dict;
   userId: string;
   orders: OrderOption[];
   defaultOrderId: string | null;
   fixedOrder?: boolean;
+  aiEnabled?: boolean;
 }) {
   const router = useRouter();
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -39,23 +41,25 @@ export function ReceiptUpload({
     const failed: string[] = [];
 
     for (const [i, file] of files.entries()) {
-      if (file.size > MAX_FILE_BYTES) {
-        failed.push(`${file.name}: ${t.fileTooBig}`);
-      } else if (!ACCEPTED_MIME.includes(file.type)) {
-        failed.push(`${file.name}: JPG, PNG, WEBP, PDF`);
+      const prepared = await prepareUpload(file);
+      if ("error" in prepared) {
+        failed.push(`${file.name}: ${prepared.error === "too_big" ? t.fileTooBig : t.unsupportedFile}`);
       } else {
-        const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-        const path = `${userId}/receipts/${crypto.randomUUID()}.${ext}`;
+        const path = `${userId}/receipts/${crypto.randomUUID()}.${prepared.ext}`;
         const { error } = await supabase.storage
           .from("documents")
-          .upload(path, file, { contentType: file.type });
+          .upload(path, prepared.file, { contentType: prepared.mimeType });
         if (error) {
-          failed.push(`${file.name}: ${error.message}`);
+          console.error(error);
+          failed.push(`${file.name}: ${t.uploadFailed}`);
         } else {
           try {
-            await addReceipt({ path, fileName: file.name, mimeType: file.type, orderId: orderId || null });
+            await addReceipt({ path, fileName: file.name, mimeType: prepared.mimeType, orderId: orderId || null });
           } catch (err) {
-            failed.push(`${file.name}: ${err instanceof Error ? err.message : String(err)}`);
+            console.error(err);
+            // Do not leave a file in storage that no receipt points to.
+            await supabase.storage.from("documents").remove([path]);
+            failed.push(`${file.name}: ${t.uploadFailed}`);
           }
         }
       }
@@ -124,14 +128,14 @@ export function ReceiptUpload({
         ref={filesRef}
         type="file"
         multiple
-        accept={ACCEPTED_MIME.join(",")}
+        accept="application/pdf,image/*,.heic,.heif"
         className="hidden"
         onChange={(e) => upload(e.target.files)}
       />
 
       {progress && (
         <p className="text-sm text-slate-700">
-          {t.readingReceipts.replace("{n}", String(progress.done)).replace("{m}", String(progress.total))}
+          {(aiEnabled ? t.readingReceipts : t.uploadingReceipts).replace("{n}", String(progress.done)).replace("{m}", String(progress.total))}
         </p>
       )}
       {errors.map((e) => (
