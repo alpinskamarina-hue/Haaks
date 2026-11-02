@@ -81,3 +81,24 @@ export async function removeWorkPhoto(formData: FormData) {
   if (path.startsWith(`${user.id}/work/`)) await supabase.storage.from("documents").remove([path]);
   revalidatePath("/dashboard", "layout");
 }
+
+// Called after the browser has uploaded the photo to <uid>/avatar/. Replaces the old one.
+export async function setAvatar(path: string) {
+  const { supabase, user } = await requireUser();
+  if (!path.startsWith(`${user.id}/avatar/`) || path.includes("..")) throw new Error("Invalid path");
+  const { data } = await supabase.from("profiles").select("avatar_path").eq("id", user.id).single<{ avatar_path: string | null }>();
+  const { error } = await supabase.from("profiles").update({ avatar_path: path }).eq("id", user.id);
+  if (error) throw new Error(error.message);
+  const old = data?.avatar_path;
+  if (old && old !== path && old.startsWith(`${user.id}/avatar/`)) await supabase.storage.from("documents").remove([old]);
+  revalidatePath("/dashboard", "layout");
+}
+
+export async function removeAvatar() {
+  const { supabase, user } = await requireUser();
+  const { data } = await supabase.from("profiles").select("avatar_path").eq("id", user.id).single<{ avatar_path: string | null }>();
+  await supabase.from("profiles").update({ avatar_path: null }).eq("id", user.id);
+  const old = data?.avatar_path;
+  if (old?.startsWith(`${user.id}/avatar/`)) await supabase.storage.from("documents").remove([old]);
+  revalidatePath("/dashboard", "layout");
+}

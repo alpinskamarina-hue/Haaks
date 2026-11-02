@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { saveRate, setAvailability } from "@/app/profile-actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { WorkPhotos } from "@/components/WorkPhotos";
 import { docStatus, type DocumentRow } from "@/lib/documents";
 import { AVAILABILITY, completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
@@ -34,7 +35,7 @@ export default async function MyProfile() {
   const docs = (docRows ?? []).filter((d) => docStatus(d) !== "expired");
   const score = completeness(p, docs);
   const d = describeProfile(p, w, lang);
-  const urls = await signedUrls(supabase, p.work_photos);
+  const urls = await signedUrls(supabase, [...p.work_photos, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
   const name = profile.full_name || profile.company_name || user.email || "";
   const initials = name
     .split(/[\s@]+/)
@@ -65,10 +66,14 @@ export default async function MyProfile() {
       <h1 className="text-2xl font-bold">{w.profileTitle}</h1>
 
       <section className={card}>
-        <div className="flex items-center gap-3">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-orange-100 text-xl font-bold text-orange-700">
-            {initials}
-          </div>
+        <div className="flex items-center gap-4">
+          <AvatarUpload
+            t={t}
+            w={w}
+            userId={user.id}
+            url={profile.avatar_path ? (urls.get(profile.avatar_path) ?? null) : null}
+            initials={initials}
+          />
           <div className="min-w-0">
             <p className="truncate text-lg font-bold">{name}</p>
             <p className="text-sm text-slate-600">{d.trades.map((x) => x.name).join(" · ")}</p>
