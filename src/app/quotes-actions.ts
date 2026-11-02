@@ -3,37 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { cleanDate, draftQuote } from "@/lib/extract";
-import { getDict, isLang, type Lang } from "@/lib/i18n";
-import {
-  addDays,
-  dutchToday,
-  cleanLines,
-  DEFAULT_TERMS_NL,
-  MAX_QUOTE_PHOTOS,
-  money,
-  PHOTO_MIME,
-  short,
-  type Quote,
-  type QuoteLine,
-} from "@/lib/quotes";
+import { cleanDate } from "@/lib/extract";
+import { isLang, type Lang } from "@/lib/i18n";
+import { createQuoteDraft } from "@/lib/quote-draft";
+import { cleanLines, dutchToday, MAX_QUOTE_PHOTOS, money, PHOTO_MIME, short, type Quote } from "@/lib/quotes";
 import { createServerAccountClient } from "@/lib/supabase/server";
-import { claudeEnabled } from "@/lib/env";
-
-type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
 function refresh() {
   revalidatePath("/dashboard/quotes", "layout");
   revalidatePath("/dashboard/orders", "layout");
-}
-
-// OFF-2026-001, OFF-2026-002, ... per worker and year.
-async function nextNumber(supabase: Supabase, userId: string) {
-  const year = dutchToday().slice(0, 4);
-  const { data } = await supabase.from("quotes").select("number").eq("user_id", userId).like("number", `OFF-${year}-%`);
-  // Highest number + 1, so a deleted quote does not make the next number repeat.
-  const max = Math.max(0, ...(data ?? []).map((q) => Number(q.number.split("-")[2]) || 0));
-  return `OFF-${year}-${String(max + 1).padStart(3, "0")}`;
 }
 
 // Called after the browser has uploaded the site photos to the user's storage folder.
@@ -60,69 +38,43 @@ export async function generateQuote(input: {
       : Promise.resolve({ data: null }),
   ]);
   const lang: Lang = isLang(profile?.language) ? profile.language : "en";
-  const t = getDict(lang);
 
   await supabase.from("profiles").update({ hourly_rate: hourlyRate || null }).eq("id", user.id);
 
-  // Without AI the worker still gets an editable quote with one labour line.
-  let draft: { title: string; intro: string | null; lines: QuoteLine[]; notes: string[] } = {
-    title: order?.title ?? "Offerte",
-    intro: null,
-    lines: [
-      { kind: "labour", description: "Arbeid", quantity: 1, unit: "uur", unit_price: hourlyRate, vat_rate: vatRate },
-    ],
-    notes: [],
-  };
-
-  if (claudeEnabled()) {
-    try {
-      const files = await Promise.all(
-        photos.map(async (p) => {
-          const { data: blob, error } = await supabase.storage.from("documents").download(p.path);
-          if (error || !blob) throw error ?? new Error("Download failed");
-          return { base64: Buffer.from(await blob.arrayBuffer()).toString("base64"), mimeType: p.mimeType };
-        }),
-      );
-      const result = await draftQuote({
-        description,
-        photos: files,
-        hourlyRate,
-        vatRate,
-        clientName: order?.client_name ?? null,
-        address: order?.address ?? null,
-        lang,
-      });
-      if (!result) throw new Error("No result");
-      draft = { title: result.title, intro: result.intro, lines: cleanLines(result.lines), notes: result.notes };
-    } catch (err) {
-      console.error("Quote draft failed", err);
-      draft.notes = [t.draftFailed];
-    }
-  }
-
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .insert({
-      user_id: user.id,
-      order_id: order?.id ?? null,
-      number: await nextNumber(supabase, user.id),
-      title: short(draft.title, 200) || "Offerte",
-      client_name: order?.client_name ?? null,
-      client_address: order?.address ?? null,
-      intro: draft.intro,
-      terms: DEFAULT_TERMS_NL,
-      lines: draft.lines,
-      work_description: description || null,
-      photo_paths: photos.map((p) => p.path),
-      ai_notes: draft.notes.map((n) => short(n, 500)).filter(Boolean),
-      valid_until: addDays(30),
-    })
-    .select("id")
-    .single();
-  if (error || !quote) throw new Error(error?.message ?? "Insert failed");
+  const id = await createQuoteDraft(supabase, user.id, lang, {
+    orderId: order?.id ?? null,
+    title: order?.title ?? null,
+    clientName: order?.client_name ?? null,
+    address: order?.address ?? null,
+    description,
+    photos: photos.map((p) => ({
+      path: p.path,
+      mimeType: p.mimeType,
+      base64: async () => {
+        const { data: blob, error } = await supabase.storage.from("documents").download(p.path);
+        if (error || !blob) throw error ?? new Error("Download failed");
+        return Buffer.from(await blob.arrayBuffer()).toString("base64");
+      },
+    })),
+    hourlyRate,
+    vatRate,
+  });
 
   refresh();
-  return { id: quote.id };
+  return { id };
+}
+
+// "Send to client" on the quote page: the worker sends the message from their own phone;
+// this only marks the quote as sent, so the client can press "Akkoord" on the link.
+export async function markQuoteSent(id: string) {
+  const { supabase } = await requireUser();
+  await supabase
+    .from("quotes")
+    .update({ status: "sent", updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "draft");
+  refresh();
+  revalidatePath("/dashboard/leads", "layout");
 }
 
 export async function saveQuote(
@@ -163,6 +115,7 @@ export async function setQuoteStatus(id: string, status: Quote["status"]) {
     })
     .eq("id", id);
   refresh();
+  revalidatePath("/dashboard/leads", "layout");
 }
 
 export async function deleteQuote(id: string) {

@@ -7,7 +7,9 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { QuoteEditor } from "@/components/QuoteEditor";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
+import { SendQuote } from "@/components/SendQuote";
 import { siteUrl } from "@/lib/lang";
+import { emailLink, quoteMessage, whatsappLink, type Lead } from "@/lib/leads";
 import type { Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
@@ -15,24 +17,45 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function QuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, lang, t } = await loadWorkspace();
+  const { supabase, profile, lang, t } = await loadWorkspace();
 
   const { data: quote } = await supabase.from("quotes").select("*").eq("id", id).maybeSingle<Quote>();
   if (!quote) notFound();
 
-  const [{ data: order }, photos] = await Promise.all([
+  const [{ data: order }, photos, { data: lead }] = await Promise.all([
     quote.order_id
       ? supabase.from("orders").select("id, title").eq("id", quote.order_id).maybeSingle()
       : Promise.resolve({ data: null }),
     signedUrls(supabase, quote.photo_paths),
+    supabase
+      .from("leads")
+      .select("id, title, client_contact, source_url")
+      .eq("quote_id", quote.id)
+      .limit(1)
+      .maybeSingle<Pick<Lead, "id" | "title" | "client_contact" | "source_url">>(),
   ]);
   const link = `${await siteUrl()}/q/${quote.public_token}`;
+  const message = quoteMessage({
+    clientName: quote.client_name,
+    title: quote.title,
+    number: quote.number,
+    link,
+    workerName: profile.full_name,
+  });
+  const contact = lead?.client_contact ?? null;
+  const subject = `Offerte ${quote.number}: ${quote.title}`;
+  const whatsapp = whatsappLink(contact, message) ?? `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const email =
+    emailLink(contact, subject, message) ?? `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
   const button = "rounded-lg border border-slate-300 px-3 py-2 text-sm";
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <Link href={order ? `/dashboard/orders/${order.id}` : "/dashboard/quotes"} className="text-sm text-slate-600 underline">
-        ← {order ? order.title : t.back}
+      <Link
+        href={order ? `/dashboard/orders/${order.id}` : lead ? `/dashboard/leads/${lead.id}` : "/dashboard/quotes"}
+        className="text-sm text-slate-600 underline"
+      >
+        ← {order ? order.title : lead ? (lead.title ?? t.leadsTitle) : t.back}
       </Link>
 
       <section className={card}>
@@ -52,24 +75,48 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           </p>
         )}
 
-        <div className="mt-4">
-          <p className="mb-1 text-sm font-medium">{t.clientLink}</p>
-          <div className="flex gap-2">
-            <input readOnly value={link} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
-            <CopyButton value={link} />
+        {quote.status !== "accepted" && (
+          <div className="mt-4 rounded-xl bg-orange-50 p-4">
+            <h2 className="font-semibold">{quote.status === "draft" ? t.sendQuoteTitle : t.sendQuoteAgain}</h2>
+            <p className="mb-3 mt-1 text-sm text-slate-700">
+              {quote.status === "draft" && <b>{t.sendQuoteCheck} </b>}
+              {t.sendQuoteHint}
+            </p>
+            <SendQuote
+              quoteId={quote.id}
+              message={message}
+              whatsapp={whatsapp}
+              email={email}
+              original={lead?.source_url ?? null}
+              labels={{
+                whatsapp: "WhatsApp",
+                email: "E-mail",
+                copy: t.copyText,
+                copied: t.sendQuoteCopied,
+                original: t.sendQuoteOriginal,
+              }}
+            />
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-slate-600">{t.sendQuotePreview}</summary>
+              <p className="mt-2 whitespace-pre-line break-words rounded-lg bg-white p-3">{message}</p>
+            </details>
           </div>
-          <p className="mt-1 text-xs text-slate-500">{t.clientLinkHint}</p>
-        </div>
+        )}
+
+        {quote.status === "accepted" && (
+          <div className="mt-4">
+            <p className="mb-1 text-sm font-medium">{t.clientLink}</p>
+            <div className="flex gap-2">
+              <input readOnly value={link} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+              <CopyButton value={link} />
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={link} target="_blank" className={button}>
             {t.openAsClient}
           </a>
-          {quote.status === "draft" && (
-            <form action={setQuoteStatus.bind(null, quote.id, "sent")}>
-              <button className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">{t.markSent}</button>
-            </form>
-          )}
           {quote.status === "sent" && (
             <>
               <form action={setQuoteStatus.bind(null, quote.id, "accepted")}>
