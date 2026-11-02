@@ -19,6 +19,8 @@ export default async function Home() {
   const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
   // First visit after sign-up: the four profile questions (they can be skipped).
   if (!worker.onboarded_at) redirect("/dashboard/onboarding");
+  // Name and phone are required; older accounts are asked for them once.
+  if (!profile.full_name?.trim() || !profile.phone?.trim()) redirect("/dashboard/onboarding?step=0&edit=1&must=1");
 
   const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }] =
     await Promise.all([

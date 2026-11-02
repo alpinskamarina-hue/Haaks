@@ -45,6 +45,8 @@ export default async function MyProfile() {
   const rate = Number(p.hourly_rate) > 0 ? Number(p.hourly_rate) : null;
 
   const rows: { label: string; value: string; href: string }[] = [
+    { label: w.rowName, value: profile.full_name ?? "", href: "?step=0" },
+    { label: w.rowPhone, value: profile.phone ?? "", href: "?step=0" },
     { label: w.rowTrades, value: d.trades.map((x) => [x.name, x.detail].filter(Boolean).join(", ")).join("\n"), href: "?step=1" },
     { label: w.rowRegion, value: d.region, href: "?step=2" },
     { label: w.rowLanguages, value: d.languages.map((x) => `${x.name} (${x.level.toLowerCase()})`).join(", "), href: "?step=3" },
