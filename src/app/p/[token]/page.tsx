@@ -13,6 +13,9 @@ import {
 } from "@/lib/documents";
 import { getPassportDict, type PassportDict } from "@/lib/i18n";
 import { createServerAccountClient } from "@/lib/supabase/server";
+import { dutchToday } from "@/lib/quotes";
+import { withDefaults, type WorkerProfile } from "@/lib/worker-profile";
+import { describeProfile, getWorkerDict, PUBLIC_PROFILE } from "@/lib/worker-profile-text";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +60,10 @@ export default async function PassportPage({
     .returns<DocumentRow[]>();
   const documents = docs ?? [];
 
-  const signed = documents.length
-    ? (
-        await admin.storage
-          .from("documents")
-          .createSignedUrls(documents.map((d) => d.file_path), SIGNED_URL_SECONDS)
-      ).data ?? []
+  const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
+  const paths = [...documents.map((d) => d.file_path), ...worker.work_photos];
+  const signed = paths.length
+    ? (await admin.storage.from("documents").createSignedUrls(paths, SIGNED_URL_SECONDS)).data ?? []
     : [];
   const urlByPath = new Map(
     signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])),
@@ -122,6 +123,8 @@ export default async function PassportPage({
         </div>
       </section>
 
+      <WorkerBlock worker={worker} lang={lang} photoUrls={worker.work_photos.flatMap((p) => urlByPath.get(p) ?? [])} />
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold">{t.documents}</h2>
         <ul className="space-y-3">
@@ -134,6 +137,95 @@ export default async function PassportPage({
       <p className="text-xs text-slate-500">{t.disclaimer}</p>
       <PublicFooter />
     </main>
+  );
+}
+
+// What the worker said about their trades, area, languages, transport and tools.
+function WorkerBlock({ worker, lang, photoUrls }: { worker: WorkerProfile; lang: "nl" | "en"; photoUrls: string[] }) {
+  const pt = PUBLIC_PROFILE[lang];
+  const d = describeProfile(worker, getWorkerDict(lang), lang);
+  const rate = Number(worker.hourly_rate) > 0 ? Number(worker.hourly_rate) : null;
+  const today = dutchToday();
+  const from = worker.available_from;
+  const availability =
+    from && from > today
+      ? pt.availableFrom.replace(
+          "{d}",
+          new Intl.DateTimeFormat(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "long", timeZone: "UTC" }).format(
+            new Date(`${from}T00:00:00Z`),
+          ),
+        )
+      : worker.available
+        ? pt.available
+        : null;
+  const transport = d.transport && worker.vehicle !== "none" && worker.licences.length
+    ? `${getWorkerDict(lang).vehicle[worker.vehicle as "car" | "van"]} · ${pt.licence.replace("{l}", worker.licences.join(", "))}`
+    : d.transport;
+  const tiles = [
+    { label: pt.region, value: d.region },
+    { label: pt.rate, value: rate ? `€ ${rate.toLocaleString("nl-NL")} / ${lang === "nl" ? "uur" : "hour"}` : "" },
+    { label: pt.transport, value: transport },
+    { label: pt.tools, value: d.tools },
+    { label: pt.team, value: d.team },
+  ].filter((x) => x.value);
+  if (!tiles.length && !d.trades.length && !d.languages.length && !photoUrls.length && !availability) return null;
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {availability && (
+        <p className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-800">
+          ● {availability}
+          {worker.availability === "part" ? ` · ${getWorkerDict(lang).availability.part.toLowerCase()}` : ""}
+        </p>
+      )}
+      {tiles.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          {tiles.map((x) => (
+            <div key={x.label} className="rounded-lg bg-slate-50 p-2.5">
+              <p className="text-xs text-slate-500">{x.label}</p>
+              <p className="font-medium">{x.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {d.trades.length > 0 && (
+        <div className="space-y-1.5 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{pt.crafts}</p>
+          {d.trades.map((x) => (
+            <div key={x.name} className="flex justify-between gap-3">
+              <span>{x.name}</span>
+              <span className="text-right font-medium">{x.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {d.languages.length > 0 && (
+        <div className="space-y-1.5 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{pt.languages}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {d.languages.map((x) => (
+              <span key={x.name} className="rounded-full border border-slate-300 px-2 py-0.5">
+                {x.name} · {x.level.toLowerCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {photoUrls.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{pt.work}</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {photoUrls.map((u) => (
+              <a key={u} href={u} target="_blank" rel="noopener" className="block aspect-square overflow-hidden rounded-lg bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={u} alt="" className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-slate-500">{pt.footnote}</p>
+    </section>
   );
 }
 
