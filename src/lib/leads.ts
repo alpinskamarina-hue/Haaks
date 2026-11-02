@@ -1,7 +1,7 @@
 export type Lead = {
   id: string;
   user_id: string;
-  source: "manual" | "telegram" | "email" | "bekendmakingen";
+  source: "manual" | "telegram" | "email" | "bekendmakingen" | "tenderned" | "haaks";
   source_name: string | null;
   source_url: string | null;
   raw_text: string;
@@ -20,6 +20,7 @@ export type Lead = {
   reply_nl: string | null;
   status: "new" | "replied" | "won" | "dismissed";
   order_id: string | null;
+  feed_item_id?: string | null;
   created_at: string;
 };
 
@@ -28,6 +29,8 @@ export const SOURCE_LABELS: Record<Lead["source"], string> = {
   telegram: "Telegram",
   email: "E-mail",
   bekendmakingen: "Omgevingsvergunning",
+  tenderned: "TenderNed",
+  haaks: "Haaks",
 };
 
 // A phone number in the contact field becomes a WhatsApp link with the reply prefilled.

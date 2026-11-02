@@ -1,0 +1,133 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { claudeEnabled } from "@/lib/env";
+import { analyzeLead } from "@/lib/extract";
+import { feedScore, feedText, tradeLabel, workerRegions, workerTrades, type FeedItem } from "@/lib/feed";
+import { isLang, type Lang } from "@/lib/i18n";
+import { siteUrl } from "@/lib/lang";
+import { replyTemplate } from "@/lib/leads";
+import { short } from "@/lib/quotes";
+
+function refresh() {
+  revalidatePath("/dashboard", "layout");
+}
+
+export async function hideFeedItem(id: string) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "hidden" });
+  refresh();
+}
+
+export async function unhideFeedItem(id: string) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("feed_actions").delete().eq("user_id", user.id).eq("item_id", id).eq("action", "hidden");
+  refresh();
+}
+
+// "Reply": the job becomes one of the worker's leads, with a Dutch reply, and the lead page opens.
+export async function takeFeedItem(id: string) {
+  const { supabase, user } = await requireUser();
+
+  const { data: existing } = await supabase
+    .from("leads")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("feed_item_id", id)
+    .maybeSingle();
+  if (existing) redirect(`/dashboard/leads/${existing.id}`);
+
+  // Through feed_for_me(), so a free worker cannot take a job that is still locked for them.
+  const { data } = await supabase.rpc("feed_for_me");
+  const item = ((data ?? []) as FeedItem[]).find((i) => i.id === id);
+  if (!item || item.locked || !item.source) return;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("language, full_name, company_name, trade, city, lead_regions, passport_token, passport_enabled")
+    .eq("id", user.id)
+    .single();
+  const lang: Lang = isLang(profile?.language) ? profile.language : "en";
+  const passportUrl = profile?.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
+  const name = profile?.company_name || profile?.full_name || null;
+  const { title, summary } = feedText(item, lang);
+  const original = [item.title, item.summary, item.city, item.timing, item.budget].filter(Boolean).join("\n");
+
+  let reply = replyTemplate({ name, passportUrl });
+  let reason: string | null = null;
+  let aiStatus: "done" | "skipped" = "skipped";
+  if (claudeEnabled()) {
+    try {
+      const result = await analyzeLead({
+        text: original,
+        image: null,
+        worker: {
+          name,
+          trade: profile?.trade ?? null,
+          city: profile?.city ?? null,
+          regions: profile?.lead_regions ?? null,
+        },
+        passportUrl,
+        lang,
+      });
+      if (result?.reply_nl) {
+        reply = result.reply_nl;
+        reason = result.match_reason;
+        aiStatus = "done";
+      }
+    } catch (err) {
+      console.error("Reply for feed job failed", err);
+    }
+  }
+
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .insert({
+      user_id: user.id,
+      source: item.source,
+      source_name: item.source_name,
+      source_url: item.source_url,
+      raw_text: short(original, 8000),
+      ai_status: aiStatus,
+      is_job: true,
+      title: short(title, 200),
+      summary,
+      trade: item.trades.map((tr) => tradeLabel(tr, lang)).join(", ") || null,
+      city: item.city,
+      client_contact: item.contact,
+      timing: item.timing,
+      match_score: feedScore(item, workerTrades(profile?.trade), workerRegions(profile?.lead_regions ?? profile?.city)),
+      match_reason: reason,
+      reply_nl: reply,
+      feed_item_id: item.id,
+    })
+    .select("id")
+    .single();
+  if (error || !lead) {
+    console.error("Lead from feed failed", error);
+    return;
+  }
+  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "taken" });
+  refresh();
+  redirect(`/dashboard/leads/${lead.id}`);
+}
+
+export async function saveFeedNotifications(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const mode = String(formData.get("feed_email") ?? "off");
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+  const allowed = profile?.plan === "pro" ? ["off", "daily", "instant"] : ["off", "daily"];
+  const email = short(formData.get("notify_email"), 200).trim();
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+  await supabase
+    .from("profiles")
+    .update({
+      feed_email: allowed.includes(mode) && (mode === "off" || validEmail || user.email) ? mode : "off",
+      notify_email: validEmail ?? user.email ?? null,
+    })
+    .eq("id", user.id);
+  refresh();
+  redirect("/dashboard/leads/feed?saved=1#notify");
+}
