@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { markQuoteSent } from "@/app/quotes-actions";
+import { WhatsAppSoon } from "@/components/WhatsAppSoon";
+import type { Lang } from "@/lib/i18n";
 
 // "Send to client": opens WhatsApp or e-mail with the Dutch message and the offer link,
 // or copies it for a Telegram post. The worker sends it; Haaks marks the offer as sent
@@ -10,14 +12,14 @@ import { markQuoteSent } from "@/app/quotes-actions";
 export function SendQuote({
   quoteId,
   message,
-  whatsapp,
   email,
   original,
   labels,
+  lang,
 }: {
+  lang: Lang;
   quoteId: string;
   message: string;
-  whatsapp: string;
   email: string;
   original: string | null;
   labels: { whatsapp: string; email: string; copy: string; copied: string; original: string };
@@ -43,11 +45,8 @@ export function SendQuote({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => open(whatsapp)} className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white">
-        {labels.whatsapp}
-      </button>
-      <button type="button" onClick={() => open(email)} className={button}>
-        {labels.email}
+      <button type="button" onClick={() => open(email)} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+        ✉ {labels.email}
       </button>
       {original && (
         <button type="button" onClick={() => copy(original)} className={button}>
@@ -57,6 +56,7 @@ export function SendQuote({
       <button type="button" onClick={() => copy()} className={button}>
         {copied ? `✓ ${labels.copied}` : `⧉ ${labels.copy}`}
       </button>
+      <WhatsAppSoon lang={lang} />
     </div>
   );
 }

@@ -9,13 +9,18 @@ import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { claudeEnabled } from "@/lib/env";
 import { euro, totals, type Order, type Receipt } from "@/lib/orders";
 import { quoteTotals, type Quote } from "@/lib/quotes";
+import { createMaterialList } from "@/app/materials-actions";
+import { SubmitButton } from "@/components/SubmitButton";
+import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
+import { getMaterialsDict } from "@/lib/materials-i18n";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user, profile, t } = await loadWorkspace();
+  const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const m = getMaterialsDict(lang);
 
   const [{ data: order }, { data: openRows }, { data: receiptRows }, { data: quoteRows }, { data: invoiceRows }] = await Promise.all([
     supabase.from("orders").select("*").eq("id", id).maybeSingle<Order>(),
@@ -45,6 +50,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       .returns<Invoice[]>(),
   ]);
   if (!order) notFound();
+  const { data: materialRows } = await supabase
+    .from("material_lists")
+    .select("*")
+    .eq("order_id", id)
+    .order("created_at", { ascending: false })
+    .returns<MaterialList[]>();
 
   const receipts = receiptRows ?? [];
   const sum = totals(receipts);
@@ -117,6 +128,37 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <span className="text-right">
                   <span className="block font-semibold">{euro(quoteTotals(q.lines).incl)}</span>
                   <QuoteStatusBadge status={q.status} t={t} />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={card}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">{m.listsTitle}</h2>
+          <form action={createMaterialList}>
+            <input type="hidden" name="order_id" value={order.id} />
+            <SubmitButton className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              + {m.newList}
+            </SubmitButton>
+          </form>
+        </div>
+        {(materialRows ?? []).length === 0 && <p className="text-slate-600">{m.listsHint}</p>}
+        <ul className="divide-y divide-slate-100">
+          {(materialRows ?? []).map((l) => (
+            <li key={l.id}>
+              <Link href={`/dashboard/materials/${l.id}`} className="flex items-center justify-between gap-3 py-2">
+                <span>
+                  <span className="block font-medium">{l.title}</span>
+                  <span className="text-sm text-slate-500">{m.items.replace("{n}", String(l.items.length))}</span>
+                </span>
+                <span className="text-right">
+                  <span className="block font-semibold">{euro(listTotal(l.items))}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[l.status]}`}>
+                    {m.status[l.status]}
+                  </span>
                 </span>
               </Link>
             </li>

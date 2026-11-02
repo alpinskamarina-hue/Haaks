@@ -5,13 +5,14 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { emailLink, scoreColor, SOURCE_LABELS, whatsappLink, type Lead } from "@/lib/leads";
+import { WhatsAppSoon } from "@/components/WhatsAppSoon";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, t } = await loadWorkspace();
+  const { supabase, lang, t } = await loadWorkspace();
   const { data: lead } = await supabase.from("leads").select("*").eq("id", id).maybeSingle<Lead>();
   if (!lead) notFound();
 
@@ -119,17 +120,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           <p className="mb-3 text-sm text-slate-600">{t.leadReplyHint}</p>
           <p className="whitespace-pre-line break-words rounded-xl bg-slate-50 p-4 text-sm">{lead.reply_nl}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <CopyButton value={lead.reply_nl} label={t.copyText} />
-            {wa && (
-              <a href={wa} target="_blank" className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white">
-                WhatsApp
-              </a>
-            )}
             {mail && (
-              <a href={mail} className={button}>
-                E-mail
+              <a href={mail} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+                ✉ E-mail
               </a>
             )}
+            <CopyButton value={lead.reply_nl} label={t.copyText} />
+            {wa && <WhatsAppSoon lang={lang} />}
           </div>
         </section>
       )}
