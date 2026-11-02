@@ -6,6 +6,9 @@ import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import type { Lead } from "@/lib/leads";
 import { euro, inQuarter, quarterOf, totals, type Order, type Receipt } from "@/lib/orders";
 import { dutchToday, type Quote } from "@/lib/quotes";
+import { redirect } from "next/navigation";
+import { completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
+import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -13,6 +16,9 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 // Home: what needs attention today across all services.
 export default async function Home() {
   const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
+  // First visit after sign-up: the four profile questions (they can be skipped).
+  if (!worker.onboarded_at) redirect("/dashboard/onboarding");
 
   const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }] =
     await Promise.all([
@@ -47,6 +53,8 @@ export default async function Home() {
   const ready = readiness(profile, docs ?? []);
   const readyCount = REQUIREMENTS.filter((r) => ready[r]).length;
   const firstName = profile.full_name?.split(" ")[0];
+  const w = getWorkerDict(lang);
+  const filled = completeness(worker, (docs ?? []).filter((d) => d.doc_type === "kvk_extract")).percent;
 
   const stats: { href: string; label: string; value: string; note?: string; warn?: boolean }[] = [
     { href: "/dashboard/leads", label: t.homeNewLeads, value: String(newLeadCount ?? leads.length) },
@@ -74,6 +82,21 @@ export default async function Home() {
         <h1 className="text-2xl font-bold">{firstName ? t.homeHello.replace("{name}", firstName) : t.navHome}</h1>
         <p className="text-slate-600">{t.homeSubtitle}</p>
       </div>
+
+      {filled < 100 && (
+        <Link
+          href="/dashboard/profile"
+          className="flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-4 hover:border-orange-300"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-800">{w.homeNudge.replace("{p}", String(filled))}</p>
+            <div className="mt-2 h-2 rounded-full bg-white">
+              <div className="h-2 rounded-full bg-orange-500" style={{ width: `${filled}%` }} />
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white">{w.homeNudgeButton}</span>
+        </Link>
+      )}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (

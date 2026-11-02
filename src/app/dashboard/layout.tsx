@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { legalSummary } from "@/lib/legal";
+import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
 
 // One cabinet for every service: sidebar on a computer, tab bar on a phone.
@@ -16,6 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq("user_id", user.id)
     .eq("status", "new");
 
+  const w = getWorkerDict(lang);
   const items: NavItem[] = [
     { href: "/dashboard", label: t.navHome, icon: "home" },
     { href: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "search", badge: newLeads ?? 0 },
@@ -23,6 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport" },
+    { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
   ];
   const name = profile.company_name || profile.full_name || user.email;
 
@@ -63,6 +66,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher current={lang} label={t.language} />
+            <Link href="/dashboard/profile" className="p-1 text-slate-500" aria-label={w.navProfile}>
+              <Icon name="user" />
+            </Link>
             <Link href="/dashboard/password" className="p-1 text-slate-500" aria-label={t.navPassword}>
               <Icon name="key" />
             </Link>
@@ -76,7 +82,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => i.href !== "/dashboard/passport")} />
+      <BottomNav items={items.filter((i) => i.href !== "/dashboard/passport" && i.href !== "/dashboard/profile")} />
     </div>
   );
 }
