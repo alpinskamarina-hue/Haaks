@@ -29,7 +29,8 @@
 - Вкладка «Лента заказов» в разделе «Поиск заказчиков» (`/dashboard/leads/feed`): заказы, которые агент собирает сам, общие для всех рабочих (таблица `feed_items`). У каждого заказа оценка, насколько он подходит рабочему по профессии и городам из профиля.
 - Бесплатный тариф видит заказ через 24 часа после публикации и без контакта и ссылки. Pro видит сразу, с контактом, и одной кнопкой получает ответ на нидерландском (заказ переходит в «Мои заявки»). Правило задержки работает в базе, в функции `feed_for_me()`, поэтому его не обойти из браузера.
 - Тариф (`profiles.plan`) меняет только Haaks: пока вручную в SQL Editor, `update profiles set plan = 'pro' where id = '…'`. Сам рабочий его поменять не может.
-- Уведомления на e-mail: рабочий выбирает «не присылать», «сводка раз в день» или «сразу» (Pro). Сводку отправляет Vercel Cron каждый день в 06:00 UTC (`vercel.json` → `/api/cron/feed-email`). Каждый заказ приходит человеку один раз. Нужны переменные `RESEND_API_KEY`, `EMAIL_FROM` (адрес на домене, подтверждённом в [Resend](https://resend.com)) и `CRON_SECRET`.
+- Уведомления на e-mail: рабочий выбирает «не присылать», «сводка раз в день» или «сразу» (Pro). Сводку отправляет Vercel Cron каждый день в 06:00 UTC (`vercel.json` → `/api/cron/feed-notify`). Каждый заказ приходит человеку один раз. Нужны переменные `RESEND_API_KEY`, `EMAIL_FROM` (адрес на домене, подтверждённом в [Resend](https://resend.com)) и `CRON_SECRET`.
+- Уведомления в Telegram (Pro): рабочий жмёт «Подключить Telegram», открывается бот Haaks с одноразовым кодом, бот привязывает чат (`/api/telegram/webhook`, функции `link_telegram` / `unlink_telegram`). Новые подходящие заказы приходят в бот с контактами; до 3 заказов отдельными сообщениями, больше одним списком. `/stop` в боте отключает. Нужна переменная `TELEGRAM_BOT_TOKEN` (бот создаётся в @BotFather); вебхук ставится сам.
 - Пока в ленте 7 заказов-примеров с пометкой «пример». Когда подключим настоящие источники, их удаляем: `delete from feed_items where is_demo;`.
 - План и ТЗ: `plans/lenta-zakazov-tz.md` в файлах проекта.
 
@@ -88,7 +89,7 @@ npm run dev
 - `src/app/dashboard/layout.tsx` — общий каркас кабинета (меню), `src/app/dashboard/page.tsx` — главная.
 - `src/app/dashboard/passport/page.tsx` — паспорт и документы.
 - `src/app/dashboard/leads/` и `src/app/leads-actions.ts` — поиск заказчиков.
-- `src/app/dashboard/leads/feed/`, `src/app/feed-actions.ts`, `src/lib/feed*.ts` — лента заказов; `src/app/api/cron/feed-email/` и `src/lib/email.ts` — письма о новых заказах.
+- `src/app/dashboard/leads/feed/`, `src/app/feed-actions.ts`, `src/lib/feed*.ts` — лента заказов; `src/app/api/cron/feed-notify/`, `src/lib/email.ts` и `src/lib/telegram.ts` — письма и Telegram о новых заказах; `src/app/api/telegram/webhook/` — бот.
 - `src/app/p/[token]/page.tsx` — публичный паспорт для заказчика.
 - `src/app/dashboard/orders/` — заказы и чеки.
 - `src/app/actions.ts` — серверные действия: профиль, документы, паспорт.
