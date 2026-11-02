@@ -131,6 +131,14 @@ const int = (v: unknown, min: number, max: number) => {
 // Validates what the browser sends; unknown ids and out-of-range numbers are dropped.
 export function cleanProfileInput(input: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
+  if ("full_name" in input) {
+    const name = typeof input.full_name === "string" ? input.full_name.replace(/\s+/g, " ").trim().slice(0, 100) : "";
+    out.full_name = name || null;
+  }
+  if ("phone" in input) {
+    const phone = typeof input.phone === "string" ? input.phone.replace(/[^\d+ ()-]/g, "").trim().slice(0, 30) : "";
+    out.phone = phone || null;
+  }
   if ("trades" in input) {
     const trades = pickMany(TRADES, input.trades);
     const levels = (input.trade_levels ?? {}) as Record<string, { level?: unknown; years?: unknown }>;
