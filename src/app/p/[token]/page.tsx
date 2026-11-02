@@ -61,7 +61,8 @@ export default async function PassportPage({
   const documents = docs ?? [];
 
   const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
-  const paths = [...documents.map((d) => d.file_path), ...worker.work_photos];
+  const avatarPath = (profile as { avatar_path?: string | null }).avatar_path ?? null;
+  const paths = [...documents.map((d) => d.file_path), ...worker.work_photos, ...(avatarPath ? [avatarPath] : [])];
   const signed = paths.length
     ? (await admin.storage.from("documents").createSignedUrls(paths, SIGNED_URL_SECONDS)).data ?? []
     : [];
@@ -95,7 +96,13 @@ export default async function PassportPage({
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h1 className="text-2xl font-bold">{profile.full_name ?? profile.company_name ?? "—"}</h1>
+        <div className="flex items-center gap-4">
+          {avatarPath && urlByPath.get(avatarPath) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={urlByPath.get(avatarPath)} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
+          )}
+          <h1 className="text-2xl font-bold">{profile.full_name ?? profile.company_name ?? "—"}</h1>
+        </div>
         <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <Row label={t.company} value={profile.company_name} />
           <Row label={t.trade} value={profile.trade} />
