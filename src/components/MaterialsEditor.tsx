@@ -42,10 +42,25 @@ export function MaterialsEditor({
   };
 
   async function addByLink() {
-    const url = link.trim();
-    if (!/^https?:\/\//i.test(url)) return;
-    setFetching(true);
+    // Shop apps share "Product name https://shop/…": take the link out of the text,
+    // and keep the words as the name in case the shop page can't be read.
+    const text = link.trim();
+    if (!text) return;
+    const found = text.match(/https?:\/\/[^\s<>"']+/i)?.[0]?.replace(/[),.;!?]+$/, "") ?? null;
+    const words = (found ? text.replace(found, "") : text).replace(/\s+/g, " ").replace(/^[\s\-–—:|.,]+|[\s\-–—:|.,]+$/g, "");
     setNote(null);
+    if (!found) {
+      setItems((list) => [
+        ...list,
+        { id: crypto.randomUUID(), url: null, title: words.slice(0, 300), image: null, store: null, unit_price: 0, quantity: 1, unit: "st" },
+      ]);
+      setNote(m.fetchPartial);
+      setLink("");
+      setSaved("idle");
+      return;
+    }
+    const url = found;
+    setFetching(true);
     const info = await lookupProduct(url).catch(() => null);
     setFetching(false);
     setItems((list) => [
@@ -53,7 +68,7 @@ export function MaterialsEditor({
       {
         id: crypto.randomUUID(),
         url,
-        title: info?.title ?? "",
+        title: info?.title || words.slice(0, 300) || "",
         image: info?.image ?? null,
         store: info?.store ?? null,
         unit_price: info?.price ?? 0,
@@ -112,7 +127,7 @@ export function MaterialsEditor({
         <p className="text-sm font-medium">🔗 {m.linkLabel}</p>
         <div className="mt-1 flex gap-2">
           <input
-            type="url"
+            type="text"
             inputMode="url"
             value={link}
             onChange={(e) => setLink(e.target.value)}
