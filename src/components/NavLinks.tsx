@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/icons";
 
-export type NavItem = { href: string; label: string; short?: string; icon: IconName; badge?: number };
+// section: the path prefix that marks the item active, when it differs from href.
+export type NavItem = { href: string; section?: string; label: string; short?: string; icon: IconName; badge?: number };
 
-function isActive(pathname: string, href: string) {
-  return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+function isActive(pathname: string, { href, section }: NavItem) {
+  return href === "/dashboard" ? pathname === href : pathname.startsWith(section ?? href);
 }
 
 // Left column on large screens.
@@ -16,7 +17,7 @@ export function SideNav({ items }: { items: NavItem[] }) {
   return (
     <nav className="space-y-1">
       {items.map((item) => {
-        const active = isActive(pathname, item.href);
+        const active = isActive(pathname, item);
         return (
           <Link
             key={item.href}
@@ -44,7 +45,7 @@ export function BottomNav({ items }: { items: NavItem[] }) {
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
       <ul className="mx-auto grid max-w-xl" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
         {items.map((item) => {
-          const active = isActive(pathname, item.href);
+          const active = isActive(pathname, item);
           return (
             <li key={item.href}>
               <Link

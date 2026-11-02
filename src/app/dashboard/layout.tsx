@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const w = getWorkerDict(lang);
   const items: NavItem[] = [
     { href: "/dashboard", label: t.navHome, icon: "home" },
-    { href: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "search", badge: newLeads ?? 0 },
+    { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "search", badge: newLeads ?? 0 },
     { href: "/dashboard/quotes", label: t.navQuotes, icon: "quote" },
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },

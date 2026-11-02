@@ -2,6 +2,9 @@ import Link from "next/link";
 import { saveLeadRegions } from "@/app/leads-actions";
 import { LeadCard } from "@/components/LeadCard";
 import { LeadForm } from "@/components/LeadForm";
+import { LeadsTabs } from "@/components/LeadsTabs";
+import { getFeedDict } from "@/lib/feed-i18n";
+import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { claudeEnabled } from "@/lib/env";
 import type { Lead } from "@/lib/leads";
 import { loadWorkspace } from "@/lib/workspace";
@@ -22,6 +25,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     .limit(200)
     .returns<Lead[]>();
   const leads = rows ?? [];
+  const f = getFeedDict(lang);
+  const { items: feed } = await loadFeed(supabase, user.id, profile);
   const shown = leads
     .filter((l) => l.status === tab)
     .sort((a, b) => (tab === "new" ? (b.match_score ?? -1) - (a.match_score ?? -1) : 0));
@@ -42,6 +47,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <h1 className="text-2xl font-bold">{t.leadsTitle}</h1>
         <p className="text-slate-600">{t.leadsSubtitle}</p>
       </div>
+
+      <LeadsTabs
+        active="mine"
+        feedLabel={f.tabFeed}
+        mineLabel={f.tabMine}
+        feedCount={newFittingCount(feed)}
+        mineCount={leads.filter((l) => l.status === "new").length}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
