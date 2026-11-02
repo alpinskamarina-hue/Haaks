@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import { LeadCard } from "@/components/LeadCard";
+import { SubmitButton } from "@/components/SubmitButton";
+import { createMaterialList } from "@/app/materials-actions";
+import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
+import { getMaterialsDict } from "@/lib/materials-i18n";
 import { readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import type { Lead } from "@/lib/leads";
@@ -22,7 +26,7 @@ export default async function Home() {
   // Name and phone are required; older accounts are asked for them once.
   if (!profile.full_name?.trim() || !profile.phone?.trim()) redirect("/dashboard/onboarding?step=0&edit=1&must=1");
 
-  const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }] =
+  const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }, { data: materialRows }] =
     await Promise.all([
       supabase
         .from("leads")
@@ -43,6 +47,13 @@ export default async function Home() {
       profile.current_order_id
         ? supabase.from("orders").select("*").eq("id", profile.current_order_id).maybeSingle<Order>()
         : Promise.resolve({ data: null }),
+      supabase
+        .from("material_lists")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(3)
+        .returns<MaterialList[]>(),
     ]);
 
   const leads = leadRows ?? [];
@@ -56,6 +67,8 @@ export default async function Home() {
   const readyCount = REQUIREMENTS.filter((r) => ready[r]).length;
   const firstName = profile.full_name?.split(" ")[0];
   const w = getWorkerDict(lang);
+  const m = getMaterialsDict(lang);
+  const materialLists = materialRows ?? [];
   const filled = completeness(worker, (docs ?? []).filter((d) => d.doc_type === "kvk_extract")).percent;
 
   const stats: { href: string; label: string; value: string; note?: string; warn?: boolean }[] = [
@@ -178,6 +191,45 @@ export default async function Home() {
           </Link>
         </div>
       </div>
+
+      <section className={card}>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold">{m.listsTitle}</h2>
+          <Link href="/dashboard/materials" className="text-sm text-orange-700 underline">
+            {t.homeAll}
+          </Link>
+        </div>
+        {materialLists.length === 0 ? (
+          <p className="mb-3 text-slate-600">{m.listsHint}</p>
+        ) : (
+          <ul className="mb-3 divide-y divide-slate-100">
+            {materialLists.map((l) => (
+              <li key={l.id}>
+                <Link href={`/dashboard/materials/${l.id}`} className="flex items-start justify-between gap-3 py-2 hover:text-orange-700">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{l.title}</p>
+                    <p className="text-sm text-slate-600">
+                      {[l.client_name, m.items.replace("{n}", String(l.items.length))].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-semibold">{euro(listTotal(l.items))}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[l.status]}`}>
+                      {m.status[l.status]}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={createMaterialList}>
+          {current && <input type="hidden" name="order_id" value={current.id} />}
+          <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">
+            + {m.newList}
+          </SubmitButton>
+        </form>
+      </section>
     </main>
   );
 }
