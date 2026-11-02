@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -10,6 +11,7 @@ import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { replyTemplate } from "@/lib/leads";
 import { short } from "@/lib/quotes";
+import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -130,4 +132,26 @@ export async function saveFeedNotifications(formData: FormData) {
     .eq("id", user.id);
   refresh();
   redirect("/dashboard/leads/feed?saved=1#notify");
+}
+
+// Saves a one-time code and opens the Haaks bot with it; the bot links the chat (api/telegram/webhook).
+export async function connectTelegram() {
+  const { supabase, user } = await requireUser();
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+  if (profile?.plan !== "pro" || !telegramEnabled()) redirect("/dashboard/leads/feed#telegram");
+  const code = randomBytes(16).toString("hex");
+  const { error } = await supabase.from("profiles").update({ telegram_link_code: code }).eq("id", user.id);
+  if (error) {
+    console.error("Telegram link code failed", error);
+    redirect("/dashboard/leads/feed#telegram");
+  }
+  await ensureWebhook(await siteUrl());
+  redirect(`https://t.me/${await botUsername()}?start=${code}`);
+}
+
+export async function disconnectTelegram() {
+  const { supabase, user } = await requireUser();
+  await supabase.from("profiles").update({ telegram_chat_id: null, telegram_link_code: null }).eq("id", user.id);
+  refresh();
+  redirect("/dashboard/leads/feed#telegram");
 }

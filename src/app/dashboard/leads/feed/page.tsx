@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { hideFeedItem, saveFeedNotifications, takeFeedItem, unhideFeedItem } from "@/app/feed-actions";
+import {
+  connectTelegram,
+  disconnectTelegram,
+  hideFeedItem,
+  saveFeedNotifications,
+  takeFeedItem,
+  unhideFeedItem,
+} from "@/app/feed-actions";
 import { LeadsTabs } from "@/components/LeadsTabs";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
@@ -7,6 +14,7 @@ import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, loadFeed, newFittingCount, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { scoreColor } from "@/lib/leads";
+import { telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -21,7 +29,12 @@ export default async function FeedPage({
   const showHidden = params.hidden === "1";
   const { supabase, user, profile, lang } = await loadWorkspace();
   const f = getFeedDict(lang);
-  const extra = profile as typeof profile & { plan?: string; feed_email?: FeedEmailMode; notify_email?: string | null };
+  const extra = profile as typeof profile & {
+    plan?: string;
+    feed_email?: FeedEmailMode;
+    notify_email?: string | null;
+    telegram_chat_id?: number | null;
+  };
   const pro = extra.plan === "pro";
 
   const [{ items, trades, regions }, { count: mineCount }] = await Promise.all([
@@ -171,6 +184,33 @@ export default async function FeedPage({
               </div>
             </form>
             <p className="mt-3 text-xs text-slate-500">{f.notifyNext}</p>
+          </section>
+
+          <section id="telegram" className={card}>
+            <h2 className="mb-2 font-semibold">{f.tgTitle}</h2>
+            {extra.telegram_chat_id ? (
+              <>
+                <p className="text-sm text-green-700">✓ {f.tgConnected}</p>
+                <form action={disconnectTelegram} className="mt-3">
+                  <SubmitButton className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                    {f.tgDisconnect}
+                  </SubmitButton>
+                </form>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600">{f.tgText}</p>
+                {!pro ? (
+                  <p className="mt-3 rounded-lg bg-orange-50 p-3 text-xs text-orange-800">{f.tgProOnly}</p>
+                ) : telegramEnabled() ? (
+                  <form action={connectTelegram} className="mt-3">
+                    <SubmitButton className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white">{f.tgConnect}</SubmitButton>
+                  </form>
+                ) : (
+                  <p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{f.tgNotReady}</p>
+                )}
+              </>
+            )}
           </section>
 
           <section className={card}>

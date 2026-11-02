@@ -4,6 +4,7 @@ import { feedScore, feedText, sourceLabel, tradeLabel, workerRegions, workerTrad
 import { fill, getFeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE } from "@/lib/feed-server";
 import { isLang, type Lang } from "@/lib/i18n";
+import { sendTelegram } from "@/lib/telegram";
 
 type Recipient = {
   id: string;
@@ -28,6 +29,42 @@ function intervalMs(value: string | null) {
   return ((days * 24 + Number(h)) * 60 + Number(m)) * 60000 + Number(s) * 1000;
 }
 
+async function loadRecentItems(supabase: SupabaseClient, now: number) {
+  const { data: rows, error } = await supabase.from("feed_items").select("*").returns<Row[]>();
+  if (error) throw new Error(error.message);
+  return (rows ?? [])
+    .map((row) => ({ ...row, published: row.published_at ? Date.parse(row.published_at) : now - intervalMs(row.demo_age) }))
+    .filter((row) => now - row.published < 3 * DAY);
+}
+
+type RecentItem = Awaited<ReturnType<typeof loadRecentItems>>[number];
+
+// Jobs already sent on this channel, or hidden/taken by the worker: "user:item" keys.
+async function alreadyHandled(supabase: SupabaseClient, channel: "email" | "telegram", ids: string[]) {
+  const [{ data: done }, { data: actions }] = await Promise.all([
+    supabase.from("feed_notifications").select("user_id, item_id").eq("channel", channel).in("user_id", ids),
+    supabase.from("feed_actions").select("user_id, item_id").in("user_id", ids),
+  ]);
+  return new Set([...(done ?? []), ...(actions ?? [])].map((r) => `${r.user_id}:${r.item_id}`));
+}
+
+function fittingJobs(
+  person: Pick<Recipient, "id" | "trade" | "city" | "lead_regions" | "plan">,
+  items: RecentItem[],
+  skip: Set<string>,
+  now: number,
+) {
+  const trades = workerTrades(person.trade);
+  const regions = workerRegions(person.lead_regions ?? person.city);
+  return items
+    .filter((item) => !skip.has(`${person.id}:${item.id}`))
+    .filter((item) => person.plan === "pro" || now - item.published >= DAY)
+    .map((item) => ({ item, score: feedScore(item, trades, regions) }))
+    .filter((j) => j.score >= FIT_SCORE)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+}
+
 // E-mails new fitting jobs to every worker who switched alerts on.
 // "daily": the digest from the daily cron. "instant": called after new jobs come in;
 // only Pro workers with instant alerts get those.
@@ -36,43 +73,26 @@ function intervalMs(value: string | null) {
 export async function sendFeedEmails(supabase: SupabaseClient, mode: "daily" | "instant", siteUrl: string) {
   const now = Date.now();
   const modes = mode === "daily" ? ["daily", "instant"] : ["instant"];
-  const [{ data: people, error: peopleError }, { data: rows, error: itemsError }] = await Promise.all([
+  const [{ data: people, error: peopleError }, items] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, language, trade, city, lead_regions, plan, feed_email, notify_email")
       .in("feed_email", modes)
       .not("notify_email", "is", null)
       .returns<Recipient[]>(),
-    supabase.from("feed_items").select("*").returns<Row[]>(),
+    loadRecentItems(supabase, now),
   ]);
-  if (peopleError || itemsError) throw new Error((peopleError ?? itemsError)!.message);
+  if (peopleError) throw new Error(peopleError.message);
 
-  const items = (rows ?? [])
-    .map((row) => ({ ...row, published: row.published_at ? Date.parse(row.published_at) : now - intervalMs(row.demo_age) }))
-    .filter((row) => now - row.published < 3 * DAY);
   const recipients = (people ?? []).filter((p) => mode === "daily" || p.plan === "pro");
   if (!recipients.length || !items.length) return { recipients: recipients.length, sent: 0, failed: 0 };
-
-  const ids = recipients.map((p) => p.id);
-  const [{ data: done }, { data: actions }] = await Promise.all([
-    supabase.from("feed_notifications").select("user_id, item_id").eq("channel", "email").in("user_id", ids),
-    supabase.from("feed_actions").select("user_id, item_id").in("user_id", ids),
-  ]);
-  const skip = new Set([...(done ?? []), ...(actions ?? [])].map((r) => `${r.user_id}:${r.item_id}`));
+  const skip = await alreadyHandled(supabase, "email", recipients.map((p) => p.id));
 
   let sent = 0;
   let failed = 0;
   for (const person of recipients) {
     const pro = person.plan === "pro";
-    const trades = workerTrades(person.trade);
-    const regions = workerRegions(person.lead_regions ?? person.city);
-    const jobs = items
-      .filter((item) => !skip.has(`${person.id}:${item.id}`))
-      .filter((item) => pro || now - item.published >= DAY)
-      .map((item) => ({ item, score: feedScore(item, trades, regions) }))
-      .filter((j) => j.score >= FIT_SCORE)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+    const jobs = fittingJobs(person, items, skip, now);
     if (!jobs.length) continue;
 
     const lang: Lang = isLang(person.language) ? person.language : "en";
@@ -146,4 +166,80 @@ ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml
   ].join("\n");
 
   return { subject, html, text };
+}
+
+type TelegramRecipient = Pick<Recipient, "id" | "language" | "trade" | "city" | "lead_regions" | "plan"> & {
+  telegram_chat_id: number;
+};
+
+// Telegram alerts for Pro workers who linked the bot: each new fitting job once.
+// Up to 3 jobs go as separate messages; more go as one list, so a worker is never flooded.
+export async function sendFeedTelegram(supabase: SupabaseClient, siteUrl: string) {
+  const now = Date.now();
+  const [{ data: people, error }, items] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, language, trade, city, lead_regions, plan, telegram_chat_id")
+      .eq("plan", "pro")
+      .not("telegram_chat_id", "is", null)
+      .returns<TelegramRecipient[]>(),
+    loadRecentItems(supabase, now),
+  ]);
+  if (error) throw new Error(error.message);
+  const recipients = people ?? [];
+  if (!recipients.length || !items.length) return { recipients: recipients.length, sent: 0, failed: 0 };
+  const skip = await alreadyHandled(supabase, "telegram", recipients.map((p) => p.id));
+  const feedUrl = `${siteUrl}/dashboard/leads/feed`;
+
+  let sent = 0;
+  let failed = 0;
+  for (const person of recipients) {
+    const jobs = fittingJobs(person, items, skip, now);
+    if (!jobs.length) continue;
+    const lang: Lang = isLang(person.language) ? person.language : "en";
+    const f = getFeedDict(lang);
+    const texts = jobs.map((j) => telegramJob({ ...j.item, locked: false, published_at: "", score: j.score }, lang));
+    const messages = texts.length <= 3 ? texts : [[`<b>${escapeHtml(fill(f.tgDigest, { n: texts.length }))}</b>`, ...texts].join("\n\n")];
+
+    let ok = true;
+    for (const text of messages) {
+      const result = await sendTelegram(person.telegram_chat_id, text, { text: f.tgOpen, url: feedUrl });
+      if (result.ok) continue;
+      ok = false;
+      console.error("Feed Telegram failed", person.id, result.status, result.error);
+      // 403: the worker blocked the bot or deleted the chat. Stop sending there.
+      if (result.status === 403) await supabase.rpc("unlink_telegram", { chat: person.telegram_chat_id });
+      break;
+    }
+    if (!ok) {
+      failed++;
+      continue;
+    }
+    sent++;
+    await supabase
+      .from("feed_notifications")
+      .insert(jobs.map((j) => ({ user_id: person.id, item_id: j.item.id, channel: "telegram" })));
+  }
+  return { recipients: recipients.length, sent, failed };
+}
+
+function telegramJob(job: FeedItem & { score: number }, lang: Lang) {
+  const f = getFeedDict(lang);
+  const { title, summary } = feedText(job, lang);
+  const source = sourceLabel(job);
+  const meta = [
+    source,
+    job.city && !source.includes(job.city) ? job.city : null,
+    job.trades.map((t) => tradeLabel(t, lang)).join(", "),
+    job.timing,
+    job.budget,
+    job.is_demo ? f.demoBadge : null,
+  ].filter(Boolean) as string[];
+  return [
+    `🔨 <b>${escapeHtml(title)}</b> · ${job.score}%`,
+    `<i>${escapeHtml(meta.join(" · "))}</i>`,
+    escapeHtml(summary),
+    ...(job.contact ? [`📞 ${escapeHtml(job.contact)}`] : []),
+    ...(job.source_url ? [escapeHtml(job.source_url)] : []),
+  ].join("\n");
 }
