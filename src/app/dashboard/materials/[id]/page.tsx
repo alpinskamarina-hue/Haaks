@@ -63,7 +63,7 @@ export default async function MaterialListPage({ params }: { params: Promise<{ i
       <section className={`${card} space-y-3`}>
         <h2 className="text-lg font-semibold">{m.sendTitle}</h2>
         <p className="text-sm text-slate-600">{m.sendHint}</p>
-        <SendMaterials listId={list.id} message={message} subject={`Materiaallijst: ${list.title}`} labels={{ copy: m.copy, copied: m.copied }} />
+        <SendMaterials lang={lang} listId={list.id} message={message} subject={`Materiaallijst: ${list.title}`} labels={{ copy: m.copy, copied: m.copied }} />
         <a href={url} target="_blank" rel="noopener" className="inline-block text-sm text-blue-700 underline">
           {m.preview} ↗
         </a>

@@ -9,7 +9,7 @@ import { QuoteEditor } from "@/components/QuoteEditor";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { SendQuote } from "@/components/SendQuote";
 import { siteUrl } from "@/lib/lang";
-import { emailLink, quoteMessage, whatsappLink, type Lead } from "@/lib/leads";
+import { emailLink, quoteMessage, type Lead } from "@/lib/leads";
 import type { Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
@@ -44,7 +44,6 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   });
   const contact = lead?.client_contact ?? null;
   const subject = `Offerte ${quote.number}: ${quote.title}`;
-  const whatsapp = whatsappLink(contact, message) ?? `https://wa.me/?text=${encodeURIComponent(message)}`;
   const email =
     emailLink(contact, subject, message) ?? `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
   const button = "rounded-lg border border-slate-300 px-3 py-2 text-sm";
@@ -83,9 +82,9 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
               {t.sendQuoteHint}
             </p>
             <SendQuote
+              lang={lang}
               quoteId={quote.id}
               message={message}
-              whatsapp={whatsapp}
               email={email}
               original={lead?.source_url ?? null}
               labels={{

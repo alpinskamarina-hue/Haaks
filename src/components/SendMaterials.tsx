@@ -3,15 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { markMaterialListSent } from "@/app/materials-actions";
+import { WhatsAppSoon } from "@/components/WhatsAppSoon";
+import type { Lang } from "@/lib/i18n";
 
-// WhatsApp, e-mail or copy: the worker sends the Dutch message with the link
+// E-mail or copy (WhatsApp comes later): the worker sends the Dutch message with the link
 // from their own phone; Haaks marks the list as sent so the client can agree.
 export function SendMaterials({
   listId,
   message,
   subject,
   labels,
+  lang,
 }: {
+  lang: Lang;
   listId: string;
   message: string;
   subject: string;
@@ -34,21 +38,15 @@ export function SendMaterials({
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
-        onClick={() => open(`https://wa.me/?text=${encodeURIComponent(message)}`)}
-        className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white"
-      >
-        WhatsApp
-      </button>
-      <button
-        type="button"
         onClick={() => open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`)}
-        className={button}
+        className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white"
       >
-        E-mail
+        ✉ E-mail
       </button>
       <button type="button" onClick={copy} className={button}>
         {copied ? `✓ ${labels.copied}` : `⧉ ${labels.copy}`}
       </button>
+      <WhatsAppSoon lang={lang} />
     </div>
   );
 }
