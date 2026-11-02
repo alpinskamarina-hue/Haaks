@@ -10,7 +10,7 @@ import type { Lead } from "@/lib/leads";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
-const TABS = ["new", "replied", "won", "dismissed"] as const;
+const TABS = ["new", "replied", "quoted", "won", "dismissed"] as const;
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const tabParam = (await searchParams).tab;
@@ -30,7 +30,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   const shown = leads
     .filter((l) => l.status === tab)
     .sort((a, b) => (tab === "new" ? (b.match_score ?? -1) - (a.match_score ?? -1) : 0));
-  const tabLabel = { new: t.leadTabNew, replied: t.leadTabReplied, won: t.leadTabWon, dismissed: t.leadTabDismissed };
+  const tabLabel = {
+    new: t.leadTabNew,
+    replied: t.leadTabReplied,
+    quoted: t.leadTabQuoted,
+    won: t.leadTabWon,
+    dismissed: t.leadTabDismissed,
+  };
   const regions = profile.lead_regions ?? profile.city ?? "";
   const field = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2";
 

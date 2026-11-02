@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { analyzeLead } from "@/lib/extract";
-import { getDict, isLang, type Lang } from "@/lib/i18n";
+import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
+import type { FeedItem } from "@/lib/feed";
 import { findContact, replyTemplate, type Lead } from "@/lib/leads";
+import { createQuoteDraft } from "@/lib/quote-draft";
 import { PHOTO_MIME, short } from "@/lib/quotes";
 import { claudeEnabled } from "@/lib/env";
 
@@ -100,7 +102,7 @@ export async function addLead(input: {
 
 export async function setLeadStatus(id: string, status: Lead["status"]) {
   const { supabase } = await requireUser();
-  if (!["new", "replied", "won", "dismissed"].includes(status)) return;
+  if (!["new", "replied", "quoted", "won", "dismissed"].includes(status)) return;
   await supabase.from("leads").update({ status }).eq("id", id);
   refresh();
 }
@@ -116,31 +118,46 @@ export async function deleteLead(id: string) {
 }
 
 // The client said yes to talking: the lead becomes an order and the worker goes straight to a quote for it.
+// "Make offer": a draft quote filled from the job itself (title, city, client, the post),
+// at the worker's hourly rate. The lead keeps a link to it and follows its status.
 export async function leadToQuote(id: string) {
   const { supabase, user } = await requireUser();
   const { data: lead } = await supabase.from("leads").select("*").eq("id", id).single<Lead>();
   if (!lead) return;
-
-  let orderId = lead.order_id;
-  if (!orderId) {
-    const { data: profile } = await supabase.from("profiles").select("language").eq("id", user.id).single();
-    const t = getDict(isLang(profile?.language) ? profile.language : "en");
-    const { data: order, error } = await supabase
-      .from("orders")
-      .insert({
-        user_id: user.id,
-        title: short(lead.title, 200) || t.newOrder,
-        client_name: lead.client_name,
-        address: lead.city,
-      })
-      .select("id")
-      .single();
-    if (error || !order) throw new Error(error?.message ?? "Order insert failed");
-    orderId = order.id;
+  if (lead.quote_id) {
+    const { data: existing } = await supabase.from("quotes").select("id").eq("id", lead.quote_id).maybeSingle();
+    if (existing) redirect(`/dashboard/quotes/${existing.id}`);
   }
-  await supabase.from("leads").update({ status: "won", order_id: orderId }).eq("id", id);
+
+  const { data: profile } = await supabase.from("profiles").select("language, hourly_rate").eq("id", user.id).single();
+  const lang: Lang = isLang(profile?.language) ? profile.language : "en";
+  const description = [lead.summary, lead.raw_text]
+    .map((text) => (text ?? "").trim())
+    .filter((text, i, all) => text && all.indexOf(text) === i)
+    .join("\n\n");
+  // A job from the feed has its title and summary in Dutch; the lead keeps the worker's
+  // language. The client reads the offer, so it takes the Dutch ones.
+  let dutch: { title: string | null; summary: string | null } | null = null;
+  if (lead.feed_item_id) {
+    const { data: items } = await supabase.rpc("feed_for_me");
+    const item = ((items ?? []) as FeedItem[]).find((i) => i.id === lead.feed_item_id);
+    if (item && !item.locked) dutch = { title: item.title, summary: item.summary };
+  }
+  const quoteId = await createQuoteDraft(supabase, user.id, lang, {
+    orderId: lead.order_id,
+    title: short(dutch?.title ?? lead.title, 200) || null,
+    intro: dutch?.summary ?? null,
+    clientName: lead.client_name,
+    address: lead.city,
+    description: short(description, 4000),
+    photos: [],
+    hourlyRate: Number(profile?.hourly_rate) || 0,
+    vatRate: 21,
+  });
+  await supabase.from("leads").update({ quote_id: quoteId }).eq("id", id);
   refresh();
-  redirect(`/dashboard/quotes?order=${orderId}`);
+  revalidatePath("/dashboard/quotes", "layout");
+  redirect(`/dashboard/quotes/${quoteId}`);
 }
 
 export async function saveLeadRegions(formData: FormData) {

@@ -18,8 +18,9 @@ export type Lead = {
   match_score: number | null;
   match_reason: string | null;
   reply_nl: string | null;
-  status: "new" | "replied" | "won" | "dismissed";
+  status: "new" | "replied" | "quoted" | "won" | "dismissed";
   order_id: string | null;
+  quote_id?: string | null;
   feed_item_id?: string | null;
   created_at: string;
 };
@@ -76,6 +77,24 @@ export function replyTemplate(worker: { name: string | null; passportUrl: string
     worker.name ?? "",
   ]
     .filter((line) => line !== null)
+    .join("\n")
+    .trim();
+}
+
+// The message the worker sends with an offer: short Dutch text and the link where the
+// client reads the offer and presses "Akkoord".
+export function quoteMessage(q: { clientName: string | null; title: string; number: string; link: string; workerName: string | null }) {
+  return [
+    q.clientName ? `Goedendag ${q.clientName},` : "Goedendag,",
+    "",
+    `Bedankt voor uw bericht. Hierbij mijn offerte ${q.number} voor "${q.title}":`,
+    q.link,
+    "",
+    "U kunt de offerte online bekijken en met één klik akkoord geven. Heeft u vragen, dan hoor ik het graag.",
+    "",
+    "Met vriendelijke groet,",
+    q.workerName ?? "",
+  ]
     .join("\n")
     .trim();
 }

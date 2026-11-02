@@ -43,6 +43,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               {t.leadOriginal}
             </a>
           )}
+          {(lead.status === "quoted" || lead.status === "won") && (
+            <span
+              className={`rounded-full px-2 py-0.5 font-medium ${lead.status === "won" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}
+            >
+              {lead.status === "won" ? `✓ ${t.leadTabWon}` : t.leadTabQuoted}
+            </span>
+          )}
         </div>
         <h1 className="mt-2 break-words text-2xl font-bold">{lead.title || lead.raw_text.slice(0, 80) || t.leadsTitle}</h1>
         {lead.match_score !== null && (
@@ -70,12 +77,21 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </dl>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <form action={leadToQuote.bind(null, lead.id)}>
-            <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-              {t.leadMakeQuote}
-            </SubmitButton>
-          </form>
-          {lead.status !== "replied" && (
+          {lead.quote_id ? (
+            <Link
+              href={`/dashboard/quotes/${lead.quote_id}`}
+              className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white"
+            >
+              {t.leadOpenQuote}
+            </Link>
+          ) : (
+            <form action={leadToQuote.bind(null, lead.id)}>
+              <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                {t.leadMakeQuote}
+              </SubmitButton>
+            </form>
+          )}
+          {lead.status === "new" && (
             <form action={setLeadStatus.bind(null, lead.id, "replied")}>
               <button className={button}>{t.leadMarkReplied}</button>
             </form>
