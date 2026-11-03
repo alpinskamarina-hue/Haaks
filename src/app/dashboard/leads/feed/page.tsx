@@ -17,6 +17,7 @@ import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
+import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
@@ -84,6 +85,7 @@ export default async function FeedPage({
   ]);
   const reportedJobs = new Set((myReports ?? []).map((r) => r.target_id as string));
   const reportT = getReportDict(lang);
+  const letterLabel = getLetterDict(lang).button;
   const ownJobByItem = new Map((myJobRows ?? []).map((j) => [j.feed_item_id as string, j.id as string]));
   const helper = getHelperDict(lang);
   const yourJob = helper.yourJob;
@@ -289,6 +291,7 @@ export default async function FeedPage({
                 yourJob={yourJob}
                 reportT={reportT}
                 reported={reportedJobs.has(item.id)}
+                letterLabel={letterLabel}
               />
             ))}
           </ul>
@@ -426,6 +429,7 @@ function FeedCard({
   yourJob,
   reportT,
   reported,
+  letterLabel,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -440,6 +444,7 @@ function FeedCard({
   yourJob: string;
   reportT: ReportDict;
   reported: boolean;
+  letterLabel: string;
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -530,6 +535,11 @@ function FeedCard({
           <a href={resumeLink} className="rounded-lg bg-slate-900 px-3 py-1.5 font-semibold text-white">
             ✉️ {f.sendResume}
           </a>
+        )}
+        {pro && item.kind === "permit" && (
+          <Link href={`/dashboard/leads/letter/${item.id}`} className="rounded-lg bg-emerald-700 px-3 py-1.5 font-semibold text-white">
+            ✉️ {letterLabel}
+          </Link>
         )}
         {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
         {pro && item.source_url && (
