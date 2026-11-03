@@ -63,10 +63,11 @@ async function listPublications(creator: string, since: string): Promise<Publica
 }
 
 // Only new and granted permits are a sign of work; refused or withdrawn ones are not.
-function permitStatus(title: string) {
-  const t = title.toLowerCase();
-  if (/geweigerd|ingetrokken|buiten behandeling|niet ontvankelijk|verlenging|beslistermijn|ontwerp/.test(t)) return null;
-  if (/verleend|besluit|toegekend/.test(t)) return "verleend" as const;
+// "skip" for those, null when the title does not say (Schiedam: "omgevingsvergunning <address>").
+function permitStatus(text: string) {
+  const t = text.toLowerCase();
+  if (/geweigerd|weigeren|weigering|ingetrokken|intrekking|buiten behandeling|niet ontvankelijk|verlenging|beslistermijn|ontwerp/.test(t)) return "skip" as const;
+  if (/verleend|verlenen|besluit|toegekend/.test(t)) return "verleend" as const;
   if (/aanvraag|aangevraagd|ontvangen|ingediend/.test(t)) return "aangevraagd" as const;
   return null;
 }
@@ -146,9 +147,12 @@ const DESC: Record<Lang, string> = {
 };
 
 async function toItem(pub: Publication): Promise<CollectedItem | null> {
-  const status = permitStatus(pub.title);
-  if (!status) return null;
+  const fromTitle = permitStatus(pub.title);
+  if (fromTitle === "skip" || !/vergunning/i.test(pub.title)) return null;
   const text = await fullText(pub.id);
+  const fromText = fromTitle ?? permitStatus(text.slice(0, 400));
+  if (!fromText || fromText === "skip") return null;
+  const status = fromText;
   const desc = description(pub.title, text);
   const work = workType(`${desc} ${pub.title}`);
   if (!work) return null;
