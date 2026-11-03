@@ -20,7 +20,7 @@ import {
 } from "@/lib/worker-profile";
 import { radiusText, yearsText, type WorkerDict } from "@/lib/worker-profile-text";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4; // 0 = name and phone (required)
 
 const chipOn = "border-2 border-orange-600 bg-orange-50 font-semibold text-orange-700";
 const chipOff = "border border-slate-300 bg-white text-slate-800";
@@ -101,18 +101,25 @@ export function ProfileWizard({
   initial,
   startStep,
   edit,
+  must = false,
+  contact,
 }: {
   w: WorkerDict;
   lang: Lang;
   initial: WorkerProfile;
   startStep: Step;
   edit: boolean;
+  must?: boolean; // name/phone missing after sign-up: no way around this step
+  contact: { firstName: string; lastName: string; phone: string };
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startStep);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const [firstName, setFirstName] = useState(contact.firstName);
+  const [lastName, setLastName] = useState(contact.lastName);
+  const [phone, setPhone] = useState(contact.phone);
   const [trades, setTrades] = useState<string[]>(initial.trades);
   const [tradeLevels, setTradeLevels] = useState(initial.trade_levels ?? {});
   const [city, setCity] = useState(initial.city ?? "");
@@ -129,6 +136,7 @@ export function ProfileWizard({
   const [teamSize, setTeamSize] = useState(initial.team_size ? String(initial.team_size) : "");
 
   function stepData(s: Step): Record<string, unknown> {
+    if (s === 0) return { full_name: `${firstName.trim()} ${lastName.trim()}`, phone };
     if (s === 1) return { trades, trade_levels: tradeLevels };
     if (s === 2) return { city, travel_km: travel, extra_cities: extra };
     if (s === 3) return { languages, language_levels: langLevels };
@@ -137,6 +145,10 @@ export function ProfileWizard({
 
   function go(next: Step | "done") {
     setError(null);
+    if (step === 0 && (!firstName.trim() || !lastName.trim() || phone.replace(/\D/g, "").length < 8)) {
+      setError(w.s0Need);
+      return;
+    }
     if (step === 1 && trades.length === 0) {
       setError(w.s1Pick);
       return;
@@ -148,7 +160,7 @@ export function ProfileWizard({
         return;
       }
       if (next === "done") {
-        router.push(edit ? "/dashboard/profile" : "/dashboard");
+        router.push(edit && !must ? "/dashboard/profile" : "/dashboard");
         router.refresh();
       } else {
         setStep(next);
@@ -177,19 +189,21 @@ export function ProfileWizard({
   return (
     <div className="mx-auto min-h-screen max-w-xl bg-slate-50">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 text-sm">
-        {edit ? (
+        {must ? (
+          <span />
+        ) : edit ? (
           <button type="button" onClick={() => router.push("/dashboard/profile")} className="text-slate-500">
             ← {w.back}
           </button>
-        ) : step > 1 ? (
+        ) : step > 0 ? (
           <button type="button" onClick={() => setStep((step - 1) as Step)} className="text-slate-500">
             ← {w.back}
           </button>
         ) : (
           <span />
         )}
-        {!edit && <span className="font-medium">{w.step.replace("{n}", String(step))}</span>}
-        {!edit ? (
+        {!edit && <span className="font-medium">{w.step.replace("{n}", String(step + 1))}</span>}
+        {!edit && step > 0 ? (
           <button type="button" onClick={later} disabled={pending} className="text-slate-500">
             {w.later}
           </button>
@@ -199,11 +213,53 @@ export function ProfileWizard({
       </header>
       {!edit && (
         <div className="h-1.5 bg-slate-200">
-          <div className="h-1.5 bg-orange-600 transition-all" style={{ width: `${step * 25}%` }} />
+          <div className="h-1.5 bg-orange-600 transition-all" style={{ width: `${(step + 1) * 20}%` }} />
         </div>
       )}
 
       <div className="space-y-5 px-4 py-6">
+        {step === 0 && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">{w.s0Title}</h1>
+              <p className="mt-1 text-slate-600">{w.s0Hint}</p>
+            </div>
+            <label className="block text-sm font-medium">
+              {w.firstName}
+              <input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                autoComplete="given-name"
+                required
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              {w.lastName}
+              <input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                autoComplete="family-name"
+                required
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              {w.phoneLabel}
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                autoComplete="tel"
+                inputMode="tel"
+                placeholder={w.phoneHint}
+                required
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base"
+              />
+            </label>
+          </>
+        )}
+
         {step === 1 && (
           <>
             <div>

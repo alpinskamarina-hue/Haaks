@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { legalSummary } from "@/lib/legal";
+import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
 
@@ -23,6 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "feed", badge: newLeads ?? 0 },
     { href: "/dashboard/quotes", label: t.navQuotes, icon: "quote" },
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
+    { href: "/dashboard/materials", label: getMaterialsDict(lang).nav, icon: "cart" },
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport" },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
@@ -82,7 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => i.href !== "/dashboard/passport" && i.href !== "/dashboard/profile")} />
+      <BottomNav items={items.filter((i) => !["/dashboard/passport", "/dashboard/profile", "/dashboard/materials"].includes(i.href))} />
     </div>
   );
 }

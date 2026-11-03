@@ -8,6 +8,7 @@ export type Profile = {
   trade: string | null;
   city: string | null;
   phone: string | null;
+  avatar_path?: string | null;
   kvk_number: string | null;
   btw_number: string | null;
   business_address?: string | null;
