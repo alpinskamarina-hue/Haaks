@@ -43,8 +43,9 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
   return { items: scored, match, trades: match.trades, regions: match.regions };
 }
 
-// A job "fits" when it matches the trade (if one is set) and is in one of the cities (if set).
-export const FIT_SCORE = 65;
+// A job "fits" when it matches the trade (if one is set) and is within the travel radius
+// or in one of the cities (if set). Trade alone (65) is not enough.
+export const FIT_SCORE = 70;
 
 export function newFittingCount(items: ScoredFeedItem[]) {
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000;

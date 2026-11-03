@@ -188,8 +188,8 @@ export async function collectTenders(options: { since?: string; skip?: Set<strin
   );
   const items = await mapLimit(works, 6, async (s) => {
     try {
-      const detail = await getJson<Detail>(`${API}/${s.publicatieId}`);
-      return toItem({ ...s, ...detail }, await tenderPlace(detail));
+      const detail: Detail = { ...s, ...(await getJson<Detail>(`${API}/${s.publicatieId}`)) };
+      return toItem(detail, await tenderPlace(detail));
     } catch {
       return null;
     }
