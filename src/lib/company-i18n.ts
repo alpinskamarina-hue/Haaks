@@ -38,9 +38,9 @@ const nl = {
   people: "Hoeveel vakmensen?",
   rate: "Tarief",
   rateHour: "Per uur",
-  rateFixed: "Vaste prijs voor het werk",
+  rateFixed: "Projectprijs (voor het hele project)",
   rateAsk: "In overleg",
-  rateAmount: "Bedrag in €",
+  rateAmount: "Bedrag in € (per uur of voor het hele project)",
   requirements: "Wat is nodig?",
   description: "Omschrijving",
   descriptionHint: "Wat moet er gebeuren, hoe groot, bijzonderheden. Geen telefoon of e-mail: reacties komen via Haaks.",
@@ -143,9 +143,9 @@ const en: CompanyDict = {
   people: "How many builders?",
   rate: "Pay",
   rateHour: "Per hour",
-  rateFixed: "Fixed price for the job",
+  rateFixed: "Project price (for the whole project)",
   rateAsk: "To be agreed",
-  rateAmount: "Amount in €",
+  rateAmount: "Amount in € (per hour or for the whole project)",
   requirements: "What is needed?",
   description: "Description",
   descriptionHint: "What needs doing, how big, anything special. No phone or e-mail: replies come through Haaks.",
@@ -215,3 +215,16 @@ export const getCompanyDict = (lang: CompanyLang) => (lang === "en" ? en : nl);
 
 export const fill = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? ""));
+
+// Texts the job form, job list and replies screens need; also used by builders who post
+// "need a helper" jobs, in the builder's own language (src/lib/helper-i18n.ts).
+export type JobUiDict = Pick<
+  CompanyDict,
+  | "title" | "intro" | "newJob" | "activeCount" | "limitReached" | "noJobs" | "pendingNote" | "sentForCheck" | "published" | "closed"
+  | "formTitle" | "jobTitle" | "jobTitleHint" | "trades" | "city" | "postcode" | "startDate" | "weeks" | "people" | "rate"
+  | "rateHour" | "rateFixed" | "rateAsk" | "rateAmount" | "requirements" | "description" | "descriptionHint" | "opdracht"
+  | "publish" | "cancel" | "errors" | "status" | "onlineUntil" | "rejectedBecause" | "close" | "closeConfirm" | "replies"
+  | "repliesNone" | "repliesTitle" | "repliesIntro" | "noReplies" | "back" | "accept" | "decline" | "replyStatus" | "hourRate"
+  | "languages" | "vehicle" | "vehicles" | "toolsLabel" | "toolsKinds" | "passport" | "contactsOpen" | "acceptedMsg"
+  | "declinedMsg" | "contactNote"
+>;

@@ -22,19 +22,19 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const { data: companies } = ids.length
     ? await server
         .from("profiles")
-        .select("id, company_name, kvk_number, full_name, phone, business_email")
+        .select("id, company_name, kvk_number, full_name, phone, business_email, account_type")
         .in("id", ids)
-        .returns<(CompanyInfo & { id: string })[]>()
+        .returns<(CompanyInfo & { id: string; account_type: string })[]>()
     : { data: [] };
   const byId = new Map((companies ?? []).map((c) => [c.id, c]));
 
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 lg:p-8">
       <div>
-        <h1 className="text-2xl font-bold">Модерация заказов компаний</h1>
+        <h1 className="text-2xl font-bold">Модерация заказов</h1>
         <p className="mt-1 text-slate-600">
-          Первые заказы компании ждут вашей проверки. После первого одобренного заказа компания считается проверенной, и её следующие заказы
-          сразу попадают в ленту.
+          Первые заказы компании или строителя («Нужен помощник») ждут вашей проверки. После первого одобренного заказа автор считается
+          проверенным, и его следующие заказы сразу попадают в ленту.
         </p>
       </div>
       {ok && (
@@ -48,11 +48,13 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
         <ul className="space-y-4">
           {jobs.map((job) => {
             const c = byId.get(job.company_id);
-            const ru = jobTexts(job, "ru");
+            const zzp = c?.account_type === "worker";
+            const ru = jobTexts(job, "ru", zzp);
             return (
               <li key={job.id} className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                 <p className="text-sm text-slate-500">
-                  {dayMonthYear(job.created_at.slice(0, 10))} · <span className="font-semibold text-slate-900">{c?.company_name ?? "—"}</span>
+                  {dayMonthYear(job.created_at.slice(0, 10))} · {zzp && <span className="mr-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs font-semibold text-sky-800">ZZP · нужен помощник</span>}
+                  <span className="font-semibold text-slate-900">{(zzp ? c?.full_name : c?.company_name) ?? "—"}</span>
                   {c?.kvk_number && (
                     <>
                       {" "}

@@ -11,11 +11,13 @@ export function MyReplies({
   invites,
   inCatalog,
   rt,
+  helper,
 }: {
   replies: MyReply[];
   invites: MyInvite[];
   inCatalog: boolean;
   rt: ReplyDict;
+  helper: { nav: string; cardText: string };
 }) {
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -35,6 +37,11 @@ export function MyReplies({
           </SubmitButton>
         </form>
       </section>
+
+      <Link href="/dashboard/helpers" className="block rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <h2 className="font-semibold">👷 {helper.nav} →</h2>
+        <p className="mt-1 text-sm text-slate-700">{helper.cardText}</p>
+      </Link>
 
       {invites.length > 0 && (
         <section className="space-y-3">
@@ -88,7 +95,7 @@ export function MyReplies({
             const status = r.status === "sent" && !r.job_open ? "closed" : r.status;
             return (
               <li key={r.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs font-semibold text-slate-500">🏢 {r.company_name ?? "—"}</p>
+                <p className="text-xs font-semibold text-slate-500">{r.company_name?.startsWith("ZZP") ? "👷" : "🏢"} {r.company_name ?? "—"}</p>
                 <p className="mt-1 font-semibold">
                   {r.job_title}, {r.job_city}
                 </p>

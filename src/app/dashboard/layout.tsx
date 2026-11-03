@@ -6,6 +6,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
+import { getHelperDict } from "@/lib/helper-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { createServerAccountClient } from "@/lib/supabase/server";
@@ -41,6 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport" },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
+    { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
     ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }] : []),
   ];
   const name = profile.company_name || profile.full_name || user.email;
@@ -98,7 +100,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => !["/dashboard/passport", "/dashboard/profile", "/dashboard/materials", "/dashboard/moderation"].includes(i.href))} />
+      <BottomNav items={items.filter((i) => !["/dashboard/passport", "/dashboard/profile", "/dashboard/materials", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
     </div>
   );
 }

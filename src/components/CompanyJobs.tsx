@@ -2,9 +2,10 @@ import Link from "next/link";
 import { closeCompanyJob, saveCompanyDetails } from "@/app/company-actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
-import { fill, type CompanyDict } from "@/lib/company-i18n";
+import { fill, type CompanyDict, type JobUiDict } from "@/lib/company-i18n";
 import { dayMonthYear, FREE_ACTIVE_JOBS, requirementLabel, type CompanyInfo, type CompanyJob } from "@/lib/company-jobs";
 import { tradeLabel } from "@/lib/feed";
+import type { Lang } from "@/lib/i18n";
 
 const input = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base";
 export const companyCard = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5";
@@ -18,9 +19,9 @@ const badge: Record<string, string> = {
   expired: "bg-slate-100 text-slate-600",
 };
 
-export function CompanyNotice({ t, ok, error }: { t: CompanyDict; ok?: string; error?: string }) {
-  const okText = ok === "sent" ? t.sentForCheck : ok === "published" ? t.published : ok === "closed" ? t.closed : ok === "saved" ? t.saved : null;
-  const errText = error ? fill(t.errors[error as keyof CompanyDict["errors"]] ?? t.errors.failed, { max: FREE_ACTIVE_JOBS }) : null;
+export function CompanyNotice({ t, ok, error }: { t: JobUiDict & { saved?: string }; ok?: string; error?: string }) {
+  const okText = ok === "sent" ? t.sentForCheck : ok === "published" ? t.published : ok === "closed" ? t.closed : ok === "saved" ? (t.saved ?? null) : null;
+  const errText = error ? fill(t.errors[error as keyof JobUiDict["errors"]] ?? t.errors.failed, { max: FREE_ACTIVE_JOBS }) : null;
   if (okText) return <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{okText}</p>;
   if (errText) return <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{errText}</p>;
   return null;
@@ -63,11 +64,15 @@ export function CompanyJobRow({
   t,
   lang,
   replies,
+  base = "/company",
+  closeAction = closeCompanyJob,
 }: {
   job: CompanyJob;
-  t: CompanyDict;
-  lang: "nl" | "en";
+  t: JobUiDict;
+  lang: Lang;
   replies?: { total: number; fresh: number };
+  base?: string;
+  closeAction?: (formData: FormData) => Promise<void>;
 }) {
   const expired = job.status === "published" && job.expires_at && Date.parse(job.expires_at) <= Date.now();
   const status = expired ? "expired" : job.status;
@@ -91,7 +96,7 @@ export function CompanyJobRow({
       {status === "rejected" && job.reject_reason && <p className="mt-2 text-sm text-red-700">{fill(t.rejectedBecause, { r: job.reject_reason })}</p>}
       {job.status !== "pending" && job.status !== "rejected" && (
         <Link
-          href={`/company/jobs/${job.id}`}
+          href={`${base}/jobs/${job.id}`}
           className={`mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
             replies?.total ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-600"
           }`}
@@ -101,7 +106,7 @@ export function CompanyJobRow({
         </Link>
       )}
       {(status === "pending" || status === "published") && (
-        <form action={closeCompanyJob} className="mt-3">
+        <form action={closeAction} className="mt-3">
           <input type="hidden" name="id" value={job.id} />
           <ConfirmButton message={t.closeConfirm} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700">
             {t.close}
