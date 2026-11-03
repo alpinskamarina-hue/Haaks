@@ -15,6 +15,15 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
       .single<CompanyInfo & { language: string; company_verified: boolean }>(),
     supabase.from("company_jobs").select("*").eq("company_id", user.id).order("created_at", { ascending: false }).returns<CompanyJob[]>(),
   ]);
+  // Builders' replies per job (RLS: only replies to this company's jobs).
+  const { data: replyRows } = await supabase.from("job_replies").select("job_id, status").returns<{ job_id: string; status: string }[]>();
+  const replies = new Map<string, { total: number; fresh: number }>();
+  for (const r of replyRows ?? []) {
+    const c = replies.get(r.job_id) ?? { total: 0, fresh: 0 };
+    c.total += 1;
+    if (r.status === "sent") c.fresh += 1;
+    replies.set(r.job_id, c);
+  }
   const t = getCompanyDict(companyLang(profile?.language));
   const ready = Boolean(profile?.company_name && profile.kvk_number && profile.full_name && profile.phone);
   const list = jobs ?? [];
@@ -56,7 +65,7 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
           ) : (
             <ul className="space-y-3">
               {list.map((job) => (
-                <CompanyJobRow key={job.id} job={job} t={t} lang={companyLang(profile?.language)} />
+                <CompanyJobRow key={job.id} job={job} t={t} lang={companyLang(profile?.language)} replies={replies.get(job.id)} />
               ))}
             </ul>
           )}

@@ -136,7 +136,6 @@ export async function publishCompanyJob(server: SupabaseClient, jobId: string, s
   const translations = Object.fromEntries(FEED_LANGS.map((lang) => [lang, jobTexts(job, lang)]));
   const now = new Date();
   const expires = new Date(now.getTime() + JOB_DAYS * 24 * 60 * 60 * 1000);
-  const contact = [company?.business_email, company?.phone].filter(Boolean).join(" · ") || null;
 
   const { data: item, error: insertError } = await server
     .from("feed_items")
@@ -155,7 +154,8 @@ export async function publishCompanyJob(server: SupabaseClient, jobId: string, s
       lng: place?.lng ?? null,
       timing: job.start_date ? `${dayMonthYear(job.start_date)}${job.weeks ? ` · ${job.weeks} wk` : ""}` : null,
       budget: job.rate_type === "ask" || !job.rate ? null : job.rate_type === "hour" ? `€${money(job.rate)}/h` : `€${money(job.rate)}`,
-      contact,
+      // Contacts open only after the company accepts a reply (job_replies).
+      contact: null,
       published_at: now.toISOString(),
       expires_at: expires.toISOString(),
       fingerprint: `job-${job.id}`,

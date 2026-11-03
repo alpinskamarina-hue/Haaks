@@ -11,6 +11,7 @@ import {
   takeJobOffline,
   type CompanyJob,
 } from "@/lib/company-jobs";
+import { notifyReplyAccepted } from "@/lib/job-replies";
 import { siteUrl } from "@/lib/lang";
 import { createServerAccountClient } from "@/lib/supabase/server";
 
@@ -129,6 +130,25 @@ export async function closeCompanyJob(formData: FormData) {
   await takeJobOffline(await createServerAccountClient(), job!, "closed");
   revalidatePath("/company");
   back("/company", "ok", "closed");
+}
+
+// The company accepts or declines a builder's reply; accepting opens contacts on both sides.
+export async function decideJobReply(formData: FormData) {
+  const { supabase } = await requireCompany();
+  const replyId = String(formData.get("reply"));
+  const jobId = String(formData.get("job"));
+  const accept = formData.get("accept") === "1";
+  const { error } = await supabase.rpc("decide_job_reply", { p_reply: replyId, p_accept: accept });
+  if (error) back(`/company/jobs/${jobId}`, "error", "failed");
+  if (accept) {
+    try {
+      await notifyReplyAccepted(await createServerAccountClient(), replyId, await siteUrl());
+    } catch (e) {
+      console.error("Reply accepted alert failed", e);
+    }
+  }
+  revalidatePath("/company", "layout");
+  back(`/company/jobs/${jobId}`, "ok", accept ? "accepted" : "declined");
 }
 
 // Moderation (Haaks admin only).
