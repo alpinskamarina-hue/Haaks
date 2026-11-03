@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import type { Profile } from "@/lib/documents";
 import { getDict, isLang } from "@/lib/i18n";
@@ -8,6 +9,8 @@ export async function loadWorkspace() {
   const profile = await ensureProfile(supabase, user.id);
   // "/" sends signed-in users back here, so redirecting there would loop.
   if (!profile) throw new Error("Profile not found");
+  // Companies (BV) have their own cabinet.
+  if ((profile as { account_type?: string }).account_type === "company") redirect("/company");
   const lang = isLang(profile.language) ? profile.language : "en";
   return { supabase, user, profile, lang, t: getDict(lang) };
 }

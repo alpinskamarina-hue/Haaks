@@ -1,0 +1,200 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { gemeentePlace, postcodePlace } from "@/lib/collect/geo";
+import { emailEnabled } from "@/lib/email";
+import { TRADE_LABELS, tradeLabel } from "@/lib/feed";
+import { sendFeedEmails, sendFeedPush, sendFeedTelegram } from "@/lib/feed-notify";
+import type { Lang } from "@/lib/i18n";
+import { telegramEnabled } from "@/lib/telegram";
+
+// A job a company (BV) posted for ZZP builders. Online jobs are copied into feed_items.
+export type CompanyJob = {
+  id: string;
+  company_id: string;
+  status: "pending" | "published" | "rejected" | "closed";
+  title: string;
+  description: string;
+  trades: string[];
+  city: string;
+  postcode: string | null;
+  start_date: string | null;
+  weeks: number | null;
+  people: number;
+  rate_type: "hour" | "fixed" | "ask";
+  rate: number | null;
+  requirements: string[];
+  opdracht_confirmed: boolean;
+  reject_reason: string | null;
+  feed_item_id: string | null;
+  created_at: string;
+  published_at: string | null;
+  expires_at: string | null;
+};
+
+export type CompanyInfo = {
+  company_name: string | null;
+  kvk_number: string | null;
+  full_name: string | null;
+  phone: string | null;
+  business_email: string | null;
+};
+
+export const JOB_TRADES = Object.keys(TRADE_LABELS);
+export const JOB_REQUIREMENTS = ["vca", "tools", "transport", "avb", "language"] as const;
+export type JobRequirement = (typeof JOB_REQUIREMENTS)[number];
+// Free plan: jobs waiting or online at the same time (also checked in the database).
+export const FREE_ACTIVE_JOBS = 3;
+// How long a job stays in the feed.
+export const JOB_DAYS = 30;
+
+type FeedLang = Lang;
+
+const REQ_LABELS: Record<JobRequirement, Record<FeedLang, string>> = {
+  vca: { nl: "VCA", en: "VCA", ru: "VCA", uk: "VCA", pl: "VCA", ro: "VCA" },
+  tools: { nl: "eigen gereedschap", en: "own tools", ru: "свой инструмент", uk: "власний інструмент", pl: "własne narzędzia", ro: "scule proprii" },
+  transport: { nl: "eigen vervoer", en: "own transport", ru: "своя машина", uk: "власне авто", pl: "własny transport", ro: "mașină proprie" },
+  avb: { nl: "AVB-verzekering", en: "AVB insurance", ru: "страховка AVB", uk: "страховка AVB", pl: "ubezpieczenie AVB", ro: "asigurare AVB" },
+  language: {
+    nl: "Nederlands of Engels",
+    en: "Dutch or English",
+    ru: "нидерландский или английский",
+    uk: "нідерландська або англійська",
+    pl: "niderlandzki lub angielski",
+    ro: "neerlandeză sau engleză",
+  },
+};
+
+export const requirementLabel = (key: string, lang: Lang) => REQ_LABELS[key as JobRequirement]?.[lang] ?? key;
+
+// Lines of a job card in each feed language, built from the form fields (no AI needed).
+const FEED_TEXT: Record<
+  FeedLang,
+  {
+    wanted: string;
+    start: string;
+    weeks: string;
+    people: string;
+    hour: string;
+    fixed: string;
+    ask: string;
+    needs: string;
+    original: string;
+  }
+> = {
+  nl: { wanted: "Gezocht", start: "Start: {d}", weeks: "{n} weken", people: "{n} personen", hour: "Tarief: €{x} per uur", fixed: "Prijs: €{x} voor het hele werk", ask: "Tarief: in overleg", needs: "Nodig: {list}", original: "{text}" },
+  en: { wanted: "Wanted", start: "Start: {d}", weeks: "{n} weeks", people: "{n} people", hour: "Rate: €{x} per hour", fixed: "Price: €{x} for the whole job", ask: "Rate: to be agreed", needs: "Needed: {list}", original: "From the company (in Dutch): «{text}»" },
+  ru: { wanted: "Ищут", start: "Начало: {d}", weeks: "{n} нед.", people: "{n} чел.", hour: "Оплата: €{x} в час", fixed: "Цена: €{x} за всю работу", ask: "Оплата: по договорённости", needs: "Нужно: {list}", original: "От компании (на нидерландском): «{text}»" },
+  uk: { wanted: "Шукають", start: "Початок: {d}", weeks: "{n} тиж.", people: "{n} осіб", hour: "Оплата: €{x} за годину", fixed: "Ціна: €{x} за всю роботу", ask: "Оплата: за домовленістю", needs: "Потрібно: {list}", original: "Від компанії (нідерландською): «{text}»" },
+  pl: { wanted: "Szukają", start: "Start: {d}", weeks: "{n} tyg.", people: "{n} os.", hour: "Stawka: €{x} za godzinę", fixed: "Cena: €{x} za całą pracę", ask: "Stawka: do uzgodnienia", needs: "Wymagane: {list}", original: "Od firmy (po niderlandzku): «{text}»" },
+  ro: { wanted: "Caută", start: "Început: {d}", weeks: "{n} săpt.", people: "{n} pers.", hour: "Tarif: €{x} pe oră", fixed: "Preț: €{x} pentru toată lucrarea", ask: "Tarif: de stabilit", needs: "Necesar: {list}", original: "De la firmă (în neerlandeză): «{text}»" },
+};
+
+const put = (text: string, values: Record<string, string | number>) =>
+  text.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? ""));
+
+// "2026-11-17" -> "17.11.2026"
+export const dayMonthYear = (iso: string) => iso.split("-").reverse().join(".");
+
+const money = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
+
+export function jobTexts(job: Pick<CompanyJob, "title" | "description" | "trades" | "city" | "start_date" | "weeks" | "people" | "rate_type" | "rate" | "requirements">, lang: FeedLang) {
+  const t = FEED_TEXT[lang];
+  const trades = job.trades.map((tr) => tradeLabel(tr, lang)).join(", ");
+  const title = lang === "nl" ? `${job.title}, ${job.city}` : `${t.wanted}: ${trades}${job.people > 1 ? ` ×${job.people}` : ""} · ${job.city}`;
+  const when = [
+    job.start_date ? put(t.start, { d: dayMonthYear(job.start_date) }) : null,
+    job.weeks ? put(t.weeks, { n: job.weeks }) : null,
+    put(t.people, { n: job.people }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const pay = job.rate_type === "ask" || !job.rate ? t.ask : put(job.rate_type === "hour" ? t.hour : t.fixed, { x: money(job.rate) });
+  const needs = job.requirements.length ? put(t.needs, { list: job.requirements.map((r) => requirementLabel(r, lang)).join(", ") }) : null;
+  const lines = [lang === "nl" ? null : job.title, when, pay, needs, job.description.trim() ? put(t.original, { text: job.description.trim() }) : null];
+  return { title, summary: lines.filter(Boolean).join("\n") };
+}
+
+// Phone numbers and e-mail addresses go through Haaks, not in the text of the job.
+export function hasContactInText(text: string) {
+  return /[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(text) || /(\+|00)?\d[\d\s().-]{7,}\d/.test(text);
+}
+
+const FEED_LANGS: FeedLang[] = ["en", "ru", "uk", "pl", "ro"];
+
+// Puts an approved job into the feed and sends the alerts. Runs with the server account.
+export async function publishCompanyJob(server: SupabaseClient, jobId: string, siteUrl: string) {
+  const { data: job, error } = await server.from("company_jobs").select("*").eq("id", jobId).single<CompanyJob>();
+  if (error || !job) throw new Error(error?.message ?? "Job not found");
+  if (job.status === "published" && job.feed_item_id) return job;
+
+  const { data: company } = await server
+    .from("profiles")
+    .select("company_name, kvk_number, full_name, phone, business_email")
+    .eq("id", job.company_id)
+    .single<CompanyInfo>();
+  const place = (job.postcode ? await postcodePlace(job.postcode.replace(/\s/g, "")) : null) ?? (await gemeentePlace(job.city));
+  const nl = jobTexts(job, "nl");
+  const translations = Object.fromEntries(FEED_LANGS.map((lang) => [lang, jobTexts(job, lang)]));
+  const now = new Date();
+  const expires = new Date(now.getTime() + JOB_DAYS * 24 * 60 * 60 * 1000);
+  const contact = [company?.business_email, company?.phone].filter(Boolean).join(" · ") || null;
+
+  const { data: item, error: insertError } = await server
+    .from("feed_items")
+    .insert({
+      source: "haaks",
+      source_name: company?.company_name ?? "Bedrijf",
+      kind: "business",
+      title: nl.title,
+      summary: nl.summary,
+      translations,
+      trades: job.trades,
+      city: job.city,
+      postcode: job.postcode,
+      region: place?.gemeente ?? job.city,
+      lat: place?.lat ?? null,
+      lng: place?.lng ?? null,
+      timing: job.start_date ? `${dayMonthYear(job.start_date)}${job.weeks ? ` · ${job.weeks} wk` : ""}` : null,
+      budget: job.rate_type === "ask" || !job.rate ? null : job.rate_type === "hour" ? `€${money(job.rate)}/h` : `€${money(job.rate)}`,
+      contact,
+      published_at: now.toISOString(),
+      expires_at: expires.toISOString(),
+      fingerprint: `job-${job.id}`,
+    })
+    .select("id")
+    .single<{ id: string }>();
+  if (insertError || !item) throw new Error(insertError?.message ?? "Feed insert failed");
+
+  const { error: updateError } = await server
+    .from("company_jobs")
+    .update({ status: "published", feed_item_id: item.id, published_at: now.toISOString(), expires_at: expires.toISOString(), reject_reason: null })
+    .eq("id", job.id);
+  if (updateError) throw new Error(updateError.message);
+  // One approved job makes the company trusted: its next jobs go online at once.
+  await server.from("profiles").update({ company_verified: true }).eq("id", job.company_id);
+
+  // New job: alerts to fitting builders, like the job collector does.
+  try {
+    await Promise.all([
+      emailEnabled() ? sendFeedEmails(server, "instant", siteUrl) : null,
+      telegramEnabled() ? sendFeedTelegram(server, siteUrl) : null,
+      sendFeedPush(server, siteUrl),
+    ]);
+  } catch (e) {
+    console.error("Company job alerts failed", e);
+  }
+  return job;
+}
+
+// "Found people" or rejected: out of the feed.
+export async function takeJobOffline(server: SupabaseClient, job: Pick<CompanyJob, "id" | "feed_item_id">, status: "closed" | "rejected", reason?: string) {
+  const now = new Date().toISOString();
+  if (job.feed_item_id) await server.from("feed_items").update({ expires_at: now }).eq("id", job.feed_item_id);
+  const { error } = await server
+    .from("company_jobs")
+    .update({ status, reject_reason: status === "rejected" ? (reason ?? null) : null, expires_at: now })
+    .eq("id", job.id);
+  if (error) throw new Error(error.message);
+}
+
+export const isActive = (job: CompanyJob, now = Date.now()) =>
+  job.status === "pending" || (job.status === "published" && (!job.expires_at || Date.parse(job.expires_at) > now));
