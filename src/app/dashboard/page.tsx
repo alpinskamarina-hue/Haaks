@@ -5,7 +5,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { createMaterialList } from "@/app/materials-actions";
 import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict } from "@/lib/materials-i18n";
-import { fill, getFeedDict } from "@/lib/feed-i18n";
+import { fill, getFeedDict, pushTexts } from "@/lib/feed-i18n";
+import { PushToggle } from "@/components/PushToggle";
+import { vapidPublicKey } from "@/lib/push";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
@@ -118,6 +120,8 @@ export default async function Home() {
           </div>
         </Link>
       )}
+
+      <PushToggle publicKey={vapidPublicKey()} t={pushTexts(feedDict)} hideWhenOn />
 
       {filled < 100 && (
         <Link

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { emailEnabled } from "@/lib/email";
-import { sendFeedEmails, sendFeedTelegram } from "@/lib/feed-notify";
+import { sendFeedEmails, sendFeedPush, sendFeedTelegram } from "@/lib/feed-notify";
 import { siteUrl } from "@/lib/lang";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { telegramEnabled } from "@/lib/telegram";
@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode") === "instant" ? "instant" : "daily";
   const supabase = await createServerAccountClient();
   const site = await siteUrl();
-  const [email, telegram] = await Promise.all([
+  const [email, telegram, push] = await Promise.all([
     emailEnabled() ? sendFeedEmails(supabase, mode, site) : "not set up: RESEND_API_KEY, EMAIL_FROM",
     telegramEnabled() ? sendFeedTelegram(supabase, site) : "not set up: TELEGRAM_BOT_TOKEN",
+    sendFeedPush(supabase, site),
   ]);
-  return NextResponse.json({ mode, email, telegram });
+  return NextResponse.json({ mode, email, telegram, push });
 }
