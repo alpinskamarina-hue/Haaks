@@ -17,13 +17,7 @@ type Recipient = {
   notify_email: string;
 };
 
-type Row = Omit<FeedItem, "locked" | "published_at"> & {
-  published_at: string | null;
-  demo_age: string | null;
-  created_at: string;
-  // A test job only this account sees; null for everyone.
-  visible_to: string | null;
-};
+type Row = Omit<FeedItem, "locked" | "published_at"> & { published_at: string | null; demo_age: string | null; created_at: string };
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -63,7 +57,6 @@ function fittingJobs(
   const trades = workerTrades(person.trade);
   const regions = workerRegions(person.lead_regions ?? person.city);
   return items
-    .filter((item) => !item.visible_to || item.visible_to === person.id)
     .filter((item) => !skip.has(`${person.id}:${item.id}`))
     .filter((item) => person.plan === "pro" || now - item.published >= DAY)
     .map((item) => ({ item, score: feedScore(item, trades, regions) }))
