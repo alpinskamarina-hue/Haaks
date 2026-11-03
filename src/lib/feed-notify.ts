@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { escapeHtml, sendEmail } from "@/lib/email";
-import { feedScore, feedText, sourceLabel, tradeLabel, workerRegions, workerTrades, type FeedItem } from "@/lib/feed";
+import { feedScore, feedText, sourceLabel, tradeLabel, workerMatch, type FeedItem } from "@/lib/feed";
 import { fill, getFeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE } from "@/lib/feed-server";
 import { isLang, type Lang } from "@/lib/i18n";
@@ -10,8 +10,13 @@ type Recipient = {
   id: string;
   language: string;
   trade: string | null;
+  trades: string[] | null;
   city: string | null;
   lead_regions: string | null;
+  home_lat: number | null;
+  home_lng: number | null;
+  travel_km: number | null;
+  extra_cities: string[] | null;
   plan: "free" | "pro";
   feed_email: "daily" | "instant";
   notify_email: string;
@@ -55,18 +60,20 @@ async function alreadyHandled(supabase: SupabaseClient, channel: "email" | "tele
   return new Set([...(done ?? []), ...(actions ?? [])].map((r) => `${r.user_id}:${r.item_id}`));
 }
 
+type MatchKeys = "trade" | "trades" | "city" | "lead_regions" | "home_lat" | "home_lng" | "travel_km" | "extra_cities";
+const MATCH_COLUMNS = "trade, trades, city, lead_regions, home_lat, home_lng, travel_km, extra_cities";
+
 function fittingJobs(
-  person: Pick<Recipient, "id" | "trade" | "city" | "lead_regions" | "plan">,
+  person: Pick<Recipient, MatchKeys | "id" | "plan">,
   items: RecentItem[],
   skip: Set<string>,
   now: number,
 ) {
-  const trades = workerTrades(person.trade);
-  const regions = workerRegions(person.lead_regions ?? person.city);
+  const match = workerMatch(person);
   return items
     .filter((item) => !skip.has(`${person.id}:${item.id}`))
     .filter((item) => person.plan === "pro" || now - item.published >= DAY)
-    .map((item) => ({ item, score: feedScore(item, trades, regions) }))
+    .map((item) => ({ item, score: feedScore(item, match) }))
     .filter((j) => j.score >= FIT_SCORE)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
@@ -83,7 +90,7 @@ export async function sendFeedEmails(supabase: SupabaseClient, mode: "daily" | "
   const [{ data: people, error: peopleError }, items] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, language, trade, city, lead_regions, plan, feed_email, notify_email")
+      .select(`id, language, ${MATCH_COLUMNS}, plan, feed_email, notify_email`)
       .in("feed_email", modes)
       .not("notify_email", "is", null)
       .returns<Recipient[]>(),
@@ -175,7 +182,7 @@ ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml
   return { subject, html, text };
 }
 
-type TelegramRecipient = Pick<Recipient, "id" | "language" | "trade" | "city" | "lead_regions" | "plan"> & {
+type TelegramRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan"> & {
   telegram_chat_id: number;
 };
 
@@ -186,7 +193,7 @@ export async function sendFeedTelegram(supabase: SupabaseClient, siteUrl: string
   const [{ data: people, error }, items] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, language, trade, city, lead_regions, plan, telegram_chat_id")
+      .select(`id, language, ${MATCH_COLUMNS}, plan, telegram_chat_id`)
       .eq("plan", "pro")
       .not("telegram_chat_id", "is", null)
       .returns<TelegramRecipient[]>(),
