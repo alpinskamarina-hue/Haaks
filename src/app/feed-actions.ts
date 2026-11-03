@@ -11,7 +11,10 @@ import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { replyTemplate } from "@/lib/leads";
 import { short } from "@/lib/quotes";
+import { getFeedDict } from "@/lib/feed-i18n";
+import { sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
+import { loadWorkspace } from "@/lib/workspace";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -156,4 +159,39 @@ export async function disconnectTelegram() {
   await supabase.from("profiles").update({ telegram_chat_id: null, telegram_link_code: null }).eq("id", user.id);
   refresh();
   redirect("/dashboard/leads/feed#telegram");
+}
+
+// Push notifications: the phone's subscription, saved for the signed-in worker.
+export async function savePushSubscription(sub: { endpoint: string; keys: { p256dh: string; auth: string } }) {
+  const { supabase, user } = await requireUser();
+  if (!sub?.endpoint?.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) return { ok: false };
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .upsert({ endpoint: sub.endpoint, user_id: user.id, p256dh: sub.keys.p256dh, auth: sub.keys.auth });
+  if (error) console.error("Saving push subscription failed", error);
+  return { ok: !error };
+}
+
+export async function removePushSubscription(endpoint: string) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("push_subscriptions").delete().eq("user_id", user.id).eq("endpoint", endpoint);
+  return { ok: true };
+}
+
+// "Check": a test notification to the worker's own phones.
+export async function sendTestPush() {
+  const { supabase, user, lang } = await loadWorkspace();
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("endpoint, user_id, p256dh, auth")
+    .eq("user_id", user.id)
+    .returns<PushSubscriptionRow[]>();
+  const f = getFeedDict(lang);
+  let ok = false;
+  for (const sub of subs ?? []) {
+    const result = await sendPush(sub, { title: "Haaks", body: f.pushTestBody, url: `${await siteUrl()}/dashboard/leads/feed`, tag: "haaks-test" });
+    if (result.ok) ok = true;
+    else if (result.gone) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+  }
+  return { ok };
 }

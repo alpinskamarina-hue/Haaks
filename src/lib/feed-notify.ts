@@ -4,6 +4,7 @@ import { feedScore, feedText, sourceLabel, tradeLabel, workerMatch, type FeedIte
 import { fill, getFeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE } from "@/lib/feed-server";
 import { isLang, type Lang } from "@/lib/i18n";
+import { pushEnabled, sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { sendTelegram } from "@/lib/telegram";
 
 type Recipient = {
@@ -256,4 +257,68 @@ function telegramJob(job: FeedItem & { score: number }, lang: Lang) {
     ...(job.contact ? [`📞 ${escapeHtml(job.contact)}`] : []),
     ...(job.source_url ? [escapeHtml(job.source_url)] : []),
   ].join("\n");
+}
+
+type PushRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan"> & { feed_seen_at: string | null };
+
+// Push notifications on the phone: new fitting jobs, once each, as one notification per
+// worker ("4 new jobs for you"), with the number of unseen fitting jobs for the app icon.
+// Free workers get jobs once they are 24 hours old, like everywhere else.
+export async function sendFeedPush(supabase: SupabaseClient, siteUrl: string) {
+  if (!pushEnabled()) return "not set up: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY";
+  const now = Date.now();
+  const { data: subs, error } = await supabase.from("push_subscriptions").select("endpoint, user_id, p256dh, auth").returns<PushSubscriptionRow[]>();
+  if (error) throw new Error(error.message);
+  const ids = [...new Set((subs ?? []).map((s) => s.user_id))];
+  if (!ids.length) return { recipients: 0, sent: 0, failed: 0 };
+
+  const [{ data: people, error: peopleError }, items, { data: done }, { data: actions }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(`id, language, ${MATCH_COLUMNS}, plan, feed_seen_at`)
+      .in("id", ids)
+      .returns<PushRecipient[]>(),
+    loadRecentItems(supabase, now),
+    supabase.from("push_sent").select("user_id, item_id").in("user_id", ids),
+    supabase.from("feed_actions").select("user_id, item_id").in("user_id", ids),
+  ]);
+  if (peopleError) throw new Error(peopleError.message);
+  const skip = new Set([...(done ?? []), ...(actions ?? [])].map((r) => `${r.user_id}:${r.item_id}`));
+  const feedUrl = `${siteUrl}/dashboard/leads/feed`;
+
+  let sent = 0;
+  let failed = 0;
+  for (const person of people ?? []) {
+    const jobs = fittingJobs(person, items, skip, now);
+    if (!jobs.length) continue;
+    const lang: Lang = isLang(person.language) ? person.language : "en";
+    const f = getFeedDict(lang);
+    // Unseen fitting jobs (since the worker last opened the feed) for the number on the icon.
+    const seen = person.feed_seen_at ? Date.parse(person.feed_seen_at) : now - DAY;
+    const match = workerMatch(person);
+    const unseen = items.filter(
+      (i) => Date.parse(i.created_at) > seen && feedScore(i, match) >= FIT_SCORE && !skip.has(`${person.id}:${i.id}`),
+    ).length;
+    const first = feedText({ ...jobs[0].item, locked: false, published_at: "" }, lang).title;
+    const message = {
+      title: "Haaks",
+      body: jobs.length === 1 ? fill(f.pushOne, { title: first }) : fill(f.pushMany, { n: jobs.length, title: first }),
+      url: feedUrl,
+      count: Math.max(unseen, jobs.length),
+    };
+    let delivered = false;
+    for (const sub of (subs ?? []).filter((s) => s.user_id === person.id)) {
+      const result = await sendPush(sub, message);
+      if (result.ok) delivered = true;
+      else if (result.gone) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      else console.error("Feed push failed", person.id, result.status);
+    }
+    if (!delivered) {
+      failed++;
+      continue;
+    }
+    sent++;
+    await supabase.from("push_sent").insert(jobs.map((j) => ({ user_id: person.id, item_id: j.item.id })));
+  }
+  return { recipients: people?.length ?? 0, sent, failed };
 }

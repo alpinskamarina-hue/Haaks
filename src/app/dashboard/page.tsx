@@ -5,7 +5,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { createMaterialList } from "@/app/materials-actions";
 import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict } from "@/lib/materials-i18n";
-import { fill, getFeedDict } from "@/lib/feed-i18n";
+import { fill, getFeedDict, pushTexts } from "@/lib/feed-i18n";
+import { PushToggle } from "@/components/PushToggle";
+import { vapidPublicKey } from "@/lib/push";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
@@ -119,6 +121,8 @@ export default async function Home() {
         </Link>
       )}
 
+      <PushToggle publicKey={vapidPublicKey()} t={pushTexts(feedDict)} hideWhenOn />
+
       {filled < 100 && (
         <Link
           href="/dashboard/profile"
@@ -157,7 +161,7 @@ export default async function Home() {
         ))}
       </section>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <section className={card}>
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">{t.homeLeadsTitle}</h2>

@@ -28,8 +28,16 @@ function useBadges(items: NavItem[]) {
     const hit = items.find((i) => i.clearOn && pathname.startsWith(i.clearOn));
     if (hit && !cleared.includes(hit.href)) setCleared((c) => [...c, hit.href]);
   }, [pathname, items, cleared]);
-  return (item: NavItem) =>
+  const value = (item: NavItem) =>
     cleared.includes(item.href) || (item.clearOn && pathname.startsWith(item.clearOn)) ? 0 : (item.badge ?? 0);
+  // The same number on the app icon of the home-screen app (where the phone supports it).
+  const total = items.reduce((sum, item) => sum + value(item), 0);
+  useEffect(() => {
+    const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (total > 0) nav.setAppBadge?.(total).catch(() => {});
+    else nav.clearAppBadge?.().catch(() => {});
+  }, [total]);
+  return value;
 }
 
 const count = (n: number) => (n > 99 ? "99+" : String(n));

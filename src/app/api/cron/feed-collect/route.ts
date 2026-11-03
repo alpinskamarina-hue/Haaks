@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { collectFeed } from "@/lib/collect";
 import { emailEnabled } from "@/lib/email";
-import { sendFeedEmails, sendFeedTelegram } from "@/lib/feed-notify";
+import { sendFeedEmails, sendFeedPush, sendFeedTelegram } from "@/lib/feed-notify";
 import { siteUrl } from "@/lib/lang";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { telegramEnabled } from "@/lib/telegram";
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     alerts = await Promise.all([
       emailEnabled() ? sendFeedEmails(supabase, "instant", site) : "e-mail not set up",
       telegramEnabled() ? sendFeedTelegram(supabase, site) : "Telegram not set up",
+      sendFeedPush(supabase, site),
     ]);
   }
   return NextResponse.json({ ...result, alerts });

@@ -8,13 +8,15 @@ import {
   unhideFeedItem,
 } from "@/app/feed-actions";
 import { LeadsTabs } from "@/components/LeadsTabs";
+import { PushToggle } from "@/components/PushToggle";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
-import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
+import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
+import { vapidPublicKey } from "@/lib/push";
 import { telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
 
@@ -130,7 +132,7 @@ export default async function FeedPage({
         mineCount={mineCount ?? 0}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
           {!pro && locked.length > 0 && (
             <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
@@ -254,6 +256,10 @@ export default async function FeedPage({
               <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{f.proSoon}</p>
             </section>
           )}
+
+          <div id="push">
+            <PushToggle publicKey={vapidPublicKey()} t={pushTexts(f)} />
+          </div>
 
           <section id="notify" className={card}>
             <h2 className="mb-3 font-semibold">{f.notifyTitle}</h2>
