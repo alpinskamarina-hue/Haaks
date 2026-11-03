@@ -32,6 +32,13 @@ export async function unhideFeedItem(id: string) {
   refresh();
 }
 
+// Free plan: open one card in full. The database checks the limit of free opens.
+export async function unlockFeedItem(id: string) {
+  const { supabase } = await requireUser();
+  await supabase.rpc("unlock_feed_item", { p_item: id });
+  refresh();
+}
+
 // "Reply": the job becomes one of the worker's leads, with a Dutch reply, and the lead page opens.
 export async function takeFeedItem(id: string) {
   const { supabase, user } = await requireUser();
