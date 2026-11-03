@@ -7,6 +7,7 @@ import { fill, type CompanyDict, type CompanyLang } from "@/lib/company-i18n";
 import { dayMonthYear, JOB_TRADES } from "@/lib/company-jobs";
 import { tradeLabel } from "@/lib/feed";
 import { isLang, LANG_NAMES } from "@/lib/i18n";
+import { PUBLIC_WORKS } from "@/lib/works-i18n";
 
 export type CatalogWorker = {
   id: string;
@@ -23,6 +24,7 @@ export type CatalogWorker = {
   has_kvk: boolean;
   passport_token: string | null;
   invite_status: "sent" | "accepted" | "declined" | null;
+  works?: number;
 };
 
 export type SentInvite = {
@@ -141,8 +143,11 @@ export function CompanyCatalog({
                 {w.has_kvk && <span className="text-green-700">{t.kvkYes}</span>}
               </p>
               {w.passport_token && (
-                <a href={`/p/${w.passport_token}`} target="_blank" rel="noopener" className="mt-2 inline-block text-sm font-medium text-orange-700 underline">
-                  🪪 {t.passport}
+                <a href={`/p/${w.passport_token}?lang=${lang}`} target="_blank" rel="noopener" className="mt-2 inline-flex flex-wrap gap-x-3 text-sm font-medium text-orange-700 underline">
+                  <span>🪪 {t.passport}</span>
+                  {(w.works ?? 0) > 0 && (
+                    <span>🧱 {w.works === 1 ? PUBLIC_WORKS[lang].one : PUBLIC_WORKS[lang].count.replace("{n}", String(w.works))}</span>
+                  )}
                 </a>
               )}
               {w.invite_status ? (

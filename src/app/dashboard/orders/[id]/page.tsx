@@ -14,6 +14,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
+import { getWorksDict } from "@/lib/works-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -50,6 +51,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       .returns<Invoice[]>(),
   ]);
   if (!order) notFound();
+  const wk = getWorksDict(lang);
+  const { data: work } = await supabase.from("works").select("id").eq("order_id", id).limit(1).maybeSingle<{ id: string }>();
   const { data: materialRows } = await supabase
     .from("material_lists")
     .select("*")
@@ -105,6 +108,23 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </form>
         </div>
       </section>
+
+      {(order.status === "closed" || work) && (
+        <section className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+          {work ? (
+            <Link href={`/dashboard/works/${work.id}`} className="font-semibold text-orange-800 underline">
+              🧱 {wk.openWork}
+            </Link>
+          ) : (
+            <>
+              <p className="text-sm text-orange-900">{wk.fromOrderHint}</p>
+              <Link href={`/dashboard/works/new?order=${order.id}`} className="mt-2 inline-block rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+                🧱 {wk.fromOrder}
+              </Link>
+            </>
+          )}
+        </section>
+      )}
 
       <section className={card}>
         <div className="mb-3 flex items-center justify-between gap-3">
