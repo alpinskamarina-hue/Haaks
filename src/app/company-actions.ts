@@ -54,10 +54,10 @@ export async function saveCompanyDetails(formData: FormData) {
   back("/company", "ok", "saved");
 }
 
-export async function createCompanyJob(formData: FormData) {
-  const { supabase, user, profile } = await requireCompany();
-  if (!profile.company_name || !profile.kvk_number || !profile.phone) back("/company", "error", "details");
+type Poster = Awaited<ReturnType<typeof requireCompany>>;
 
+// Shared by companies (/company) and builders who need a helper (/dashboard/helpers).
+async function postJob({ supabase, user, profile }: Poster, formData: FormData, base: string) {
   const title = text(formData, "title", 120) ?? "";
   const description = text(formData, "description", 2000) ?? "";
   const trades = formData.getAll("trades").map(String).filter((t) => JOB_TRADES.includes(t));
@@ -73,13 +73,14 @@ export async function createCompanyJob(formData: FormData) {
     return Number.isFinite(n) && n >= min && n <= max ? n : null;
   };
   const startDate = text(formData, "start_date", 10);
+  const form = `${base}/new`;
 
-  if (title.length < 3) back("/company/new", "error", "title");
-  if (trades.length < 1 || trades.length > 5) back("/company/new", "error", "trades");
-  if (!city) back("/company/new", "error", "city");
-  if (rateType !== "ask" && !(rate > 0)) back("/company/new", "error", "rate");
-  if (hasContactInText(`${title}\n${description}`)) back("/company/new", "error", "contact");
-  if (formData.get("opdracht") !== "on") back("/company/new", "error", "opdracht");
+  if (title.length < 3) back(form, "error", "title");
+  if (trades.length < 1 || trades.length > 5) back(form, "error", "trades");
+  if (!city) back(form, "error", "city");
+  if (rateType !== "ask" && !(rate > 0)) back(form, "error", "rate");
+  if (hasContactInText(`${title}\n${description}`)) back(form, "error", "contact");
+  if (formData.get("opdracht") !== "on") back(form, "error", "opdracht");
 
   const { data: job, error } = await supabase
     .from("company_jobs")
@@ -100,46 +101,44 @@ export async function createCompanyJob(formData: FormData) {
     })
     .select("id")
     .single<{ id: string }>();
-  if (error || !job) back("/company/new", "error", error?.message.includes("company_jobs_limit") ? "limit" : "failed");
+  if (error || !job) back(form, "error", error?.message.includes("company_jobs_limit") ? "limit" : "failed");
 
-  // A company Haaks has approved before goes online at once.
+  // A poster Haaks has approved before goes online at once.
   if (profile.company_verified) {
     try {
       await publishCompanyJob(await createServerAccountClient(), job!.id, await siteUrl());
     } catch (e) {
-      console.error("Publishing a company job failed", e);
-      revalidatePath("/company");
-      back("/company", "ok", "sent");
+      console.error("Publishing a job failed", e);
+      revalidatePath(base);
+      back(base, "ok", "sent");
     }
-    revalidatePath("/company");
-    back("/company", "ok", "published");
+    revalidatePath(base);
+    back(base, "ok", "published");
   }
-  revalidatePath("/company");
-  back("/company", "ok", "sent");
+  revalidatePath(base);
+  back(base, "ok", "sent");
 }
 
-export async function closeCompanyJob(formData: FormData) {
-  const { supabase } = await requireCompany();
-  // Read through the company's own rights: only its own jobs are found.
+async function closeJob({ supabase }: Poster, formData: FormData, base: string) {
+  // Read through the poster's own rights: only their own jobs are found.
   const { data: job } = await supabase
     .from("company_jobs")
     .select("id, feed_item_id, status")
     .eq("id", String(formData.get("id")))
     .maybeSingle<Pick<CompanyJob, "id" | "feed_item_id" | "status">>();
-  if (!job || job.status === "closed" || job.status === "rejected") back("/company", "error", "failed");
+  if (!job || job.status === "closed" || job.status === "rejected") back(base, "error", "failed");
   await takeJobOffline(await createServerAccountClient(), job!, "closed");
-  revalidatePath("/company");
-  back("/company", "ok", "closed");
+  revalidatePath(base);
+  back(base, "ok", "closed");
 }
 
-// The company accepts or declines a builder's reply; accepting opens contacts on both sides.
-export async function decideJobReply(formData: FormData) {
-  const { supabase } = await requireCompany();
+// Accept or decline a builder's reply; accepting opens contacts on both sides.
+async function decideReply({ supabase }: Poster, formData: FormData, base: string) {
   const replyId = String(formData.get("reply"));
   const jobId = String(formData.get("job"));
   const accept = formData.get("accept") === "1";
   const { error } = await supabase.rpc("decide_job_reply", { p_reply: replyId, p_accept: accept });
-  if (error) back(`/company/jobs/${jobId}`, "error", "failed");
+  if (error) back(`${base}/jobs/${jobId}`, "error", "failed");
   if (accept) {
     try {
       await notifyReplyAccepted(await createServerAccountClient(), replyId, await siteUrl());
@@ -147,8 +146,50 @@ export async function decideJobReply(formData: FormData) {
       console.error("Reply accepted alert failed", e);
     }
   }
-  revalidatePath("/company", "layout");
-  back(`/company/jobs/${jobId}`, "ok", accept ? "accepted" : "declined");
+  revalidatePath(base, "layout");
+  back(`${base}/jobs/${jobId}`, "ok", accept ? "accepted" : "declined");
+}
+
+export async function createCompanyJob(formData: FormData) {
+  const poster = await requireCompany();
+  if (!poster.profile.company_name || !poster.profile.kvk_number || !poster.profile.phone) back("/company", "error", "details");
+  await postJob(poster, formData, "/company");
+}
+
+export async function closeCompanyJob(formData: FormData) {
+  await closeJob(await requireCompany(), formData, "/company");
+}
+
+export async function decideJobReply(formData: FormData) {
+  await decideReply(await requireCompany(), formData, "/company");
+}
+
+// "Need a helper": a builder posts a job for other builders, in their own cabinet.
+const HELPERS = "/dashboard/helpers";
+
+async function requireBuilder() {
+  const { supabase, user } = await requireUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("account_type, company_verified, company_name, kvk_number, full_name, phone, business_email")
+    .eq("id", user.id)
+    .single();
+  if (profile?.account_type !== "worker") redirect("/company");
+  return { supabase, user, profile };
+}
+
+export async function createHelperJob(formData: FormData) {
+  const poster = await requireBuilder();
+  if (!poster.profile.full_name || !poster.profile.phone) back(`${HELPERS}/new`, "error", "details");
+  await postJob(poster, formData, HELPERS);
+}
+
+export async function closeHelperJob(formData: FormData) {
+  await closeJob(await requireBuilder(), formData, HELPERS);
+}
+
+export async function decideHelperReply(formData: FormData) {
+  await decideReply(await requireBuilder(), formData, HELPERS);
 }
 
 // The company invites a builder from the catalog; the builder gets an alert.

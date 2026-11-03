@@ -78,28 +78,44 @@ const FEED_TEXT: Record<
     ask: string;
     needs: string;
     original: string;
+    originalZzp: string;
+    helper: string;
   }
 > = {
-  nl: { wanted: "Gezocht", start: "Start: {d}", weeks: "{n} weken", people: "{n} personen", hour: "Tarief: €{x} per uur", fixed: "Prijs: €{x} voor het hele werk", ask: "Tarief: in overleg", needs: "Nodig: {list}", original: "{text}" },
-  en: { wanted: "Wanted", start: "Start: {d}", weeks: "{n} weeks", people: "{n} people", hour: "Rate: €{x} per hour", fixed: "Price: €{x} for the whole job", ask: "Rate: to be agreed", needs: "Needed: {list}", original: "From the company (in Dutch): «{text}»" },
-  ru: { wanted: "Ищут", start: "Начало: {d}", weeks: "{n} нед.", people: "{n} чел.", hour: "Оплата: €{x} в час", fixed: "Цена: €{x} за всю работу", ask: "Оплата: по договорённости", needs: "Нужно: {list}", original: "От компании (на нидерландском): «{text}»" },
-  uk: { wanted: "Шукають", start: "Початок: {d}", weeks: "{n} тиж.", people: "{n} осіб", hour: "Оплата: €{x} за годину", fixed: "Ціна: €{x} за всю роботу", ask: "Оплата: за домовленістю", needs: "Потрібно: {list}", original: "Від компанії (нідерландською): «{text}»" },
-  pl: { wanted: "Szukają", start: "Start: {d}", weeks: "{n} tyg.", people: "{n} os.", hour: "Stawka: €{x} za godzinę", fixed: "Cena: €{x} za całą pracę", ask: "Stawka: do uzgodnienia", needs: "Wymagane: {list}", original: "Od firmy (po niderlandzku): «{text}»" },
-  ro: { wanted: "Caută", start: "Început: {d}", weeks: "{n} săpt.", people: "{n} pers.", hour: "Tarif: €{x} pe oră", fixed: "Preț: €{x} pentru toată lucrarea", ask: "Tarif: de stabilit", needs: "Necesar: {list}", original: "De la firmă (în neerlandeză): «{text}»" },
+  nl: { wanted: "Gezocht", start: "Start: {d}", weeks: "{n} weken", people: "{n} personen", hour: "Tarief: €{x} per uur", fixed: "Prijs: €{x} voor het hele werk", ask: "Tarief: in overleg", needs: "Nodig: {list}", original: "{text}", originalZzp: "{text}", helper: "Hulp gezocht" },
+  en: { wanted: "Wanted", start: "Start: {d}", weeks: "{n} weeks", people: "{n} people", hour: "Rate: €{x} per hour", fixed: "Price: €{x} for the whole job", ask: "Rate: to be agreed", needs: "Needed: {list}", original: "From the company (in Dutch): «{text}»", originalZzp: "From the builder: «{text}»", helper: "Helper wanted" },
+  ru: { wanted: "Ищут", start: "Начало: {d}", weeks: "{n} нед.", people: "{n} чел.", hour: "Оплата: €{x} в час", fixed: "Цена: €{x} за всю работу", ask: "Оплата: по договорённости", needs: "Нужно: {list}", original: "От компании (на нидерландском): «{text}»", originalZzp: "От строителя: «{text}»", helper: "Нужен помощник" },
+  uk: { wanted: "Шукають", start: "Початок: {d}", weeks: "{n} тиж.", people: "{n} осіб", hour: "Оплата: €{x} за годину", fixed: "Ціна: €{x} за всю роботу", ask: "Оплата: за домовленістю", needs: "Потрібно: {list}", original: "Від компанії (нідерландською): «{text}»", originalZzp: "Від будівельника: «{text}»", helper: "Потрібен помічник" },
+  pl: { wanted: "Szukają", start: "Start: {d}", weeks: "{n} tyg.", people: "{n} os.", hour: "Stawka: €{x} za godzinę", fixed: "Cena: €{x} za całą pracę", ask: "Stawka: do uzgodnienia", needs: "Wymagane: {list}", original: "Od firmy (po niderlandzku): «{text}»", originalZzp: "Od fachowca: «{text}»", helper: "Potrzebny pomocnik" },
+  ro: { wanted: "Caută", start: "Început: {d}", weeks: "{n} săpt.", people: "{n} pers.", hour: "Tarif: €{x} pe oră", fixed: "Preț: €{x} pentru toată lucrarea", ask: "Tarif: de stabilit", needs: "Necesar: {list}", original: "De la firmă (în neerlandeză): «{text}»", originalZzp: "De la constructor: «{text}»", helper: "Caut ajutor" },
 };
 
 const put = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? ""));
+
+// "Ivan Petrov" -> "Ivan P."
+export function shortName(full: string | null | undefined) {
+  const [first, last] = (full ?? "").trim().split(/\s+/);
+  return first ? `${first}${last ? ` ${last[0]}.` : ""}` : "ZZP";
+}
 
 // "2026-11-17" -> "17.11.2026"
 export const dayMonthYear = (iso: string) => iso.split("-").reverse().join(".");
 
 const money = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
 
-export function jobTexts(job: Pick<CompanyJob, "title" | "description" | "trades" | "city" | "start_date" | "weeks" | "people" | "rate_type" | "rate" | "requirements">, lang: FeedLang) {
+export function jobTexts(
+  job: Pick<CompanyJob, "title" | "description" | "trades" | "city" | "start_date" | "weeks" | "people" | "rate_type" | "rate" | "requirements">,
+  lang: FeedLang,
+  // Posted by a builder who needs a helper (not a company).
+  fromZzp = false,
+) {
   const t = FEED_TEXT[lang];
   const trades = job.trades.map((tr) => tradeLabel(tr, lang)).join(", ");
-  const title = lang === "nl" ? `${job.title}, ${job.city}` : `${t.wanted}: ${trades}${job.people > 1 ? ` ×${job.people}` : ""} · ${job.city}`;
+  const title =
+    lang === "nl"
+      ? `${fromZzp ? `${t.helper}: ` : ""}${job.title}, ${job.city}`
+      : `${fromZzp ? t.helper : t.wanted}: ${trades}${job.people > 1 ? ` ×${job.people}` : ""} · ${job.city}`;
   const when = [
     job.start_date ? put(t.start, { d: dayMonthYear(job.start_date) }) : null,
     job.weeks ? put(t.weeks, { n: job.weeks }) : null,
@@ -109,7 +125,7 @@ export function jobTexts(job: Pick<CompanyJob, "title" | "description" | "trades
     .join(" · ");
   const pay = job.rate_type === "ask" || !job.rate ? t.ask : put(job.rate_type === "hour" ? t.hour : t.fixed, { x: money(job.rate) });
   const needs = job.requirements.length ? put(t.needs, { list: job.requirements.map((r) => requirementLabel(r, lang)).join(", ") }) : null;
-  const lines = [lang === "nl" ? null : job.title, when, pay, needs, job.description.trim() ? put(t.original, { text: job.description.trim() }) : null];
+  const lines = [lang === "nl" ? null : job.title, when, pay, needs, job.description.trim() ? put(fromZzp ? t.originalZzp : t.original, { text: job.description.trim() }) : null];
   return { title, summary: lines.filter(Boolean).join("\n") };
 }
 
@@ -128,12 +144,13 @@ export async function publishCompanyJob(server: SupabaseClient, jobId: string, s
 
   const { data: company } = await server
     .from("profiles")
-    .select("company_name, kvk_number, full_name, phone, business_email")
+    .select("company_name, kvk_number, full_name, phone, business_email, account_type")
     .eq("id", job.company_id)
-    .single<CompanyInfo>();
+    .single<CompanyInfo & { account_type: string }>();
+  const fromZzp = company?.account_type === "worker";
   const place = (job.postcode ? await postcodePlace(job.postcode.replace(/\s/g, "")) : null) ?? (await gemeentePlace(job.city));
-  const nl = jobTexts(job, "nl");
-  const translations = Object.fromEntries(FEED_LANGS.map((lang) => [lang, jobTexts(job, lang)]));
+  const nl = jobTexts(job, "nl", fromZzp);
+  const translations = Object.fromEntries(FEED_LANGS.map((lang) => [lang, jobTexts(job, lang, fromZzp)]));
   const now = new Date();
   const expires = new Date(now.getTime() + JOB_DAYS * 24 * 60 * 60 * 1000);
 
@@ -141,7 +158,8 @@ export async function publishCompanyJob(server: SupabaseClient, jobId: string, s
     .from("feed_items")
     .insert({
       source: "haaks",
-      source_name: company?.company_name ?? "Bedrijf",
+      // A builder is shown as "ZZP · Ivan P."; a company by its name.
+      source_name: fromZzp ? `ZZP · ${shortName(company?.full_name)}` : (company?.company_name ?? "Bedrijf"),
       kind: "business",
       title: nl.title,
       summary: nl.summary,

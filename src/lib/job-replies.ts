@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { shortName } from "@/lib/company-jobs";
 import type { Lang } from "@/lib/i18n";
 import { pushEnabled, sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { sendTelegram, telegramEnabled } from "@/lib/telegram";
@@ -280,9 +281,11 @@ export async function notifyReplyAccepted(server: SupabaseClient, replyId: strin
     server.from("company_jobs").select("title, company_id").eq("id", reply.job_id).single(),
   ]);
   if (!worker || !job) return;
-  const { data: company } = await server.from("profiles").select("company_name").eq("id", job.company_id).single();
+  const { data: company } = await server.from("profiles").select("company_name, full_name, account_type").eq("id", job.company_id).single();
   const t = getReplyDict((worker.language as Lang) ?? "en");
-  const body = put(t.pushBody, { company: company?.company_name ?? "Bedrijf", job: job.title });
+  // A builder who needs a helper is named "ZZP · Ivan P.".
+  const poster = company?.account_type === "worker" ? `ZZP · ${shortName(company.full_name)}` : (company?.company_name ?? "Bedrijf");
+  const body = put(t.pushBody, { company: poster, job: job.title });
   const url = `${siteUrl}/dashboard/replies`;
 
   if (pushEnabled()) {

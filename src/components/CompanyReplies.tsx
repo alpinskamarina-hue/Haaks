@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { decideJobReply } from "@/app/company-actions";
 import { SubmitButton } from "@/components/SubmitButton";
-import { type CompanyDict, type CompanyLang } from "@/lib/company-i18n";
+import type { JobUiDict } from "@/lib/company-i18n";
+import type { Lang } from "@/lib/i18n";
 import { dayMonthYear, type CompanyJob } from "@/lib/company-jobs";
 import { kvkSearchUrl } from "@/lib/documents";
 import { tradeLabel } from "@/lib/feed";
@@ -18,16 +18,20 @@ export function CompanyReplies({
   t,
   lang,
   ok,
+  decideAction,
+  base = "/company",
 }: {
   job: Pick<CompanyJob, "id" | "title" | "city" | "trades">;
   replies: CompanyReply[];
-  t: CompanyDict;
-  lang: CompanyLang;
+  t: JobUiDict;
+  lang: Lang;
   ok?: string;
+  decideAction: (formData: FormData) => Promise<void>;
+  base?: string;
 }) {
   return (
     <div className="space-y-5">
-      <Link href="/company" className="text-sm text-slate-500">
+      <Link href={base} className="text-sm text-slate-500">
         {t.back}
       </Link>
       <div>
@@ -72,13 +76,13 @@ export function CompanyReplies({
                 {r.vehicle && (
                   <>
                     <dt className="text-slate-500">{t.vehicle}</dt>
-                    <dd>{t.vehicles[r.vehicle as keyof CompanyDict["vehicles"]] ?? r.vehicle}</dd>
+                    <dd>{t.vehicles[r.vehicle as keyof JobUiDict["vehicles"]] ?? r.vehicle}</dd>
                   </>
                 )}
                 {r.tools && (
                   <>
                     <dt className="text-slate-500">{t.toolsLabel}</dt>
-                    <dd>{t.toolsKinds[r.tools as keyof CompanyDict["toolsKinds"]] ?? r.tools}</dd>
+                    <dd>{t.toolsKinds[r.tools as keyof JobUiDict["toolsKinds"]] ?? r.tools}</dd>
                   </>
                 )}
                 {r.kvk_number && (
@@ -113,7 +117,7 @@ export function CompanyReplies({
                 </div>
               )}
               {r.status === "sent" && (
-                <form action={decideJobReply} className="mt-3 flex gap-2">
+                <form action={decideAction} className="mt-3 flex gap-2">
                   <input type="hidden" name="reply" value={r.id} />
                   <input type="hidden" name="job" value={job.id} />
                   <input type="hidden" name="accept" value="1" />
@@ -123,7 +127,7 @@ export function CompanyReplies({
                 </form>
               )}
               {r.status === "sent" && (
-                <form action={decideJobReply} className="mt-2">
+                <form action={decideAction} className="mt-2">
                   <input type="hidden" name="reply" value={r.id} />
                   <input type="hidden" name="job" value={job.id} />
                   <input type="hidden" name="accept" value="0" />

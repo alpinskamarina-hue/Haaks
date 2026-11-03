@@ -16,6 +16,7 @@ import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "
 import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
+import { getHelperDict } from "@/lib/helper-i18n";
 import { getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
@@ -70,12 +71,16 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }, { data: myJobRows }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
     markFeedSeen(supabase, user.id, extra),
     supabase.rpc("my_job_replies"),
+    // "Need a helper" jobs this builder posted: their own card links to the replies.
+    supabase.from("company_jobs").select("id, feed_item_id").eq("company_id", user.id).not("feed_item_id", "is", null),
   ]);
+  const ownJobByItem = new Map((myJobRows ?? []).map((j) => [j.feed_item_id as string, j.id as string]));
+  const yourJob = getHelperDict(lang).yourJob;
   // Replies to company jobs, by feed card.
   const myReplies = (myReplyRows ?? []) as MyReply[];
   const replyByItem = new Map(myReplies.filter((r) => r.feed_item_id).map((r) => [r.feed_item_id!, r]));
@@ -265,6 +270,8 @@ export default async function FeedPage({
                 isNew={isNewJob(item, since)}
                 reply={replyByItem.get(item.id)}
                 rt={rt}
+                ownJob={ownJobByItem.get(item.id)}
+                yourJob={yourJob}
               />
             ))}
           </ul>
@@ -398,6 +405,8 @@ function FeedCard({
   isNew,
   reply,
   rt,
+  ownJob,
+  yourJob,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -408,6 +417,8 @@ function FeedCard({
   isNew: boolean;
   reply?: MyReply;
   rt: ReplyDict;
+  ownJob?: string;
+  yourJob: string;
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -457,7 +468,11 @@ function FeedCard({
       </p>
       <p className="mt-2 break-words text-sm text-slate-700">{summary}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm">
-        {companyJob && reply ? (
+        {companyJob && ownJob ? (
+          <Link href={`/dashboard/helpers/jobs/${ownJob}`} className="rounded-lg bg-sky-50 px-3 py-1.5 font-medium text-sky-800">
+            👷 {yourJob}
+          </Link>
+        ) : companyJob && reply ? (
           <Link
             href="/dashboard/replies"
             className={`rounded-lg px-3 py-1.5 font-medium ${

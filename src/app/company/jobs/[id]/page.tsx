@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { decideJobReply } from "@/app/company-actions";
 import { CompanyReplies } from "@/components/CompanyReplies";
 import { requireUser } from "@/lib/auth";
 import { companyLang, getCompanyDict } from "@/lib/company-i18n";
@@ -22,5 +23,5 @@ export default async function CompanyJobRepliesPage({
   ]);
   if (!job) notFound();
   const lang = companyLang(profile?.language);
-  return <CompanyReplies job={job} replies={(replies ?? []) as CompanyReply[]} t={getCompanyDict(lang)} lang={lang} ok={ok} />;
+  return <CompanyReplies job={job} replies={(replies ?? []) as CompanyReply[]} t={getCompanyDict(lang)} lang={lang} ok={ok} decideAction={decideJobReply} />;
 }

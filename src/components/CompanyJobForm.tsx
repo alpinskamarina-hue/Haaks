@@ -1,23 +1,35 @@
 import Link from "next/link";
-import { createCompanyJob } from "@/app/company-actions";
 import { SubmitButton } from "@/components/SubmitButton";
-import { fill, type CompanyDict, type CompanyLang } from "@/lib/company-i18n";
+import { fill, type JobUiDict } from "@/lib/company-i18n";
 import { FREE_ACTIVE_JOBS, JOB_REQUIREMENTS, JOB_TRADES, requirementLabel } from "@/lib/company-jobs";
 import { tradeLabel } from "@/lib/feed";
+import type { Lang } from "@/lib/i18n";
 
 const input = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base";
 const chip =
   "flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50";
 
 // The form a company fills in for a new job.
-export function CompanyJobForm({ t, lang, error }: { t: CompanyDict; lang: CompanyLang; error?: string }) {
+export function CompanyJobForm({
+  t,
+  lang,
+  error,
+  action,
+  base = "/company",
+}: {
+  t: JobUiDict;
+  lang: Lang;
+  error?: string;
+  action: (formData: FormData) => Promise<void>;
+  base?: string;
+}) {
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <form action={createCompanyJob} className="space-y-5">
+    <form action={action} className="space-y-5">
       <h1 className="text-2xl font-bold">{t.formTitle}</h1>
       {error && (
         <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          {fill(t.errors[error as keyof CompanyDict["errors"]] ?? t.errors.failed, { max: FREE_ACTIVE_JOBS })}
+          {fill(t.errors[error as keyof JobUiDict["errors"]] ?? t.errors.failed, { max: FREE_ACTIVE_JOBS })}
         </p>
       )}
 
@@ -105,7 +117,7 @@ export function CompanyJobForm({ t, lang, error }: { t: CompanyDict; lang: Compa
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <SubmitButton className="rounded-lg bg-orange-600 px-5 py-3 font-semibold text-white disabled:opacity-60">{t.publish}</SubmitButton>
-        <Link href="/company" className="rounded-lg px-5 py-3 text-center text-slate-600">
+        <Link href={base} className="rounded-lg px-5 py-3 text-center text-slate-600">
           {t.cancel}
         </Link>
       </div>
