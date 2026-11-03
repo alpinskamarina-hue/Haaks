@@ -16,7 +16,7 @@ export type ScoredFeedItem = FeedItem & {
   opened: boolean;
 };
 
-// Cards a free worker can open in full, once (the database enforces it in unlock_feed_item()).
+// Cards a free worker can open in full per 24 hours (the database enforces it in unlock_feed_item()).
 export const FREE_OPENS = 3;
 
 // The worker's feed: every job scored against their trade and cities, with what they did with it.
@@ -26,7 +26,7 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
     supabase.rpc("feed_details"),
     supabase.from("feed_actions").select("item_id, action").eq("user_id", userId),
     supabase.from("leads").select("id, feed_item_id").eq("user_id", userId).not("feed_item_id", "is", null),
-    supabase.from("feed_unlocks").select("item_id").eq("user_id", userId),
+    supabase.from("feed_unlocks").select("item_id, created_at").eq("user_id", userId),
   ]);
   const opened = new Set((unlocks ?? []).map((u) => u.item_id as string));
   const actionOf = new Map((actions ?? []).map((a) => [a.item_id as string, a.action as "hidden" | "taken"]));
@@ -50,8 +50,15 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
       opened: opened.has(item.id),
     };
   });
-  const opensLeft = Math.max(0, FREE_OPENS - opened.size);
-  return { items: scored, match, trades: match.trades, regions: match.regions, opensLeft };
+  // Opens in the last 24 hours count; an opened card stays open for good.
+  const recent = (unlocks ?? [])
+    .map((u) => new Date(u.created_at as string).getTime())
+    .filter((t) => t > Date.now() - DAY)
+    .sort((a, b) => a - b);
+  const opensLeft = Math.max(0, FREE_OPENS - recent.length);
+  // When all are used: hours until the earliest of them is 24 hours old.
+  const opensInHours = opensLeft > 0 ? 0 : Math.max(1, Math.ceil((recent[0] + DAY - Date.now()) / 3600000));
+  return { items: scored, match, trades: match.trades, regions: match.regions, opensLeft, opensInHours };
 }
 
 // A job "fits" when it matches the trade (if one is set) and is within the travel radius

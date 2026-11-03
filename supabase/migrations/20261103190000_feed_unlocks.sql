@@ -1,4 +1,5 @@
--- Free plan: a worker can open 3 cards, once (not per month). An opened card shows everything a Pro
+-- Free plan: a worker can open 3 cards per 24 hours; the next ones open 24 hours after the
+-- earliest of those 3. An opened card shows everything a Pro
 -- worker sees (text at once, contact, link to the source, "Reply"). The limit lives here,
 -- not in the page, so it cannot be skipped.
 create table if not exists public.feed_unlocks (
@@ -13,7 +14,7 @@ alter table public.feed_unlocks enable row level security;
 create policy "own feed unlocks" on public.feed_unlocks
   for select using (auth.uid() = user_id);
 
--- How many cards a free worker may open in total.
+-- How many cards a free worker may open within 24 hours.
 create or replace function public.feed_unlock_limit()
 returns int
 language sql
@@ -29,7 +30,8 @@ set search_path = ''
 as $$
   select count(*)::int
   from public.feed_unlocks u
-  where u.user_id = auth.uid();
+  where u.user_id = auth.uid()
+    and u.created_at > now() - interval '24 hours';
 $$;
 
 -- Opens one card. Returns how many are left; raises 'feed_unlock_limit' when nothing is left.

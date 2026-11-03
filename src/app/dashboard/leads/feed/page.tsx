@@ -68,7 +68,7 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match, opensLeft }, { count: mineCount }, lastVisit] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
     markFeedSeen(supabase, user.id, extra),
@@ -140,7 +140,7 @@ export default async function FeedPage({
               <p className="font-semibold text-orange-900">{fill(f.bannerTitle, { n: locked.length })}</p>
               <p className="mt-1 text-sm text-orange-900/80">{f.bannerText}</p>
               <p className="mt-2 text-sm font-semibold text-orange-900">
-                {opensLeft > 0 ? `🔓 ${fill(f.openLeft, { n: opensLeft })}` : f.openNone}
+                {opensLeft > 0 ? `🔓 ${fill(f.openLeft, { n: opensLeft })}` : `⏳ ${fill(f.openNone, { h: opensInHours })}`}
               </p>
               <a href="#pro" className="mt-3 inline-block rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
                 {f.proTitle}
