@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { claudeEnabled } from "@/lib/env";
 import { analyzeLead } from "@/lib/extract";
-import { feedScore, feedText, tradeLabel, workerRegions, workerTrades, type FeedItem } from "@/lib/feed";
+import { feedScore, feedText, tradeLabel, workerMatch, type FeedItem } from "@/lib/feed";
 import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { replyTemplate } from "@/lib/leads";
@@ -42,13 +42,15 @@ export async function takeFeedItem(id: string) {
   if (existing) redirect(`/dashboard/leads/${existing.id}`);
 
   // Through feed_for_me(), so a free worker cannot take a job that is still locked for them.
-  const { data } = await supabase.rpc("feed_for_me");
-  const item = ((data ?? []) as FeedItem[]).find((i) => i.id === id);
+  const [{ data }, { data: places }] = await Promise.all([supabase.rpc("feed_for_me"), supabase.rpc("feed_places")]);
+  const row = ((data ?? []) as FeedItem[]).find((i) => i.id === id);
+  const place = ((places ?? []) as Pick<FeedItem, "id" | "lat" | "lng" | "region">[]).find((p) => p.id === id);
+  const item = row && { ...row, ...place };
   if (!item || item.locked || !item.source) return;
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("language, full_name, company_name, trade, city, lead_regions, passport_token, passport_enabled")
+    .select("language, full_name, company_name, trade, trades, city, lead_regions, home_lat, home_lng, travel_km, extra_cities, passport_token, passport_enabled")
     .eq("id", user.id)
     .single();
   const lang: Lang = isLang(profile?.language) ? profile.language : "en";
@@ -100,7 +102,7 @@ export async function takeFeedItem(id: string) {
       city: item.city,
       client_contact: item.contact,
       timing: item.timing,
-      match_score: feedScore(item, workerTrades(profile?.trade), workerRegions(profile?.lead_regions ?? profile?.city)),
+      match_score: feedScore(item, workerMatch(profile)),
       match_reason: reason,
       reply_nl: reply,
       feed_item_id: item.id,

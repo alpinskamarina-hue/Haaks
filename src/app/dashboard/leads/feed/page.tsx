@@ -46,12 +46,13 @@ function daysLeft(timing: string | null) {
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; section?: string }>;
+  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; section?: string; city?: string }>;
 }) {
   const params = await searchParams;
   const showAll = params.all === "1";
   const showHidden = params.hidden === "1";
   const section = SECTIONS.find((x) => x.key === params.section)?.key ?? null;
+  const cityFilter = params.city?.trim() || null;
   const { supabase, user, profile, lang } = await loadWorkspace();
   const f = getFeedDict(lang);
   const extra = profile as typeof profile & {
@@ -62,22 +63,33 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions }, { count: mineCount }] = await Promise.all([
+  const [{ items, trades, regions, match }, { count: mineCount }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
   ]);
 
-  const base = items
+  const shown = items
     .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
     .filter((i) => showAll || showHidden || i.score >= FIT_SCORE);
+  // Places to pick from in "all jobs", most jobs first.
+  const cityCounts = new Map<string, number>();
+  for (const i of shown) if (i.city) cityCounts.set(i.city, (cityCounts.get(i.city) ?? 0) + 1);
+  const cities = [...cityCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c]) => c);
+  const base = shown.filter((i) => !cityFilter || i.city === cityFilter);
   const sectionOrder = SECTIONS.map((x) => x.key);
+  // Real jobs first, then nearest first; jobs without a known place after those, newest first.
   const visible = base
     .filter((i) => !section || SECTION_OF[i.kind] === section)
-    .sort((a, b) => sectionOrder.indexOf(SECTION_OF[a.kind]) - sectionOrder.indexOf(SECTION_OF[b.kind]));
+    .sort(
+      (a, b) =>
+        sectionOrder.indexOf(SECTION_OF[a.kind]) - sectionOrder.indexOf(SECTION_OF[b.kind]) ||
+        (a.distance ?? Infinity) - (b.distance ?? Infinity) ||
+        b.published_at.localeCompare(a.published_at),
+    );
   const sectionCount = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key).length;
   const query = (next: Record<string, string | null>) => {
     const q = new URLSearchParams();
-    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, section, ...next };
+    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, section, city: cityFilter, ...next };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     const str = q.toString();
     return `/dashboard/leads/feed${str ? `?${str}` : ""}`;
@@ -150,7 +162,7 @@ export default async function FeedPage({
             ))}
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-xs sm:mx-0 sm:flex-wrap sm:px-0">
-            <Link href={query({ all: null, hidden: null })} className={chip(!showAll && !showHidden)}>
+            <Link href={query({ all: null, hidden: null, city: null })} className={chip(!showAll && !showHidden)}>
               {f.filterMine}
             </Link>
             <Link href={query({ all: "1", hidden: null })} className={chip(showAll)}>
@@ -162,11 +174,36 @@ export default async function FeedPage({
               </Link>
             )}
           </div>
+          {showAll && cities.length > 1 && (
+            <form action="/dashboard/leads/feed" className="flex flex-wrap items-center gap-2 text-sm">
+              <input type="hidden" name="all" value="1" />
+              {section && <input type="hidden" name="section" value={section} />}
+              <select name="city" defaultValue={cityFilter ?? ""} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5">
+                <option value="">{f.cityAll}</option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>
+                    {c} ({cityCounts.get(c)})
+                  </option>
+                ))}
+              </select>
+              <button className="rounded-lg bg-slate-900 px-3 py-1.5 font-semibold text-white">{f.cityShow}</button>
+            </form>
+          )}
           {(trades.length > 0 || regions.length > 0) && !showHidden && (
             <p className="text-xs text-slate-500">
               {fill(f.matchFor, {
                 trades: trades.map((tr) => tradeLabel(tr, lang)).join(", ") || "—",
-                cities: profile.lead_regions || profile.city || "—",
+                cities:
+                  match.radius === 0
+                    ? f.wholeCountry
+                    : [
+                        profile.city && match.lat != null && match.radius
+                          ? fill(f.withinKm, { city: profile.city, n: match.radius })
+                          : profile.lead_regions || profile.city,
+                        ...((profile as typeof profile & { extra_cities?: string[] }).extra_cities ?? []),
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "—",
               })}{" "}
               <Link href="/dashboard/leads" className="underline">
                 {f.profileLink}
@@ -327,6 +364,11 @@ function FeedCard({ item, f, lang, pro, worker }: { item: ScoredFeedItem; f: Fee
           {sourceLabel(item)}
         </span>
         <span>{timeAgo(item.published_at, lang)}</span>
+        {item.distance !== null && (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
+            📍 {fill(f.kmAway, { n: Math.max(1, item.distance) })}
+          </span>
+        )}
         {fresh && <span className="rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700">{f.newBadge}</span>}
         {item.is_demo && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">{f.demoBadge}</span>}
         <span className={`ml-auto rounded-full px-2 py-0.5 font-semibold ${scoreColor(item.score)}`}>{item.score}%</span>

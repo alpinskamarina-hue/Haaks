@@ -19,6 +19,10 @@ export type FeedItem = {
   is_demo: boolean;
   // Newer than 24 hours for a free worker: only city and trades are known.
   locked: boolean;
+  // From feed_places(): where the job is, when known.
+  lat?: number | null;
+  lng?: number | null;
+  region?: string | null;
 };
 
 export type FeedEmailMode = "off" | "daily" | "instant";
@@ -71,12 +75,82 @@ export function workerRegions(regions: string | null | undefined) {
     .filter(Boolean);
 }
 
-// 0-100: trade counts most, then the worker's cities. No distance yet (needs postcodes).
-export function feedScore(item: Pick<FeedItem, "trades" | "city">, trades: string[], regions: string[]) {
-  const tradeFit = trades.length === 0 ? 0.5 : item.trades.some((t) => trades.includes(t)) ? 1 : 0;
-  const city = (item.city ?? "").toLowerCase();
-  const regionFit = regions.length === 0 ? 0.5 : city && regions.some((r) => city.includes(r) || r.includes(city)) ? 1 : 0;
-  return Math.round(tradeFit * 60 + regionFit * 35 + 5);
+// Trade ids of the worker profile (worker-profile.ts) -> Dutch trade keys of feed items.
+const PROFILE_TRADES: Record<string, string[]> = {
+  tiler: ["tegelzetter"],
+  plumber: ["loodgieter"],
+  carpenter: ["timmerman"],
+  electrician: ["elektricien"],
+  painter: ["schilder"],
+  bricklayer: ["metselaar"],
+  drywall: ["stukadoor", "timmerman"],
+  plasterer: ["stukadoor"],
+  roofer: ["dakdekker"],
+  windows_doors: ["timmerman"],
+  flooring: ["timmerman", "tegelzetter"],
+  welder: ["aannemer"],
+  labourer: ["klusjesman", "aannemer"],
+  other: [],
+};
+
+// What the feed matches a worker on: trades, home point and travel radius, extra cities.
+export type WorkerMatch = {
+  trades: string[];
+  regions: string[];
+  lat: number | null;
+  lng: number | null;
+  // km; 0 = the whole country, null = not set (the home city counts then).
+  radius: number | null;
+};
+
+type MatchProfile = {
+  trade?: string | null;
+  trades?: string[] | null;
+  city?: string | null;
+  lead_regions?: string | null;
+  home_lat?: number | null;
+  home_lng?: number | null;
+  travel_km?: number | null;
+  extra_cities?: string[] | null;
+};
+
+export function workerMatch(p: MatchProfile | null | undefined): WorkerMatch {
+  const trades = new Set([...(p?.trades ?? []).flatMap((id) => PROFILE_TRADES[id] ?? []), ...workerTrades(p?.trade)]);
+  const regions = new Set([...workerRegions(p?.lead_regions ?? p?.city), ...workerRegions(p?.city), ...(p?.extra_cities ?? []).map((c) => c.trim().toLowerCase())]);
+  return {
+    trades: [...trades],
+    regions: [...regions].filter(Boolean),
+    lat: p?.home_lat ?? null,
+    lng: p?.home_lng ?? null,
+    radius: p?.travel_km ?? null,
+  };
+}
+
+type Placed = { lat?: number | null; lng?: number | null };
+
+// Straight-line distance in km between the worker's home and the job, or null if either is unknown.
+export function distanceKm(item: Placed, m: Pick<WorkerMatch, "lat" | "lng">) {
+  if (item.lat == null || item.lng == null || m.lat == null || m.lng == null) return null;
+  const rad = Math.PI / 180;
+  const dLat = (item.lat - m.lat) * rad;
+  const dLng = (item.lng - m.lng) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(m.lat * rad) * Math.cos(item.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+function inRegion(item: Pick<FeedItem, "city"> & Placed & { region?: string | null }, m: WorkerMatch) {
+  if (m.radius === 0) return 1;
+  const places = [item.city, item.region].map((c) => (c ?? "").toLowerCase()).filter(Boolean);
+  if (places.some((c) => m.regions.some((r) => c.includes(r) || r.includes(c)))) return 1;
+  const km = distanceKm(item, m);
+  if (km !== null) return km <= (m.radius ?? 30) ? 1 : 0;
+  return m.regions.length === 0 && m.lat == null ? 0.5 : 0;
+}
+
+// 0-100: trade counts most, then the place (within the travel radius or in one of the cities).
+export function feedScore(item: Pick<FeedItem, "trades" | "city"> & Placed & { region?: string | null }, m: WorkerMatch) {
+  const tradeFit = m.trades.length === 0 ? 0.5 : item.trades.some((t) => m.trades.includes(t)) ? 1 : 0;
+  return Math.round(tradeFit * 60 + inRegion(item, m) * 35 + 5);
 }
 
 export function feedText(item: FeedItem, lang: Lang) {
