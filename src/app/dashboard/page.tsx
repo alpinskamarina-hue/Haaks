@@ -5,6 +5,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { createMaterialList } from "@/app/materials-actions";
 import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict } from "@/lib/materials-i18n";
+import { fill, getFeedDict } from "@/lib/feed-i18n";
+import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import type { Lead } from "@/lib/leads";
@@ -26,7 +28,7 @@ export default async function Home() {
   // Name and phone are required; older accounts are asked for them once.
   if (!profile.full_name?.trim() || !profile.phone?.trim()) redirect("/dashboard/onboarding?step=0&edit=1&must=1");
 
-  const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }, { data: materialRows }] =
+  const [{ data: leadRows, count: newLeadCount }, { data: quoteRows }, { data: invoiceRows }, { data: receiptRows }, { data: docs }, { data: current }, { data: materialRows }, newJobs] =
     await Promise.all([
       supabase
         .from("leads")
@@ -54,7 +56,11 @@ export default async function Home() {
         .order("updated_at", { ascending: false })
         .limit(3)
         .returns<MaterialList[]>(),
+      loadFeed(supabase, user.id, profile)
+        .then(({ items }) => newFittingCount(items, (profile as typeof profile & { feed_seen_at?: string | null }).feed_seen_at))
+        .catch(() => 0),
     ]);
+  const feedDict = getFeedDict(lang);
 
   const leads = leadRows ?? [];
   const waitingQuotes = (quoteRows ?? []).filter((q) => q.status === "sent").length;
@@ -97,6 +103,21 @@ export default async function Home() {
         <h1 className="text-2xl font-bold">{firstName ? t.homeHello.replace("{name}", firstName) : t.navHome}</h1>
         <p className="text-slate-600">{t.homeSubtitle}</p>
       </div>
+
+      {newJobs > 0 && (
+        <Link
+          href="/dashboard/leads/feed"
+          className="flex items-center gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 hover:border-red-300"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-red-600 text-lg font-bold text-white">
+            {newJobs > 99 ? "99+" : newJobs}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-red-900">{fill(feedDict.homeNewJobs, { n: newJobs })}</p>
+            <p className="text-sm text-red-900/80">{feedDict.homeNewJobsHint} →</p>
+          </div>
+        </Link>
+      )}
 
       {filled < 100 && (
         <Link
