@@ -25,10 +25,19 @@ export type Review = {
   submitted_at: string | null;
   publish_at: string | null;
   created_at: string;
+  reply?: string | null;
+  reply_at?: string | null;
+  report_reason?: ReportReason | null;
+  report_note?: string | null;
+  reported_at?: string | null;
+  held?: boolean;
 };
 
-export const isPublished = (r: Pick<Review, "status" | "publish_at">, now = new Date()) =>
-  r.status === "submitted" && !!r.publish_at && new Date(r.publish_at) <= now;
+export const REVIEW_REPORT_REASONS = ["insult", "personal", "false", "not_client", "other"] as const;
+export type ReportReason = (typeof REVIEW_REPORT_REASONS)[number];
+
+export const isPublished = (r: Pick<Review, "status" | "publish_at" | "held">, now = new Date()) =>
+  r.status === "submitted" && !r.held && !!r.publish_at && new Date(r.publish_at) <= now;
 
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
 

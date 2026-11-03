@@ -53,7 +53,10 @@ export default async function ReviewRequestPage({ params }: { params: Promise<{ 
           </div>
         ) : (
           <div className="mt-4">
-            <ReviewCard review={review} lang={lang} criteria={r.criteria} />
+            <ReviewCard review={review} lang={lang} criteria={r.criteria} replyLabel={r.yourReply} />
+            <Link href={`/dashboard/reviews#review-${review.id}`} className="mt-3 inline-block text-sm text-orange-700 underline">
+              {r.reply} / {r.report} →
+            </Link>
           </div>
         )}
       </section>

@@ -82,6 +82,7 @@ export default async function PassportPage({
     .select("*")
     .eq("worker_id", profile.id)
     .eq("status", "submitted")
+    .eq("held", false)
     .lte("publish_at", new Date().toISOString())
     .order("submitted_at", { ascending: false })
     .limit(50)
@@ -186,7 +187,13 @@ export default async function PassportPage({
           <RatingSummary summary={rating} criteria={rvCriteria} averageText={getReviewsDict(lang).average} newcomerText={pr.newcomer} />
           <div className="space-y-3">
             {rating.published.map((x) => (
-              <ReviewCard key={x.id} review={x} lang={lang} criteria={rvCriteria} />
+              <ReviewCard
+                key={x.id}
+                review={x}
+                lang={lang}
+                criteria={rvCriteria}
+                replyLabel={pr.reply.replace("{name}", (profile.full_name ?? "").split(" ")[0] || "ZZP")}
+              />
             ))}
           </div>
           <p className="text-xs text-slate-500">✓ {pr.verified}</p>

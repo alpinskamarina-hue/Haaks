@@ -6,6 +6,10 @@ import { dayMonthYear, jobTexts, type CompanyInfo, type CompanyJob } from "@/lib
 import { kvkSearchUrl } from "@/lib/documents";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadWorkspace } from "@/lib/workspace";
+import { resolveReviewReport } from "@/app/reviews-actions";
+import { ReviewCard } from "@/components/ReviewCard";
+import type { Review } from "@/lib/reviews";
+import { getReviewsDict } from "@/lib/reviews-i18n";
 
 // Haaks checks a company's first jobs before they go into the feed. Admin only, in Russian.
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
@@ -53,6 +57,21 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       ? server.from("profiles").select("id, full_name, city, trades").in("id", workerIds)
       : Promise.resolve({ data: [] as { id: string; full_name: string | null; city: string | null; trades: string[] }[] }),
   ]);
+  // Reviews a builder reported.
+  const { data: reviewReports } = await server
+    .from("reviews")
+    .select("*")
+    .eq("status", "submitted")
+    .not("report_reason", "is", null)
+    .order("reported_at", { ascending: true })
+    .returns<Review[]>();
+  const reviewWorkerIds = [...new Set((reviewReports ?? []).map((r) => r.worker_id))];
+  const { data: reviewWorkers } = reviewWorkerIds.length
+    ? await server.from("profiles").select("id, full_name").in("id", reviewWorkerIds)
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const reviewWorkerName = new Map((reviewWorkers ?? []).map((w) => [w.id as string, w.full_name as string | null]));
+  const rvRu = getReviewsDict("ru");
+
   const jobByItem = new Map((reportedJobs ?? []).map((j) => [j.feed_item_id as string, j]));
   const workerById = new Map((reportedWorkers ?? []).map((w) => [w.id as string, w]));
 
@@ -71,6 +90,10 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
             ? "Опубликовано: заказ в ленте «Компании ищут», подходящим строителям ушли уведомления."
             : ok === "removed"
               ? "Снято: заказ убран из ленты (или строитель убран из каталога), жалобы закрыты."
+              : ok === "review_removed"
+                ? "Отзыв удалён: его больше нет в паспорте и в оценке."
+              : ok === "review_kept"
+                ? "Отзыв оставлен и показан в паспорте. Повторно пожаловаться на него строитель не сможет."
               : ok === "dismissed"
                 ? "Жалобы отклонены, всё осталось как было."
                 : "Заказ отклонён."}
@@ -171,6 +194,36 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
               </li>
             );
           })}
+        </ul>
+      )}
+      <h2 className="pt-4 text-xl font-bold">
+        Жалобы на отзывы {(reviewReports ?? []).length > 0 && <span className="text-red-600">({(reviewReports ?? []).length})</span>}
+      </h2>
+      {(reviewReports ?? []).length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-slate-500">Жалоб на отзывы нет.</p>
+      ) : (
+        <ul className="space-y-4">
+          {(reviewReports ?? []).map((r) => (
+            <li key={r.id} className="space-y-3 rounded-xl border border-red-200 bg-white p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase text-red-700">
+                ⚠️ Строитель {reviewWorkerName.get(r.worker_id) ?? "—"} жалуется: {r.report_reason ? rvRu.reasons[r.report_reason] : ""}
+                {r.held ? " · отзыв скрыт до решения" : " · отзыв уже виден"}
+              </p>
+              {r.report_note && <p className="text-sm text-slate-700">«{r.report_note}»</p>}
+              <ReviewCard review={r} lang="ru" criteria={rvRu.criteria} replyLabel={rvRu.yourReply} />
+              <div className="flex flex-wrap gap-2">
+                <form action={resolveReviewReport}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="remove" value="1" />
+                  <SubmitButton className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Удалить отзыв</SubmitButton>
+                </form>
+                <form action={resolveReviewReport}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <SubmitButton className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-60">Оставить отзыв</SubmitButton>
+                </form>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
     </main>

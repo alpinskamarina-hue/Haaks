@@ -9,11 +9,13 @@ export function ReviewCard({
   lang,
   criteria,
   note,
+  replyLabel,
 }: {
   review: Review;
   lang: Lang;
   criteria: Record<Criterion, string>;
   note?: React.ReactNode;
+  replyLabel?: string;
 }) {
   const who = [reviewerShort(review.reviewer_name), review.reviewer_city, monthLabel(review.submitted_at?.slice(0, 10) ?? null, lang)]
     .filter(Boolean)
@@ -36,6 +38,12 @@ export function ReviewCard({
             </span>
           ))}
         </p>
+      )}
+      {review.reply && (
+        <div className="rounded-lg border-l-4 border-orange-400 bg-slate-50 px-3 py-2 text-sm">
+          {replyLabel && <p className="text-xs font-semibold text-slate-600">{replyLabel}</p>}
+          <p className="whitespace-pre-line text-slate-700">{review.reply}</p>
+        </div>
       )}
       {note}
     </article>

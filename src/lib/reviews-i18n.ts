@@ -1,7 +1,7 @@
 // Review texts: the builder's cabinet in 6 languages; the client's form, the passport and the
 // company catalog in nl/en.
 import type { Lang } from "@/lib/i18n";
-import type { Criterion } from "@/lib/reviews";
+import type { Criterion, ReportReason } from "@/lib/reviews";
 
 export type ReviewsDict = {
   nav: string;
@@ -31,6 +31,17 @@ export type ReviewsDict = {
   pushTitle: string;
   pushBody: string;
   notAllowed: string;
+  reply: string;
+  replyHint: string;
+  replySend: string;
+  yourReply: string;
+  report: string;
+  reportHint: string;
+  reportNote: string;
+  reportSend: string;
+  reported: string;
+  reportedHeld: string;
+  reasons: Record<ReportReason, string>;
 };
 
 const ru: ReviewsDict = {
@@ -61,6 +72,17 @@ const ru: ReviewsDict = {
   pushTitle: "Новый отзыв ⭐",
   pushBody: "{name} оценил(а) работу «{job}»: {stars} из 5.",
   notAllowed: "Попросить отзыв можно по закрытому заказу, принятому предложению или отправленному счёту.",
+  reply: "Ответить",
+  replyHint: "Ответ виден всем под отзывом. Ответить можно один раз, спокойно и по делу. Лучше на нидерландском.",
+  replySend: "Опубликовать ответ",
+  yourReply: "Ваш ответ",
+  report: "Пожаловаться",
+  reportHint: "Haaks проверит отзыв. Если пожаловаться в первые 48 часов, отзыв не появится в паспорте до решения.",
+  reportNote: "Что не так? (необязательно)",
+  reportSend: "Отправить жалобу",
+  reported: "Жалоба отправлена, Haaks проверяет",
+  reportedHeld: "Жалоба отправлена: отзыв скрыт до решения Haaks",
+  reasons: { insult: "Оскорбления", personal: "Личные данные (адрес, телефон)", false: "Неправда о работе", not_client: "Это не мой заказчик", other: "Другое" },
 };
 
 const DICTS: Record<Lang, ReviewsDict> = {
@@ -93,6 +115,17 @@ const DICTS: Record<Lang, ReviewsDict> = {
     pushTitle: "Новий відгук ⭐",
     pushBody: "{name} оцінив(ла) роботу «{job}»: {stars} з 5.",
     notAllowed: "Попросити відгук можна за закритим замовленням, прийнятою пропозицією або надісланим рахунком.",
+    reply: "Відповісти",
+    replyHint: "Відповідь бачать усі під відгуком. Відповісти можна один раз, спокійно і по суті. Краще нідерландською.",
+    replySend: "Опублікувати відповідь",
+    yourReply: "Ваша відповідь",
+    report: "Поскаржитися",
+    reportHint: "Haaks перевірить відгук. Якщо поскаржитися в перші 48 годин, відгук не з'явиться в паспорті до рішення.",
+    reportNote: "Що не так? (необов'язково)",
+    reportSend: "Надіслати скаргу",
+    reported: "Скаргу надіслано, Haaks перевіряє",
+    reportedHeld: "Скаргу надіслано: відгук приховано до рішення Haaks",
+    reasons: { insult: "Образи", personal: "Особисті дані (адреса, телефон)", false: "Неправда про роботу", not_client: "Це не мій замовник", other: "Інше" },
   },
   pl: {
     nav: "Opinie",
@@ -122,6 +155,17 @@ const DICTS: Record<Lang, ReviewsDict> = {
     pushTitle: "Nowa opinia ⭐",
     pushBody: "{name} ocenił(a) pracę „{job}”: {stars} z 5.",
     notAllowed: "O opinię można poprosić przy zamkniętym zleceniu, zaakceptowanej ofercie lub wysłanej fakturze.",
+    reply: "Odpowiedz",
+    replyHint: "Odpowiedź widzą wszyscy pod opinią. Można odpowiedzieć raz, spokojnie i rzeczowo. Najlepiej po niderlandzku.",
+    replySend: "Opublikuj odpowiedź",
+    yourReply: "Twoja odpowiedź",
+    report: "Zgłoś",
+    reportHint: "Haaks sprawdzi opinię. Jeśli zgłosisz ją w ciągu 48 godzin, nie pojawi się w paszporcie do decyzji.",
+    reportNote: "Co jest nie tak? (opcjonalnie)",
+    reportSend: "Wyślij zgłoszenie",
+    reported: "Zgłoszenie wysłane, Haaks sprawdza",
+    reportedHeld: "Zgłoszenie wysłane: opinia ukryta do decyzji Haaks",
+    reasons: { insult: "Obraźliwe słowa", personal: "Dane osobowe (adres, telefon)", false: "Nieprawda o pracy", not_client: "To nie mój klient", other: "Inne" },
   },
   ro: {
     nav: "Recenzii",
@@ -151,6 +195,17 @@ const DICTS: Record<Lang, ReviewsDict> = {
     pushTitle: "Recenzie nouă ⭐",
     pushBody: "{name} a evaluat lucrarea „{job}”: {stars} din 5.",
     notAllowed: "Poți cere o recenzie pentru o comandă închisă, o ofertă acceptată sau o factură trimisă.",
+    reply: "Răspunde",
+    replyHint: "Răspunsul e vizibil tuturor sub recenzie. Poți răspunde o singură dată, calm și la obiect. Mai bine în neerlandeză.",
+    replySend: "Publică răspunsul",
+    yourReply: "Răspunsul tău",
+    report: "Raportează",
+    reportHint: "Haaks va verifica recenzia. Dacă raportezi în primele 48 de ore, recenzia nu apare în pașaport până la decizie.",
+    reportNote: "Ce nu e în regulă? (opțional)",
+    reportSend: "Trimite raportul",
+    reported: "Raport trimis, Haaks verifică",
+    reportedHeld: "Raport trimis: recenzia e ascunsă până la decizia Haaks",
+    reasons: { insult: "Insulte", personal: "Date personale (adresă, telefon)", false: "Neadevăruri despre lucrare", not_client: "Nu e clientul meu", other: "Altceva" },
   },
   en: {
     nav: "Reviews",
@@ -180,6 +235,17 @@ const DICTS: Record<Lang, ReviewsDict> = {
     pushTitle: "New review ⭐",
     pushBody: "{name} rated “{job}”: {stars} of 5.",
     notAllowed: "You can ask for a review for a closed order, an accepted quote or a sent invoice.",
+    reply: "Reply",
+    replyHint: "Everyone sees your reply under the review. You can reply once; keep it calm and factual. Dutch is best.",
+    replySend: "Publish reply",
+    yourReply: "Your reply",
+    report: "Report",
+    reportHint: "Haaks will check the review. If you report it in the first 48 hours, it stays out of your passport until Haaks decides.",
+    reportNote: "What is wrong? (optional)",
+    reportSend: "Send report",
+    reported: "Report sent, Haaks is checking",
+    reportedHeld: "Report sent: the review is hidden until Haaks decides",
+    reasons: { insult: "Insults", personal: "Personal data (address, phone)", false: "Untrue about the work", not_client: "Not my client", other: "Other" },
   },
   nl: {
     nav: "Beoordelingen",
@@ -209,6 +275,17 @@ const DICTS: Record<Lang, ReviewsDict> = {
     pushTitle: "Nieuwe beoordeling ⭐",
     pushBody: "{name} beoordeelde “{job}”: {stars} van 5.",
     notAllowed: "Je kunt om een beoordeling vragen bij een afgesloten klus, een geaccepteerde offerte of een verstuurde factuur.",
+    reply: "Reageren",
+    replyHint: "Iedereen ziet je reactie onder de beoordeling. Je kunt één keer reageren; blijf rustig en zakelijk.",
+    replySend: "Reactie plaatsen",
+    yourReply: "Jouw reactie",
+    report: "Melden",
+    reportHint: "Haaks bekijkt de beoordeling. Meld je binnen 48 uur, dan komt hij pas in je paspoort na het besluit van Haaks.",
+    reportNote: "Wat klopt er niet? (optioneel)",
+    reportSend: "Melding versturen",
+    reported: "Melding verstuurd, Haaks kijkt ernaar",
+    reportedHeld: "Melding verstuurd: de beoordeling is verborgen tot Haaks beslist",
+    reasons: { insult: "Beledigingen", personal: "Persoonsgegevens (adres, telefoon)", false: "Onwaar over het werk", not_client: "Niet mijn opdrachtgever", other: "Anders" },
   },
 };
 
@@ -241,6 +318,7 @@ export const PUBLIC_REVIEWS = {
     newcomer: "Nieuw op Haaks",
     count: "{n} beoordelingen",
     one: "1 beoordeling",
+    reply: "Reactie van {name}",
   },
   en: {
     pageTitle: "Review",
@@ -267,5 +345,6 @@ export const PUBLIC_REVIEWS = {
     newcomer: "New on Haaks",
     count: "{n} reviews",
     one: "1 review",
+    reply: "Reply from {name}",
   },
 } as const;
