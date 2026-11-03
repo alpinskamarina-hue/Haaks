@@ -25,6 +25,8 @@ export type LandingDict = {
   faq: { q: string; a: string }[];
   signupTitle: string;
   signupText: string;
+  signinTitle: string;
+  signinText: string;
   leadCard: { found: string; match: string; reply: string };
   footer: string;
 };
@@ -120,6 +122,8 @@ const en: LandingDict = {
   ],
   signupTitle: "Start for free",
   signupText: "Choose an email and password. Confirm your address once with the link we send, then just sign in with your password.",
+  signinTitle: "Sign in",
+  signinText: "Enter the email and password you registered with.",
   leadCard: { found: "New job for you", match: "fits you", reply: "Reply in Dutch" },
   footer: "Haaks: tools for self-employed construction workers in the Netherlands.",
 };
@@ -208,6 +212,8 @@ const ru: LandingDict = {
   ],
   signupTitle: "Начните бесплатно",
   signupText: "Укажите почту и пароль. Один раз подтвердите адрес по ссылке из письма, дальше просто входите по паролю.",
+  signinTitle: "Вход",
+  signinText: "Введите почту и пароль, с которыми вы регистрировались.",
   leadCard: { found: "Новый заказ для вас", match: "подходит", reply: "Ответить на нидерландском" },
   footer: "Haaks: инструменты для самозанятых строителей в Нидерландах.",
 };
@@ -296,6 +302,8 @@ const uk: LandingDict = {
   ],
   signupTitle: "Почніть безкоштовно",
   signupText: "Вкажіть пошту й пароль. Один раз підтвердьте адресу за посиланням із листа, далі просто входьте за паролем.",
+  signinTitle: "Вхід",
+  signinText: "Введіть пошту й пароль, з якими ви реєструвалися.",
   leadCard: { found: "Нове замовлення для вас", match: "підходить", reply: "Відповісти нідерландською" },
   footer: "Haaks: інструменти для самозайнятих будівельників у Нідерландах.",
 };
@@ -384,6 +392,8 @@ const pl: LandingDict = {
   ],
   signupTitle: "Zacznij za darmo",
   signupText: "Podaj e-mail i hasło. Raz potwierdź adres linkiem z wiadomości, potem logujesz się hasłem.",
+  signinTitle: "Logowanie",
+  signinText: "Podaj e-mail i hasło, których użyłeś przy rejestracji.",
   leadCard: { found: "Nowe zlecenie dla Ciebie", match: "pasuje", reply: "Odpowiedz po niderlandzku" },
   footer: "Haaks: narzędzia dla samozatrudnionych budowlańców w Holandii.",
 };
@@ -472,6 +482,8 @@ const ro: LandingDict = {
   ],
   signupTitle: "Începe gratuit",
   signupText: "Alege e-mailul și parola. Confirmă o dată adresa cu linkul primit, apoi intri doar cu parola.",
+  signinTitle: "Autentificare",
+  signinText: "Introdu e-mailul și parola cu care te-ai înregistrat.",
   leadCard: { found: "Lucrare nouă pentru tine", match: "potrivire", reply: "Răspunde în olandeză" },
   footer: "Haaks: unelte pentru constructorii independenți din Țările de Jos.",
 };
@@ -560,6 +572,8 @@ const nl: LandingDict = {
   ],
   signupTitle: "Begin gratis",
   signupText: "Kies je e-mailadres en wachtwoord. Bevestig je adres één keer via de link in de mail, daarna log je in met je wachtwoord.",
+  signinTitle: "Inloggen",
+  signinText: "Vul het e-mailadres en wachtwoord in waarmee je je hebt aangemeld.",
   leadCard: { found: "Nieuwe klus voor jou", match: "match", reply: "Reageer in het Nederlands" },
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
