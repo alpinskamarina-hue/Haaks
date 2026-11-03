@@ -21,6 +21,19 @@ export type MyReply = {
   email: string | null;
 };
 
+export type MyInvite = {
+  id: string;
+  status: ReplyStatus;
+  created_at: string;
+  company_name: string | null;
+  kvk_number: string | null;
+  job_title: string | null;
+  job_city: string | null;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
 export type CompanyReply = {
   id: string;
   status: ReplyStatus;
@@ -41,6 +54,22 @@ export type CompanyReply = {
 
 const TEXT = {
   ru: {
+    pageTitle: "Отклики и приглашения",
+    invitesTitle: "Приглашения от компаний",
+    invite: "{company} приглашает вас на работу",
+    inviteJob: "Заказ: {job}",
+    acceptInvite: "Принять",
+    declineInvite: "Отклонить",
+    inviteAccepted: "Вы приняли приглашение",
+    inviteDeclined: "Вы отклонили приглашение",
+    catalogTitle: "Ищу работу",
+    catalogText: "Покажите свой профиль компаниям (BV) в каталоге Haaks. Компании увидят имя, профессию, город, ставку, языки и ZZP-паспорт. Телефон и почту они увидят, только если вы примете приглашение.",
+    catalogOn: "Показывать меня компаниям",
+    catalogOff: "Скрыть меня из каталога",
+    catalogIsOn: "✓ Вы в каталоге: компании могут вас пригласить",
+    catalogBanner: "Пусть компании находят вас сами: включите «Ищу работу»",
+    pushInviteTitle: "Вас приглашает компания",
+    pushInviteBody: "{company} приглашает вас на работу. Откройте Haaks, чтобы принять или отклонить.",
     reply: "Откликнуться",
     hint: "Компания увидит ваш профиль и ZZP-паспорт. Телефон и почта откроются обеим сторонам, когда компания примет отклик.",
     sent: "Вы откликнулись · ждём ответа компании",
@@ -60,6 +89,22 @@ const TEXT = {
     errLocked: "Сначала откройте карточку.",
   },
   uk: {
+    pageTitle: "Відгуки та запрошення",
+    invitesTitle: "Запрошення від компаній",
+    invite: "{company} запрошує вас на роботу",
+    inviteJob: "Замовлення: {job}",
+    acceptInvite: "Прийняти",
+    declineInvite: "Відхилити",
+    inviteAccepted: "Ви прийняли запрошення",
+    inviteDeclined: "Ви відхилили запрошення",
+    catalogTitle: "Шукаю роботу",
+    catalogText: "Покажіть свій профіль компаніям (BV) у каталозі Haaks. Компанії побачать ім'я, професію, місто, ставку, мови та ZZP-паспорт. Телефон і пошту — лише якщо ви приймете запрошення.",
+    catalogOn: "Показувати мене компаніям",
+    catalogOff: "Сховати мене з каталогу",
+    catalogIsOn: "✓ Ви в каталозі: компанії можуть вас запросити",
+    catalogBanner: "Нехай компанії знаходять вас самі: увімкніть «Шукаю роботу»",
+    pushInviteTitle: "Вас запрошує компанія",
+    pushInviteBody: "{company} запрошує вас на роботу. Відкрийте Haaks, щоб прийняти або відхилити.",
     reply: "Відгукнутися",
     hint: "Компанія побачить ваш профіль і ZZP-паспорт. Телефон і пошта відкриються обом сторонам, коли компанія прийме відгук.",
     sent: "Ви відгукнулися · чекаємо відповіді компанії",
@@ -79,6 +124,22 @@ const TEXT = {
     errLocked: "Спочатку відкрийте картку.",
   },
   pl: {
+    pageTitle: "Zgłoszenia i zaproszenia",
+    invitesTitle: "Zaproszenia od firm",
+    invite: "{company} zaprasza Cię do pracy",
+    inviteJob: "Zlecenie: {job}",
+    acceptInvite: "Przyjmij",
+    declineInvite: "Odrzuć",
+    inviteAccepted: "Przyjęto zaproszenie",
+    inviteDeclined: "Odrzucono zaproszenie",
+    catalogTitle: "Szukam pracy",
+    catalogText: "Pokaż swój profil firmom (BV) w katalogu Haaks. Firmy zobaczą imię, zawód, miasto, stawkę, języki i paszport ZZP. Telefon i e-mail tylko wtedy, gdy przyjmiesz zaproszenie.",
+    catalogOn: "Pokazuj mnie firmom",
+    catalogOff: "Ukryj mnie w katalogu",
+    catalogIsOn: "✓ Jesteś w katalogu: firmy mogą Cię zaprosić",
+    catalogBanner: "Niech firmy znajdują Cię same: włącz «Szukam pracy»",
+    pushInviteTitle: "Firma Cię zaprasza",
+    pushInviteBody: "{company} zaprasza Cię do pracy. Otwórz Haaks, aby przyjąć lub odrzucić.",
     reply: "Zgłoś się",
     hint: "Firma zobaczy Twój profil i paszport ZZP. Telefon i e-mail otworzą się obu stronom, gdy firma przyjmie zgłoszenie.",
     sent: "Zgłoszono · czekamy na odpowiedź firmy",
@@ -98,6 +159,22 @@ const TEXT = {
     errLocked: "Najpierw otwórz kartę.",
   },
   ro: {
+    pageTitle: "Aplicări și invitații",
+    invitesTitle: "Invitații de la firme",
+    invite: "{company} te invită la lucru",
+    inviteJob: "Lucrare: {job}",
+    acceptInvite: "Acceptă",
+    declineInvite: "Refuză",
+    inviteAccepted: "Ai acceptat invitația",
+    inviteDeclined: "Ai refuzat invitația",
+    catalogTitle: "Caut de lucru",
+    catalogText: "Arată-ți profilul firmelor (BV) în catalogul Haaks. Firmele văd numele, meseria, orașul, tariful, limbile și pașaportul ZZP. Telefonul și e-mailul doar dacă accepți invitația.",
+    catalogOn: "Arată-mă firmelor",
+    catalogOff: "Ascunde-mă din catalog",
+    catalogIsOn: "✓ Ești în catalog: firmele te pot invita",
+    catalogBanner: "Lasă firmele să te găsească: activează «Caut de lucru»",
+    pushInviteTitle: "O firmă te invită",
+    pushInviteBody: "{company} te invită la lucru. Deschide Haaks pentru a accepta sau refuza.",
     reply: "Aplică",
     hint: "Firma vede profilul tău și pașaportul ZZP. Telefonul și e-mailul se deschid ambelor părți când firma acceptă aplicarea.",
     sent: "Ai aplicat · așteptăm răspunsul firmei",
@@ -117,6 +194,22 @@ const TEXT = {
     errLocked: "Deschide mai întâi cardul.",
   },
   en: {
+    pageTitle: "Replies and invitations",
+    invitesTitle: "Invitations from companies",
+    invite: "{company} invites you to work",
+    inviteJob: "Job: {job}",
+    acceptInvite: "Accept",
+    declineInvite: "Decline",
+    inviteAccepted: "You accepted the invitation",
+    inviteDeclined: "You declined the invitation",
+    catalogTitle: "Looking for work",
+    catalogText: "Show your profile to companies (BV) in the Haaks catalog. Companies see your name, trade, town, rate, languages and ZZP passport. Phone and e-mail only if you accept an invitation.",
+    catalogOn: "Show me to companies",
+    catalogOff: "Hide me from the catalog",
+    catalogIsOn: "✓ You are in the catalog: companies can invite you",
+    catalogBanner: "Let companies find you: turn on «Looking for work»",
+    pushInviteTitle: "A company invites you",
+    pushInviteBody: "{company} invites you to work. Open Haaks to accept or decline.",
     reply: "Reply",
     hint: "The company sees your profile and ZZP passport. Phone and e-mail open for both sides when the company accepts your reply.",
     sent: "You replied · waiting for the company",
@@ -136,6 +229,22 @@ const TEXT = {
     errLocked: "Open the card first.",
   },
   nl: {
+    pageTitle: "Reacties en uitnodigingen",
+    invitesTitle: "Uitnodigingen van bedrijven",
+    invite: "{company} nodigt je uit voor werk",
+    inviteJob: "Opdracht: {job}",
+    acceptInvite: "Accepteren",
+    declineInvite: "Afwijzen",
+    inviteAccepted: "Je hebt de uitnodiging geaccepteerd",
+    inviteDeclined: "Je hebt de uitnodiging afgewezen",
+    catalogTitle: "Ik zoek werk",
+    catalogText: "Laat je profiel zien aan bedrijven (BV) in de Haaks-catalogus. Bedrijven zien je naam, vak, plaats, tarief, talen en ZZP-paspoort. Telefoon en e-mail alleen als je een uitnodiging accepteert.",
+    catalogOn: "Laat mij zien aan bedrijven",
+    catalogOff: "Verberg mij uit de catalogus",
+    catalogIsOn: "✓ Je staat in de catalogus: bedrijven kunnen je uitnodigen",
+    catalogBanner: "Laat bedrijven jou vinden: zet «Ik zoek werk» aan",
+    pushInviteTitle: "Een bedrijf nodigt je uit",
+    pushInviteBody: "{company} nodigt je uit voor werk. Open Haaks om te accepteren of af te wijzen.",
     reply: "Reageren",
     hint: "Het bedrijf ziet je profiel en ZZP-paspoort. Telefoon en e-mail gaan voor beide kanten open als het bedrijf je reactie accepteert.",
     sent: "Je hebt gereageerd · wacht op het bedrijf",
@@ -189,5 +298,35 @@ export async function notifyReplyAccepted(server: SupabaseClient, replyId: strin
   }
   if (telegramEnabled() && worker.telegram_chat_id) {
     await sendTelegram(Number(worker.telegram_chat_id), `<b>${esc(t.pushTitle)}</b>\n${esc(body)}`, { text: t.open, url });
+  }
+}
+
+// Tells the builder a company invited them: push to the phone and Telegram, where set up.
+export async function notifyInvite(server: SupabaseClient, inviteId: string, siteUrl: string) {
+  const { data: invite } = await server.from("company_invites").select("worker_id, company_id").eq("id", inviteId).single();
+  if (!invite) return;
+  const [{ data: worker }, { data: company }] = await Promise.all([
+    server.from("profiles").select("language, telegram_chat_id").eq("id", invite.worker_id).single(),
+    server.from("profiles").select("company_name").eq("id", invite.company_id).single(),
+  ]);
+  if (!worker) return;
+  const t = getReplyDict((worker.language as Lang) ?? "en");
+  const body = put(t.pushInviteBody, { company: company?.company_name ?? "Bedrijf" });
+  if (pushEnabled()) {
+    const { data: subs } = await server
+      .from("push_subscriptions")
+      .select("endpoint, user_id, p256dh, auth")
+      .eq("user_id", invite.worker_id)
+      .returns<PushSubscriptionRow[]>();
+    for (const sub of subs ?? []) {
+      const result = await sendPush(sub, { title: t.pushInviteTitle, body, url: "/dashboard/replies", tag: `invite-${inviteId}` });
+      if (result.gone) await server.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    }
+  }
+  if (telegramEnabled() && worker.telegram_chat_id) {
+    await sendTelegram(Number(worker.telegram_chat_id), `<b>${esc(t.pushInviteTitle)}</b>\n${esc(body)}`, {
+      text: t.open,
+      url: `${siteUrl}/dashboard/replies`,
+    });
   }
 }

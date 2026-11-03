@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { setLanguage, signOut } from "@/app/actions";
+import { CompanyTabs } from "@/components/CompanyTabs";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { requireUser } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default async function CompanyLayout({ children }: { children: React.Reac
             </form>
           </div>
         </div>
+        <CompanyTabs jobs={t.navJobs} builders={t.navBuilders} />
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
     </div>

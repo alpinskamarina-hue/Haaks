@@ -11,7 +11,7 @@ import {
   takeJobOffline,
   type CompanyJob,
 } from "@/lib/company-jobs";
-import { notifyReplyAccepted } from "@/lib/job-replies";
+import { notifyInvite, notifyReplyAccepted } from "@/lib/job-replies";
 import { siteUrl } from "@/lib/lang";
 import { createServerAccountClient } from "@/lib/supabase/server";
 
@@ -149,6 +149,26 @@ export async function decideJobReply(formData: FormData) {
   }
   revalidatePath("/company", "layout");
   back(`/company/jobs/${jobId}`, "ok", accept ? "accepted" : "declined");
+}
+
+// The company invites a builder from the catalog; the builder gets an alert.
+export async function inviteWorker(formData: FormData) {
+  const { supabase } = await requireCompany();
+  const job = String(formData.get("job") ?? "");
+  const { data: id, error } = await supabase.rpc("invite_worker", {
+    p_worker: String(formData.get("worker")),
+    p_job: /^[0-9a-f-]{36}$/.test(job) ? job : null,
+  });
+  const back_to = `/company/builders${formData.get("trade") ? `?trade=${encodeURIComponent(String(formData.get("trade")))}` : ""}`;
+  const sep = back_to.includes("?") ? "&" : "?";
+  if (error || !id) redirect(`${back_to}${sep}error=${error?.message.includes("invite_limit") ? "invite_limit" : "failed"}`);
+  try {
+    await notifyInvite(await createServerAccountClient(), String(id), await siteUrl());
+  } catch (e) {
+    console.error("Invite alert failed", e);
+  }
+  revalidatePath("/company", "layout");
+  redirect(`${back_to}${sep}ok=invited`);
 }
 
 // Moderation (Haaks admin only).

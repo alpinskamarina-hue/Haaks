@@ -80,6 +80,7 @@ export default async function FeedPage({
   const myReplies = (myReplyRows ?? []) as MyReply[];
   const replyByItem = new Map(myReplies.filter((r) => r.feed_item_id).map((r) => [r.feed_item_id!, r]));
   const rt = getReplyDict(lang);
+  const inCatalog = Boolean((profile as typeof profile & { in_catalog?: boolean }).in_catalog);
   // "New": came in since the visit before this one.
   const since = newSince(lastVisit);
 
@@ -132,13 +133,17 @@ export default async function FeedPage({
         <p className="text-slate-600">{f.feedSubtitle}</p>
       </div>
 
-      {myReplies.length > 0 && (
+      {(myReplies.length > 0 || !inCatalog) && (
         <Link
           href="/dashboard/replies"
-          className="flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-800"
+          className="flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-800"
         >
-          <span>🙋 {rt.myLink} ({myReplies.length})</span>
-          {myReplies.some((r) => r.status === "accepted") && <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">✓ {rt.accepted}</span>}
+          <span>{myReplies.length > 0 ? `🙋 ${rt.myLink} (${myReplies.length})` : `🔎 ${rt.catalogBanner}`}</span>
+          {myReplies.some((r) => r.status === "accepted") ? (
+            <span className="shrink-0 rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">✓</span>
+          ) : (
+            <span className="shrink-0">→</span>
+          )}
         </Link>
       )}
 
