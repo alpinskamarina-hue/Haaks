@@ -23,12 +23,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .catch(() => 0),
   ]);
 
-  // Haaks admin: company jobs waiting for a check.
+  // Haaks admin: jobs waiting for a check, plus complaints.
   const isAdmin = Boolean((profile as typeof profile & { is_admin?: boolean }).is_admin);
   const pendingJobs = isAdmin
     ? await createServerAccountClient()
-        .then((server) => server.from("company_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"))
-        .then(({ count }) => count ?? 0)
+        .then((server) =>
+          Promise.all([
+            server.from("company_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"),
+            server.from("reports").select("id", { count: "exact", head: true }),
+          ]),
+        )
+        .then(([jobs, reports]) => (jobs.count ?? 0) + (reports.count ?? 0))
         .catch(() => 0)
     : 0;
 

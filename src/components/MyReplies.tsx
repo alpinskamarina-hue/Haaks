@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { decideInvite, setInCatalog } from "@/app/feed-actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { dayMonthYear } from "@/lib/company-jobs";
 import type { MyInvite, MyReply, ReplyDict } from "@/lib/job-replies";
 
 const badge = { sent: "bg-purple-50 text-purple-800", accepted: "bg-green-100 text-green-800", declined: "bg-slate-100 text-slate-500" };
@@ -10,12 +11,14 @@ export function MyReplies({
   replies,
   invites,
   inCatalog,
+  catalogUntil,
   rt,
   helper,
 }: {
   replies: MyReply[];
   invites: MyInvite[];
   inCatalog: boolean;
+  catalogUntil: string | null;
   rt: ReplyDict;
   helper: { nav: string; cardText: string };
 }) {
@@ -27,15 +30,27 @@ export function MyReplies({
         <h2 className="font-semibold">🔎 {rt.catalogTitle}</h2>
         <p className="mt-1 text-sm text-slate-700">{rt.catalogText}</p>
         {inCatalog && <p className="mt-2 text-sm font-semibold text-green-800">{rt.catalogIsOn}</p>}
-        <form action={setInCatalog.bind(null, !inCatalog)} className="mt-3">
-          <SubmitButton
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
-              inCatalog ? "border border-slate-300 bg-white text-slate-600" : "bg-orange-600 text-white"
-            }`}
-          >
-            {inCatalog ? rt.catalogOff : rt.catalogOn}
-          </SubmitButton>
-        </form>
+        {inCatalog && catalogUntil && (
+          <p className="mt-1 text-sm text-slate-700">{rt.catalogUntil.replace("{d}", dayMonthYear(catalogUntil.slice(0, 10)))}</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {inCatalog && (
+            <form action={setInCatalog.bind(null, true)}>
+              <SubmitButton className="rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                ↻ {rt.catalogExtend}
+              </SubmitButton>
+            </form>
+          )}
+          <form action={setInCatalog.bind(null, !inCatalog)}>
+            <SubmitButton
+              className={`rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
+                inCatalog ? "border border-slate-300 bg-white text-slate-600" : "bg-orange-600 text-white"
+              }`}
+            >
+              {inCatalog ? rt.catalogOff : rt.catalogOn}
+            </SubmitButton>
+          </form>
+        </div>
       </section>
 
       <Link href="/dashboard/helpers" className="block rounded-xl border border-sky-200 bg-sky-50 p-4">

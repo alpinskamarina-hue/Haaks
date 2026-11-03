@@ -53,6 +53,14 @@ export type CompanyReply = {
   email: string | null;
 };
 
+// How long "looking for work" stays on before it switches itself off.
+export const CATALOG_DAYS = 30;
+
+// The builder's card is in the catalog: switched on and not run out.
+export function catalogActive(p: { in_catalog?: boolean | null; catalog_until?: string | null }) {
+  return Boolean(p.in_catalog) && (!p.catalog_until || Date.parse(p.catalog_until) > Date.now());
+}
+
 const TEXT = {
   ru: {
     pageTitle: "Отклики и приглашения",
@@ -69,6 +77,8 @@ const TEXT = {
     catalogOff: "Скрыть меня из каталога",
     catalogIsOn: "✓ Вы в каталоге: компании могут вас пригласить",
     catalogBanner: "Пусть компании находят вас сами: включите «Ищу работу»",
+    catalogUntil: "Компании видят вас до {d}. Потом карточка сама выключится.",
+    catalogExtend: "Продлить на 30 дней",
     pushInviteTitle: "Вас приглашает компания",
     pushInviteBody: "{company} приглашает вас на работу. Откройте Haaks, чтобы принять или отклонить.",
     reply: "Откликнуться",
@@ -104,6 +114,8 @@ const TEXT = {
     catalogOff: "Сховати мене з каталогу",
     catalogIsOn: "✓ Ви в каталозі: компанії можуть вас запросити",
     catalogBanner: "Нехай компанії знаходять вас самі: увімкніть «Шукаю роботу»",
+    catalogUntil: "Компанії бачать вас до {d}. Потім картка сама вимкнеться.",
+    catalogExtend: "Продовжити на 30 днів",
     pushInviteTitle: "Вас запрошує компанія",
     pushInviteBody: "{company} запрошує вас на роботу. Відкрийте Haaks, щоб прийняти або відхилити.",
     reply: "Відгукнутися",
@@ -139,6 +151,8 @@ const TEXT = {
     catalogOff: "Ukryj mnie w katalogu",
     catalogIsOn: "✓ Jesteś w katalogu: firmy mogą Cię zaprosić",
     catalogBanner: "Niech firmy znajdują Cię same: włącz «Szukam pracy»",
+    catalogUntil: "Firmy widzą Cię do {d}. Potem karta sama się wyłączy.",
+    catalogExtend: "Przedłuż o 30 dni",
     pushInviteTitle: "Firma Cię zaprasza",
     pushInviteBody: "{company} zaprasza Cię do pracy. Otwórz Haaks, aby przyjąć lub odrzucić.",
     reply: "Zgłoś się",
@@ -174,6 +188,8 @@ const TEXT = {
     catalogOff: "Ascunde-mă din catalog",
     catalogIsOn: "✓ Ești în catalog: firmele te pot invita",
     catalogBanner: "Lasă firmele să te găsească: activează «Caut de lucru»",
+    catalogUntil: "Firmele te văd până la {d}. Apoi fișa se oprește singură.",
+    catalogExtend: "Prelungește cu 30 de zile",
     pushInviteTitle: "O firmă te invită",
     pushInviteBody: "{company} te invită la lucru. Deschide Haaks pentru a accepta sau refuza.",
     reply: "Aplică",
@@ -209,6 +225,8 @@ const TEXT = {
     catalogOff: "Hide me from the catalog",
     catalogIsOn: "✓ You are in the catalog: companies can invite you",
     catalogBanner: "Let companies find you: turn on «Looking for work»",
+    catalogUntil: "Companies see you until {d}. Then your card switches off by itself.",
+    catalogExtend: "Extend by 30 days",
     pushInviteTitle: "A company invites you",
     pushInviteBody: "{company} invites you to work. Open Haaks to accept or decline.",
     reply: "Reply",
@@ -244,6 +262,8 @@ const TEXT = {
     catalogOff: "Verberg mij uit de catalogus",
     catalogIsOn: "✓ Je staat in de catalogus: bedrijven kunnen je uitnodigen",
     catalogBanner: "Laat bedrijven jou vinden: zet «Ik zoek werk» aan",
+    catalogUntil: "Bedrijven zien je tot {d}. Daarna gaat je kaart vanzelf uit.",
+    catalogExtend: "Verlengen met 30 dagen",
     pushInviteTitle: "Een bedrijf nodigt je uit",
     pushInviteBody: "{company} nodigt je uit voor werk. Open Haaks om te accepteren of af te wijzen.",
     reply: "Reageren",
