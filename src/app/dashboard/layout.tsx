@@ -63,7 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SideNav items={items} />
         <div className="mt-auto space-y-3 border-t border-slate-200 px-3 pt-4">
           <p className="truncate text-sm font-medium">{name}</p>
-          <LanguageSwitcher current={lang} label={t.language} />
+          <LanguageSwitcher current={lang} label={t.language} up />
           <Link href="/dashboard/password" className="flex items-center gap-2 text-sm text-slate-600">
             <Icon name="key" className="h-4 w-4" />
             {t.navPassword}
