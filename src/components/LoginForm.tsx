@@ -17,14 +17,20 @@ export function LoginForm({
   initialMode = "signin",
   consent,
   heads,
+  roles,
+  initialRole = "worker",
 }: {
   t: Dict;
   initialMode?: LoginMode;
   consent?: React.ReactNode;
   // Optional heading and short text per mode, shown above the fields.
   heads?: Record<"signin" | "signup", { title: string; text: string }>;
+  // Sign-up choice "builder / company"; the database trigger reads it from the user metadata.
+  roles?: { label: string; worker: string; company: string; companyText: string };
+  initialRole?: "worker" | "company";
 }) {
   const [mode, setMode] = useState<LoginMode>(initialMode);
+  const [role, setRole] = useState<"worker" | "company">(initialRole);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,7 +57,7 @@ export function LoginForm({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: callback },
+        options: { emailRedirectTo: callback, data: { account_type: role } },
       });
       if (error) {
         setError(
@@ -102,6 +108,27 @@ export function LoginForm({
     <>
     {heading}
     <form onSubmit={onSubmit} className="space-y-3">
+      {mode === "signup" && roles && (
+        <fieldset>
+          <legend className="text-sm font-medium">{roles.label}</legend>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {(["worker", "company"] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                aria-pressed={role === r}
+                onClick={() => setRole(r)}
+                className={`rounded-lg border-2 px-3 py-2.5 text-sm font-semibold leading-tight ${
+                  role === r ? "border-orange-600 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-600"
+                }`}
+              >
+                {r === "worker" ? roles.worker : roles.company}
+              </button>
+            ))}
+          </div>
+          {role === "company" && <p className="mt-2 text-xs text-slate-500">{roles.companyText}</p>}
+        </fieldset>
+      )}
       <label className="block text-sm font-medium">
         {t.emailLabel}
         <input

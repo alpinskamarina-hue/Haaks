@@ -27,6 +27,8 @@ export type LandingDict = {
   signupText: string;
   signinTitle: string;
   signinText: string;
+  roles: { label: string; worker: string; company: string; companyText: string };
+  companyLink: string;
   leadCard: { found: string; match: string; reply: string };
   footer: string;
 };
@@ -124,6 +126,8 @@ const en: LandingDict = {
   signupText: "Choose an email and password. Confirm your address once with the link we send, then just sign in with your password.",
   signinTitle: "Sign in",
   signinText: "Enter the email and password you registered with.",
+  roles: { label: "Who are you?", worker: "I am a builder (ZZP)", company: "I am a company, I need builders", companyText: "Companies post jobs for free. Builders nearby see them in their own language." },
+  companyLink: "Are you a company? Post a job for free",
   leadCard: { found: "New job for you", match: "fits you", reply: "Reply in Dutch" },
   footer: "Haaks: tools for self-employed construction workers in the Netherlands.",
 };
@@ -214,6 +218,8 @@ const ru: LandingDict = {
   signupText: "Укажите почту и пароль. Один раз подтвердите адрес по ссылке из письма, дальше просто входите по паролю.",
   signinTitle: "Вход",
   signinText: "Введите почту и пароль, с которыми вы регистрировались.",
+  roles: { label: "Кто вы?", worker: "Я строитель (ZZP)", company: "Я компания, ищу строителей", companyText: "Компании размещают заказы бесплатно. Строители рядом видят их на своём языке." },
+  companyLink: "Вы компания? Разместите заказ бесплатно",
   leadCard: { found: "Новый заказ для вас", match: "подходит", reply: "Ответить на нидерландском" },
   footer: "Haaks: инструменты для самозанятых строителей в Нидерландах.",
 };
@@ -304,6 +310,8 @@ const uk: LandingDict = {
   signupText: "Вкажіть пошту й пароль. Один раз підтвердьте адресу за посиланням із листа, далі просто входьте за паролем.",
   signinTitle: "Вхід",
   signinText: "Введіть пошту й пароль, з якими ви реєструвалися.",
+  roles: { label: "Хто ви?", worker: "Я будівельник (ZZP)", company: "Я компанія, шукаю будівельників", companyText: "Компанії розміщують замовлення безкоштовно. Будівельники поруч бачать їх своєю мовою." },
+  companyLink: "Ви компанія? Розмістіть замовлення безкоштовно",
   leadCard: { found: "Нове замовлення для вас", match: "підходить", reply: "Відповісти нідерландською" },
   footer: "Haaks: інструменти для самозайнятих будівельників у Нідерландах.",
 };
@@ -394,6 +402,8 @@ const pl: LandingDict = {
   signupText: "Podaj e-mail i hasło. Raz potwierdź adres linkiem z wiadomości, potem logujesz się hasłem.",
   signinTitle: "Logowanie",
   signinText: "Podaj e-mail i hasło, których użyłeś przy rejestracji.",
+  roles: { label: "Kim jesteś?", worker: "Jestem fachowcem (ZZP)", company: "Jestem firmą, szukam fachowców", companyText: "Firmy dodają zlecenia za darmo. Fachowcy w okolicy widzą je w swoim języku." },
+  companyLink: "Jesteś firmą? Dodaj zlecenie za darmo",
   leadCard: { found: "Nowe zlecenie dla Ciebie", match: "pasuje", reply: "Odpowiedz po niderlandzku" },
   footer: "Haaks: narzędzia dla samozatrudnionych budowlańców w Holandii.",
 };
@@ -484,6 +494,8 @@ const ro: LandingDict = {
   signupText: "Alege e-mailul și parola. Confirmă o dată adresa cu linkul primit, apoi intri doar cu parola.",
   signinTitle: "Autentificare",
   signinText: "Introdu e-mailul și parola cu care te-ai înregistrat.",
+  roles: { label: "Cine ești?", worker: "Sunt constructor (ZZP)", company: "Sunt firmă, caut constructori", companyText: "Firmele publică lucrări gratuit. Constructorii din zonă le văd în limba lor." },
+  companyLink: "Ești firmă? Publică o lucrare gratuit",
   leadCard: { found: "Lucrare nouă pentru tine", match: "potrivire", reply: "Răspunde în olandeză" },
   footer: "Haaks: unelte pentru constructorii independenți din Țările de Jos.",
 };
@@ -574,6 +586,8 @@ const nl: LandingDict = {
   signupText: "Kies je e-mailadres en wachtwoord. Bevestig je adres één keer via de link in de mail, daarna log je in met je wachtwoord.",
   signinTitle: "Inloggen",
   signinText: "Vul het e-mailadres en wachtwoord in waarmee je je hebt aangemeld.",
+  roles: { label: "Wie bent u?", worker: "Ik ben vakman (ZZP)", company: "Ik ben een bedrijf en zoek vakmensen", companyText: "Bedrijven plaatsen gratis opdrachten. Vakmensen in de buurt zien ze in hun eigen taal." },
+  companyLink: "Bent u een bedrijf? Plaats gratis een opdracht",
   leadCard: { found: "Nieuwe klus voor jou", match: "match", reply: "Reageer in het Nederlands" },
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
