@@ -12,16 +12,23 @@ export type ScoredFeedItem = FeedItem & {
   added_at: string;
   action: "hidden" | "taken" | null;
   leadId: string | null;
+  // A free worker opened this card with one of their free opens: shown like for Pro.
+  opened: boolean;
 };
+
+// Cards a free worker can open in full, once (the database enforces it in unlock_feed_item()).
+export const FREE_OPENS = 3;
 
 // The worker's feed: every job scored against their trade and cities, with what they did with it.
 export async function loadFeed(supabase: Supabase, userId: string, profile: Profile) {
-  const [{ data: items }, { data: places }, { data: actions }, { data: leads }] = await Promise.all([
+  const [{ data: items }, { data: places }, { data: actions }, { data: leads }, { data: unlocks }] = await Promise.all([
     supabase.rpc("feed_for_me"),
     supabase.rpc("feed_details"),
     supabase.from("feed_actions").select("item_id, action").eq("user_id", userId),
     supabase.from("leads").select("id, feed_item_id").eq("user_id", userId).not("feed_item_id", "is", null),
+    supabase.from("feed_unlocks").select("item_id").eq("user_id", userId),
   ]);
+  const opened = new Set((unlocks ?? []).map((u) => u.item_id as string));
   const actionOf = new Map((actions ?? []).map((a) => [a.item_id as string, a.action as "hidden" | "taken"]));
   const leadOf = new Map((leads ?? []).map((l) => [l.feed_item_id as string, l.id as string]));
   const placeOf = new Map(
@@ -40,9 +47,11 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
       added_at: place?.added_at ?? item.published_at,
       action: actionOf.get(item.id) ?? null,
       leadId: leadOf.get(item.id) ?? null,
+      opened: opened.has(item.id),
     };
   });
-  return { items: scored, match, trades: match.trades, regions: match.regions };
+  const opensLeft = Math.max(0, FREE_OPENS - opened.size);
+  return { items: scored, match, trades: match.trades, regions: match.regions, opensLeft };
 }
 
 // A job "fits" when it matches the trade (if one is set) and is within the travel radius
