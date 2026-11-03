@@ -17,7 +17,12 @@ type Recipient = {
   notify_email: string;
 };
 
-type Row = Omit<FeedItem, "locked" | "published_at"> & { published_at: string | null; demo_age: string | null; created_at: string };
+type Row = Omit<FeedItem, "locked" | "published_at"> & {
+  published_at: string | null;
+  demo_age: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -34,7 +39,9 @@ async function loadRecentItems(supabase: SupabaseClient, now: number) {
   if (error) throw new Error(error.message);
   return (rows ?? [])
     .map((row) => ({ ...row, published: row.published_at ? Date.parse(row.published_at) : now - intervalMs(row.demo_age) }))
-    .filter((row) => now - row.published < 3 * DAY);
+    .filter((row) => now - row.published < 3 * DAY)
+    // Expired jobs (and the old example jobs, switched off by setting expires_at) are never sent.
+    .filter((row) => !row.expires_at || Date.parse(row.expires_at) > now);
 }
 
 type RecentItem = Awaited<ReturnType<typeof loadRecentItems>>[number];

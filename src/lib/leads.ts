@@ -98,3 +98,32 @@ export function quoteMessage(q: { clientName: string | null; title: string; numb
     .join("\n")
     .trim();
 }
+
+// A short Dutch e-mail the worker sends to a client from the feed: who they are and a link
+// to the ZZP passport, where the client sees KvK, VCA, insurance and photos of earlier work.
+export function resumeMessage(w: {
+  name: string | null;
+  trades: string[];
+  city: string | null;
+  phone: string | null;
+  passportUrl: string | null;
+  job: string;
+}) {
+  return [
+    "Goedendag,",
+    "",
+    `Ik zag uw klus "${w.job}" en help u graag.`,
+    `Ik ben zelfstandig vakman (ZZP)${w.trades.length ? `: ${w.trades.join(", ")}` : ""}${w.city ? ` uit ${w.city}` : ""}.`,
+    w.passportUrl
+      ? `In mijn ZZP-paspoort ziet u mijn KvK, VCA, verzekering en foto's van eerder werk: ${w.passportUrl}`
+      : null,
+    "Ik kom graag langs om de klus te bekijken en stuur u daarna een vrijblijvende offerte.",
+    "",
+    "Met vriendelijke groet,",
+    w.name ?? "",
+    w.phone ?? "",
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
+    .trim();
+}
