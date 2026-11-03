@@ -8,6 +8,9 @@ import { AVAILABILITY, completeness, withDefaults, type WorkerProfile } from "@/
 import { describeProfile, getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 import { getWorksDict } from "@/lib/works-i18n";
+import { RatingSummary } from "@/components/RatingSummary";
+import { ratingSummary, type Review } from "@/lib/reviews";
+import { getReviewsDict } from "@/lib/reviews-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
 const MISSING_ICON: Record<string, string> = {
@@ -45,6 +48,9 @@ export default async function MyProfile() {
     .order("created_at", { ascending: false })
     .returns<{ id: string; photos_after: string[] }[]>();
   const works = workRows ?? [];
+  const rv = getReviewsDict(lang);
+  const { data: reviewRows } = await supabase.from("reviews").select("*").eq("worker_id", user.id).eq("status", "submitted").returns<Review[]>();
+  const rating = ratingSummary(reviewRows ?? []);
   const workCovers = works.slice(0, 3).flatMap((x) => x.photos_after.slice(0, 1));
   const urls = await signedUrls(supabase, [...p.work_photos, ...workCovers, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
   const name = profile.full_name || profile.company_name || user.email || "";
@@ -216,6 +222,21 @@ export default async function MyProfile() {
             ),
           )}
         </div>
+      </section>
+
+      <section id="reviews" className={card}>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">
+              ⭐ {rv.title} · {rating.n}
+            </p>
+            <p className="text-sm text-slate-600">{rv.profileHint}</p>
+          </div>
+          <Link href="/dashboard/reviews" className="shrink-0 text-sm font-medium text-orange-700 underline">
+            {rv.nav} →
+          </Link>
+        </div>
+        <RatingSummary summary={rating} criteria={rv.criteria} averageText={rv.average} newcomerText={rv.newcomer} />
       </section>
 
       <section id="works" className={card}>

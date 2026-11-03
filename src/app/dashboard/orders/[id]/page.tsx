@@ -15,11 +15,20 @@ import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
 import { getWorksDict } from "@/lib/works-i18n";
+import { getReviewsDict } from "@/lib/reviews-i18n";
+import { requestReview } from "@/app/reviews-actions";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
-export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ review?: string }>;
+}) {
   const { id } = await params;
+  const { review: reviewError } = await searchParams;
   const { supabase, user, profile, lang, t } = await loadWorkspace();
   const m = getMaterialsDict(lang);
 
@@ -53,6 +62,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   if (!order) notFound();
   const wk = getWorksDict(lang);
   const { data: work } = await supabase.from("works").select("id").eq("order_id", id).limit(1).maybeSingle<{ id: string }>();
+  const rv = getReviewsDict(lang);
+  const { data: reviewRow } = await supabase.from("reviews").select("id, status").eq("order_id", id).limit(1).maybeSingle<{ id: string; status: string }>();
   const { data: materialRows } = await supabase
     .from("material_lists")
     .select("*")
@@ -108,6 +119,28 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </form>
         </div>
       </section>
+
+      {(reviewRow ||
+        order.status === "closed" ||
+        (invoiceRows ?? []).some((i) => i.status !== "draft") ||
+        (quoteRows ?? []).some((q) => q.status === "accepted")) && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          {reviewRow ? (
+            <Link href={`/dashboard/reviews/${reviewRow.id}`} className="font-semibold text-amber-900 underline">
+              ⭐ {reviewRow.status === "requested" ? rv.open : rv.nav}
+            </Link>
+          ) : (
+            <>
+              <p className="text-sm text-amber-900">{rv.askHint}</p>
+              <form action={requestReview} className="mt-2">
+                <input type="hidden" name="order" value={order.id} />
+                <button className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white">{rv.ask}</button>
+              </form>
+            </>
+          )}
+        </section>
+      )}
+      {reviewError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{rv.notAllowed}</p>}
 
       {(order.status === "closed" || work) && (
         <section className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
