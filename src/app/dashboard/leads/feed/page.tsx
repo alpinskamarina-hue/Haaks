@@ -11,7 +11,7 @@ import { LeadsTabs } from "@/components/LeadsTabs";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
 import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
-import { FIT_SCORE, loadFeed, newFittingCount, type ScoredFeedItem } from "@/lib/feed-server";
+import { FIT_SCORE, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
@@ -60,13 +60,18 @@ export default async function FeedPage({
     feed_email?: FeedEmailMode;
     notify_email?: string | null;
     telegram_chat_id?: number | null;
+    feed_seen_at?: string | null;
+    feed_last_visit?: string | null;
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match }, { count: mineCount }] = await Promise.all([
+  const [{ items, trades, regions, match }, { count: mineCount }, lastVisit] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
+    markFeedSeen(supabase, user.id, extra),
   ]);
+  // "New": came in since the visit before this one.
+  const since = newSince(lastVisit);
 
   const shown = items
     .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
@@ -87,6 +92,7 @@ export default async function FeedPage({
         b.published_at.localeCompare(a.published_at),
     );
   const sectionCount = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key).length;
+  const sectionNew = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key && isNewJob(i, since)).length;
   const query = (next: Record<string, string | null>) => {
     const q = new URLSearchParams();
     const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, section, city: cityFilter, ...next };
@@ -120,7 +126,7 @@ export default async function FeedPage({
         active="feed"
         feedLabel={f.tabFeed}
         mineLabel={f.tabMine}
-        feedCount={newFittingCount(items)}
+        feedCount={newFittingCount(items, lastVisit)}
         mineCount={mineCount ?? 0}
       />
 
@@ -158,6 +164,9 @@ export default async function FeedPage({
                 }`}
               >
                 {x.icon} {x.label(f)} {sectionCount(x.key)}
+                {sectionNew(x.key) > 0 && (
+                  <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">+{sectionNew(x.key)}</span>
+                )}
               </Link>
             ))}
           </div>
@@ -217,7 +226,7 @@ export default async function FeedPage({
               <LockedCard key={item.id} item={item} f={f} lang={lang} />
             ))}
             {open.map((item) => (
-              <FeedCard key={item.id} item={item} f={f} lang={lang} pro={pro} worker={worker} />
+              <FeedCard key={item.id} item={item} f={f} lang={lang} pro={pro} worker={worker} isNew={isNewJob(item, since)} />
             ))}
           </ul>
         </div>
@@ -336,10 +345,23 @@ function kindLabel(kind: ScoredFeedItem["kind"], f: FeedDict) {
 
 type Worker = Omit<Parameters<typeof resumeMessage>[0], "job">;
 
-function FeedCard({ item, f, lang, pro, worker }: { item: ScoredFeedItem; f: FeedDict; lang: Lang; pro: boolean; worker: Worker }) {
+function FeedCard({
+  item,
+  f,
+  lang,
+  pro,
+  worker,
+  isNew,
+}: {
+  item: ScoredFeedItem;
+  f: FeedDict;
+  lang: Lang;
+  pro: boolean;
+  worker: Worker;
+  isNew: boolean;
+}) {
   const { title, summary } = feedText(item, lang);
   const age = Date.now() - new Date(item.published_at).getTime();
-  const fresh = age < 24 * 60 * 60 * 1000;
   const old = age > 14 * 24 * 60 * 60 * 1000;
   const info = sectionInfo(item.kind);
   const left = item.kind === "tender" ? daysLeft(item.timing) : null;
@@ -369,7 +391,7 @@ function FeedCard({ item, f, lang, pro, worker }: { item: ScoredFeedItem; f: Fee
             📍 {fill(f.kmAway, { n: Math.max(1, item.distance) })}
           </span>
         )}
-        {fresh && <span className="rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700">{f.newBadge}</span>}
+        {isNew && <span className="rounded-full bg-red-600 px-2 py-0.5 font-semibold text-white">{f.newBadge}</span>}
         {item.is_demo && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">{f.demoBadge}</span>}
         <span className={`ml-auto rounded-full px-2 py-0.5 font-semibold ${scoreColor(item.score)}`}>{item.score}%</span>
       </div>

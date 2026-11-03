@@ -2,10 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 
 // section: the path prefix that marks the item active, when it differs from href.
-export type NavItem = { href: string; section?: string; label: string; short?: string; icon: IconName; badge?: number };
+// badge: a number (new jobs); dot: something waiting without a number (new leads).
+// clearOn: once this page is opened the number is gone until the next full load.
+export type NavItem = {
+  href: string;
+  section?: string;
+  label: string;
+  short?: string;
+  icon: IconName;
+  badge?: number;
+  dot?: boolean;
+  clearOn?: string;
+};
+
+// The layout stays on screen while the worker moves between pages, so the server's number
+// would stay too: forget it once its page has been opened.
+function useBadges(items: NavItem[]) {
+  const pathname = usePathname();
+  const [cleared, setCleared] = useState<string[]>([]);
+  useEffect(() => {
+    const hit = items.find((i) => i.clearOn && pathname.startsWith(i.clearOn));
+    if (hit && !cleared.includes(hit.href)) setCleared((c) => [...c, hit.href]);
+  }, [pathname, items, cleared]);
+  return (item: NavItem) =>
+    cleared.includes(item.href) || (item.clearOn && pathname.startsWith(item.clearOn)) ? 0 : (item.badge ?? 0);
+}
+
+const count = (n: number) => (n > 99 ? "99+" : String(n));
 
 function isActive(pathname: string, { href, section }: NavItem) {
   return href === "/dashboard" ? pathname === href : pathname.startsWith(section ?? href);
@@ -14,6 +41,7 @@ function isActive(pathname: string, { href, section }: NavItem) {
 // Left column on large screens.
 export function SideNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const badge = useBadges(items);
   return (
     <nav className="space-y-1">
       {items.map((item) => {
@@ -26,10 +54,10 @@ export function SideNav({ items }: { items: NavItem[] }) {
           >
             <Icon name={item.icon} />
             <span className="flex-1">{item.label}</span>
-            {!!item.badge && (
-              <span className="rounded-full bg-orange-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {item.badge}
-              </span>
+            {badge(item) > 0 ? (
+              <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">{count(badge(item))}</span>
+            ) : (
+              item.dot && <span className="h-2.5 w-2.5 rounded-full bg-orange-600" />
             )}
           </Link>
         );
@@ -41,6 +69,7 @@ export function SideNav({ items }: { items: NavItem[] }) {
 // Thumb-reach tab bar on phones.
 export function BottomNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const badge = useBadges(items);
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
       <ul className="mx-auto grid max-w-xl" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
@@ -54,8 +83,12 @@ export function BottomNav({ items }: { items: NavItem[] }) {
               >
                 <Icon name={item.icon} className="h-6 w-6" />
                 <span className="w-full truncate text-center">{item.short ?? item.label}</span>
-                {!!item.badge && (
-                  <span className="absolute right-[22%] top-1 h-2.5 w-2.5 rounded-full bg-orange-600 ring-2 ring-white" />
+                {badge(item) > 0 ? (
+                  <span className="absolute left-1/2 top-0.5 ml-1.5 min-w-[18px] rounded-full bg-red-600 px-1 text-center text-[11px] font-bold leading-[18px] text-white ring-2 ring-white">
+                    {count(badge(item))}
+                  </span>
+                ) : (
+                  item.dot && <span className="absolute right-[22%] top-1 h-2.5 w-2.5 rounded-full bg-orange-600 ring-2 ring-white" />
                 )}
               </Link>
             </li>

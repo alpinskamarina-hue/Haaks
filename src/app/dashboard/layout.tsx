@@ -4,6 +4,7 @@ import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
+import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
@@ -12,16 +13,18 @@ import { loadWorkspace } from "@/lib/workspace";
 // One cabinet for every service: sidebar on a computer, tab bar on a phone.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile, lang, t } = await loadWorkspace();
-  const { count: newLeads } = await supabase
-    .from("leads")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "new");
+  const [{ count: newLeads }, newJobs] = await Promise.all([
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
+    // New fitting jobs since the worker last opened the feed: the number on the Feed button.
+    loadFeed(supabase, user.id, profile)
+      .then(({ items }) => newFittingCount(items, (profile as typeof profile & { feed_seen_at?: string | null }).feed_seen_at))
+      .catch(() => 0),
+  ]);
 
   const w = getWorkerDict(lang);
   const items: NavItem[] = [
     { href: "/dashboard", label: t.navHome, icon: "home" },
-    { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "feed", badge: newLeads ?? 0 },
+    { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "feed", badge: newJobs, dot: (newLeads ?? 0) > 0, clearOn: "/dashboard/leads/feed" },
     { href: "/dashboard/quotes", label: t.navQuotes, icon: "quote" },
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/materials", label: getMaterialsDict(lang).nav, icon: "cart" },

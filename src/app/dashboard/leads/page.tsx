@@ -58,7 +58,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         active="mine"
         feedLabel={f.tabFeed}
         mineLabel={f.tabMine}
-        feedCount={newFittingCount(feed)}
+        feedCount={newFittingCount(feed, (profile as typeof profile & { feed_seen_at?: string | null }).feed_seen_at)}
         mineCount={leads.filter((l) => l.status === "new").length}
       />
 
