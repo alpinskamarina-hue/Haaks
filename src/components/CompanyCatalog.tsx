@@ -8,6 +8,8 @@ import { dayMonthYear, JOB_TRADES } from "@/lib/company-jobs";
 import { tradeLabel } from "@/lib/feed";
 import { isLang, LANG_NAMES } from "@/lib/i18n";
 import { PUBLIC_WORKS } from "@/lib/works-i18n";
+import { MIN_REVIEWS_FOR_AVERAGE, ratingText } from "@/lib/reviews";
+import { PUBLIC_REVIEWS } from "@/lib/reviews-i18n";
 
 export type CatalogWorker = {
   id: string;
@@ -25,6 +27,7 @@ export type CatalogWorker = {
   passport_token: string | null;
   invite_status: "sent" | "accepted" | "declined" | null;
   works?: number;
+  rating?: { avg: number; n: number } | null;
 };
 
 export type SentInvite = {
@@ -124,6 +127,14 @@ export function CompanyCatalog({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold">{w.name ?? "ZZP"}</p>
+                  {w.rating && w.rating.n >= MIN_REVIEWS_FOR_AVERAGE ? (
+                    <p className="text-sm">
+                      <span className="text-amber-500">★</span> <b>{ratingText(w.rating.avg)}</b>{" "}
+                      <span className="text-slate-500">· {PUBLIC_REVIEWS[lang].count.replace("{n}", String(w.rating.n))}</span>
+                    </p>
+                  ) : w.rating ? (
+                    <p className="text-sm text-slate-500">{w.rating.n === 1 ? PUBLIC_REVIEWS[lang].one : PUBLIC_REVIEWS[lang].count.replace("{n}", String(w.rating.n))}</p>
+                  ) : null}
                   <p className="text-sm text-slate-600">{w.trades.map((tr) => tradeLabel(tr, lang)).join(", ")}</p>
                 </div>
                 <span

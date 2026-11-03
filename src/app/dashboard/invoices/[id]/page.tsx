@@ -8,12 +8,22 @@ import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import type { Invoice } from "@/lib/invoices";
 import { siteUrl } from "@/lib/lang";
 import { loadWorkspace } from "@/lib/workspace";
+import { requestReview } from "@/app/reviews-actions";
+import { getReviewsDict } from "@/lib/reviews-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
-export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ review?: string }>;
+}) {
   const { id } = await params;
-  const { supabase, profile, t } = await loadWorkspace();
+  const { review: reviewError } = await searchParams;
+  const { supabase, profile, lang, t } = await loadWorkspace();
+  const rv = getReviewsDict(lang);
 
   const { data: invoice } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle<Invoice>();
   if (!invoice) notFound();
@@ -21,6 +31,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const { data: order } = invoice.order_id
     ? await supabase.from("orders").select("id, title").eq("id", invoice.order_id).maybeSingle()
     : { data: null };
+  const { data: reviewRow } = await supabase
+    .from("reviews")
+    .select("id, status")
+    .or(invoice.order_id ? `invoice_id.eq.${invoice.id},order_id.eq.${invoice.order_id}` : `invoice_id.eq.${invoice.id}`)
+    .limit(1)
+    .maybeSingle<{ id: string; status: string }>();
   const link = `${await siteUrl()}/f/${invoice.public_token}`;
   const button = "rounded-lg border border-slate-300 px-3 py-2 text-sm";
 
@@ -108,6 +124,25 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           )}
         </div>
       </section>
+
+      {(reviewRow || invoice.status !== "draft") && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          {reviewRow ? (
+            <Link href={`/dashboard/reviews/${reviewRow.id}`} className="font-semibold text-amber-900 underline">
+              ⭐ {reviewRow.status === "requested" ? rv.open : rv.nav}
+            </Link>
+          ) : (
+            <>
+              <p className="text-sm text-amber-900">{rv.askHint}</p>
+              <form action={requestReview} className="mt-2">
+                <input type="hidden" name="invoice" value={invoice.id} />
+                <button className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white">{rv.ask}</button>
+              </form>
+            </>
+          )}
+          {reviewError && <p className="mt-2 text-sm text-red-700">{rv.notAllowed}</p>}
+        </section>
+      )}
 
       <section className={card}>
         {invoice.status !== "draft" && <p className="mb-3 text-sm text-amber-700">{t.editSentInvoice}</p>}

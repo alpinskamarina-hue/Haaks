@@ -1,0 +1,271 @@
+// Review texts: the builder's cabinet in 6 languages; the client's form, the passport and the
+// company catalog in nl/en.
+import type { Lang } from "@/lib/i18n";
+import type { Criterion } from "@/lib/reviews";
+
+export type ReviewsDict = {
+  nav: string;
+  title: string;
+  intro: string;
+  newcomer: string;
+  average: string;
+  received: string;
+  waiting: string;
+  waitingHint: string;
+  none: string;
+  ask: string;
+  askHint: string;
+  open: string;
+  shareTitle: string;
+  shareHint: string;
+  email: string;
+  copyText: string;
+  copied: string;
+  link: string;
+  preview: string;
+  publishesOn: string;
+  published: string;
+  from: string;
+  criteria: Record<Criterion, string>;
+  profileHint: string;
+  pushTitle: string;
+  pushBody: string;
+  notAllowed: string;
+};
+
+const ru: ReviewsDict = {
+  nav: "Отзывы",
+  title: "Отзывы заказчиков",
+  intro: "Отзыв может оставить только заказчик, с которым вы работали через Haaks: по закрытому заказу или по отправленному счёту. Отзыв появляется в паспорте через 48 часов.",
+  newcomer: "Новый в Haaks: средняя оценка появится с 3 отзывов",
+  average: "{avg} из 5 · отзывов: {n}",
+  received: "Полученные отзывы",
+  waiting: "Ждём отзыв",
+  waitingHint: "Заказчик ещё не заполнил. Отправьте ссылку ещё раз, если нужно.",
+  none: "Отзывов пока нет. Закройте заказ или отправьте счёт и нажмите «Попросить отзыв».",
+  ask: "⭐ Попросить отзыв",
+  askHint: "Работа сделана? Попросите заказчика оценить её. Хорошие отзывы помогают получать новые заказы.",
+  open: "Открыть просьбу об отзыве",
+  shareTitle: "Отправьте ссылку заказчику",
+  shareHint: "Заказчику не нужен аккаунт: он откроет ссылку, поставит звёзды и напишет пару слов на нидерландском или английском. Одна ссылка — один отзыв.",
+  email: "E-mail",
+  copyText: "Копировать текст",
+  copied: "Скопировано",
+  link: "Ссылка на отзыв",
+  preview: "Посмотреть текст сообщения",
+  publishesOn: "Появится в паспорте {d}",
+  published: "Опубликован",
+  from: "Заказ: {job}",
+  criteria: { quality: "Качество", timing: "Сроки", communication: "Общение", cleanliness: "Чистота" },
+  profileHint: "Звёзды и отзывы реальных заказчиков. Их видят в паспорте и в каталоге для компаний.",
+  pushTitle: "Новый отзыв ⭐",
+  pushBody: "{name} оценил(а) работу «{job}»: {stars} из 5.",
+  notAllowed: "Попросить отзыв можно по закрытому заказу, принятому предложению или отправленному счёту.",
+};
+
+const DICTS: Record<Lang, ReviewsDict> = {
+  ru,
+  uk: {
+    nav: "Відгуки",
+    title: "Відгуки замовників",
+    intro: "Відгук може залишити лише замовник, з яким ви працювали через Haaks: за закритим замовленням або надісланим рахунком. Відгук з'являється в паспорті через 48 годин.",
+    newcomer: "Новий у Haaks: середня оцінка з'явиться з 3 відгуків",
+    average: "{avg} з 5 · відгуків: {n}",
+    received: "Отримані відгуки",
+    waiting: "Чекаємо відгук",
+    waitingHint: "Замовник ще не заповнив. Надішліть посилання ще раз, якщо потрібно.",
+    none: "Відгуків поки немає. Закрийте замовлення або надішліть рахунок і натисніть «Попросити відгук».",
+    ask: "⭐ Попросити відгук",
+    askHint: "Роботу зроблено? Попросіть замовника оцінити її. Гарні відгуки допомагають отримувати нові замовлення.",
+    open: "Відкрити прохання про відгук",
+    shareTitle: "Надішліть посилання замовнику",
+    shareHint: "Замовнику не потрібен акаунт: він відкриє посилання, поставить зірки й напише кілька слів нідерландською або англійською. Одне посилання — один відгук.",
+    email: "E-mail",
+    copyText: "Копіювати текст",
+    copied: "Скопійовано",
+    link: "Посилання на відгук",
+    preview: "Переглянути текст повідомлення",
+    publishesOn: "З'явиться в паспорті {d}",
+    published: "Опубліковано",
+    from: "Замовлення: {job}",
+    criteria: { quality: "Якість", timing: "Строки", communication: "Спілкування", cleanliness: "Чистота" },
+    profileHint: "Зірки та відгуки реальних замовників. Їх бачать у паспорті та в каталозі для компаній.",
+    pushTitle: "Новий відгук ⭐",
+    pushBody: "{name} оцінив(ла) роботу «{job}»: {stars} з 5.",
+    notAllowed: "Попросити відгук можна за закритим замовленням, прийнятою пропозицією або надісланим рахунком.",
+  },
+  pl: {
+    nav: "Opinie",
+    title: "Opinie klientów",
+    intro: "Opinię może wystawić tylko klient, z którym pracowałeś przez Haaks: przy zamkniętym zleceniu lub wysłanej fakturze. Opinia pojawia się w paszporcie po 48 godzinach.",
+    newcomer: "Nowy w Haaks: średnia ocena pojawi się od 3 opinii",
+    average: "{avg} z 5 · opinie: {n}",
+    received: "Otrzymane opinie",
+    waiting: "Czekamy na opinię",
+    waitingHint: "Klient jeszcze nie wypełnił. W razie potrzeby wyślij link ponownie.",
+    none: "Nie ma jeszcze opinii. Zamknij zlecenie lub wyślij fakturę i kliknij „Poproś o opinię”.",
+    ask: "⭐ Poproś o opinię",
+    askHint: "Praca skończona? Poproś klienta o ocenę. Dobre opinie pomagają zdobywać nowe zlecenia.",
+    open: "Otwórz prośbę o opinię",
+    shareTitle: "Wyślij link klientowi",
+    shareHint: "Klient nie potrzebuje konta: otworzy link, da gwiazdki i napisze kilka słów po niderlandzku lub angielsku. Jeden link — jedna opinia.",
+    email: "E-mail",
+    copyText: "Kopiuj tekst",
+    copied: "Skopiowano",
+    link: "Link do opinii",
+    preview: "Zobacz treść wiadomości",
+    publishesOn: "Pojawi się w paszporcie {d}",
+    published: "Opublikowana",
+    from: "Zlecenie: {job}",
+    criteria: { quality: "Jakość", timing: "Terminowość", communication: "Komunikacja", cleanliness: "Porządek" },
+    profileHint: "Gwiazdki i opinie prawdziwych klientów. Widać je w paszporcie i w katalogu dla firm.",
+    pushTitle: "Nowa opinia ⭐",
+    pushBody: "{name} ocenił(a) pracę „{job}”: {stars} z 5.",
+    notAllowed: "O opinię można poprosić przy zamkniętym zleceniu, zaakceptowanej ofercie lub wysłanej fakturze.",
+  },
+  ro: {
+    nav: "Recenzii",
+    title: "Recenzii de la clienți",
+    intro: "Doar un client cu care ai lucrat prin Haaks poate lăsa o recenzie: pentru o comandă închisă sau o factură trimisă. Recenzia apare în pașaport după 48 de ore.",
+    newcomer: "Nou pe Haaks: media apare de la 3 recenzii",
+    average: "{avg} din 5 · recenzii: {n}",
+    received: "Recenzii primite",
+    waiting: "Așteptăm recenzia",
+    waitingHint: "Clientul încă n-a completat. Trimite din nou linkul dacă e nevoie.",
+    none: "Încă nu ai recenzii. Închide o comandă sau trimite o factură și apasă „Cere o recenzie”.",
+    ask: "⭐ Cere o recenzie",
+    askHint: "Lucrarea e gata? Cere-i clientului să o evalueze. Recenziile bune aduc comenzi noi.",
+    open: "Deschide cererea de recenzie",
+    shareTitle: "Trimite linkul clientului",
+    shareHint: "Clientul nu are nevoie de cont: deschide linkul, dă stele și scrie câteva cuvinte în neerlandeză sau engleză. Un link — o recenzie.",
+    email: "E-mail",
+    copyText: "Copiază textul",
+    copied: "Copiat",
+    link: "Linkul recenziei",
+    preview: "Vezi textul mesajului",
+    publishesOn: "Apare în pașaport pe {d}",
+    published: "Publicată",
+    from: "Comanda: {job}",
+    criteria: { quality: "Calitate", timing: "Termene", communication: "Comunicare", cleanliness: "Curățenie" },
+    profileHint: "Stele și recenzii de la clienți reali. Se văd în pașaport și în catalogul pentru firme.",
+    pushTitle: "Recenzie nouă ⭐",
+    pushBody: "{name} a evaluat lucrarea „{job}”: {stars} din 5.",
+    notAllowed: "Poți cere o recenzie pentru o comandă închisă, o ofertă acceptată sau o factură trimisă.",
+  },
+  en: {
+    nav: "Reviews",
+    title: "Client reviews",
+    intro: "Only a client you worked with through Haaks can leave a review: for a closed order or a sent invoice. A review shows in your passport after 48 hours.",
+    newcomer: "New on Haaks: the average shows from 3 reviews",
+    average: "{avg} of 5 · reviews: {n}",
+    received: "Reviews received",
+    waiting: "Waiting for a review",
+    waitingHint: "The client has not filled it in yet. Send the link again if needed.",
+    none: "No reviews yet. Close an order or send an invoice and press “Ask for a review”.",
+    ask: "⭐ Ask for a review",
+    askHint: "Job done? Ask the client to rate it. Good reviews help you win new work.",
+    open: "Open the review request",
+    shareTitle: "Send the link to your client",
+    shareHint: "The client needs no account: they open the link, give stars and write a few words in Dutch or English. One link, one review.",
+    email: "E-mail",
+    copyText: "Copy text",
+    copied: "Copied",
+    link: "Review link",
+    preview: "See the message text",
+    publishesOn: "Shows in your passport on {d}",
+    published: "Published",
+    from: "Order: {job}",
+    criteria: { quality: "Quality", timing: "On time", communication: "Communication", cleanliness: "Tidiness" },
+    profileHint: "Stars and reviews from real clients. Shown in your passport and in the catalog for companies.",
+    pushTitle: "New review ⭐",
+    pushBody: "{name} rated “{job}”: {stars} of 5.",
+    notAllowed: "You can ask for a review for a closed order, an accepted quote or a sent invoice.",
+  },
+  nl: {
+    nav: "Beoordelingen",
+    title: "Beoordelingen van opdrachtgevers",
+    intro: "Alleen een opdrachtgever met wie je via Haaks werkte kan een beoordeling geven: bij een afgesloten klus of een verstuurde factuur. Een beoordeling staat na 48 uur in je paspoort.",
+    newcomer: "Nieuw op Haaks: het gemiddelde verschijnt vanaf 3 beoordelingen",
+    average: "{avg} van 5 · beoordelingen: {n}",
+    received: "Ontvangen beoordelingen",
+    waiting: "Wacht op beoordeling",
+    waitingHint: "De opdrachtgever heeft nog niet gereageerd. Stuur de link zo nodig opnieuw.",
+    none: "Nog geen beoordelingen. Sluit een klus af of verstuur een factuur en klik “Vraag om beoordeling”.",
+    ask: "⭐ Vraag om beoordeling",
+    askHint: "Klus klaar? Vraag de opdrachtgever om een beoordeling. Goede beoordelingen helpen bij nieuwe opdrachten.",
+    open: "Beoordelingsverzoek openen",
+    shareTitle: "Stuur de link naar je opdrachtgever",
+    shareHint: "De opdrachtgever heeft geen account nodig: link openen, sterren geven en een paar woorden schrijven. Eén link, één beoordeling.",
+    email: "E-mail",
+    copyText: "Tekst kopiëren",
+    copied: "Gekopieerd",
+    link: "Beoordelingslink",
+    preview: "Berichttekst bekijken",
+    publishesOn: "Staat op {d} in je paspoort",
+    published: "Gepubliceerd",
+    from: "Klus: {job}",
+    criteria: { quality: "Kwaliteit", timing: "Op tijd", communication: "Communicatie", cleanliness: "Netheid" },
+    profileHint: "Sterren en beoordelingen van echte opdrachtgevers. Zichtbaar in je paspoort en in de catalogus voor bedrijven.",
+    pushTitle: "Nieuwe beoordeling ⭐",
+    pushBody: "{name} beoordeelde “{job}”: {stars} van 5.",
+    notAllowed: "Je kunt om een beoordeling vragen bij een afgesloten klus, een geaccepteerde offerte of een verstuurde factuur.",
+  },
+};
+
+export const getReviewsDict = (lang: Lang) => DICTS[lang];
+
+// The client's form (/r/<token>), the passport and the company catalog.
+export const PUBLIC_REVIEWS = {
+  nl: {
+    pageTitle: "Beoordeling",
+    title: "Hoe was het werk van {name}?",
+    intro: "{name} heeft via Haaks voor u gewerkt. Uw eerlijke beoordeling helpt andere opdrachtgevers. Het kost 1 minuut.",
+    job: "Klus",
+    overall: "Uw totaaloordeel",
+    details: "Meer details (optioneel)",
+    criteria: { quality: "Kwaliteit van het werk", timing: "Op tijd en binnen planning", communication: "Communicatie", cleanliness: "Netheid na afloop" },
+    body: "Uw ervaring (optioneel)",
+    bodyHint: "Wat ging goed, wat kon beter?",
+    name: "Uw naam",
+    nameHint: "We tonen alleen uw voornaam en de eerste letter van uw achternaam.",
+    city: "Plaats (optioneel)",
+    send: "Beoordeling versturen",
+    needStars: "Kies eerst het aantal sterren.",
+    thanks: "Bedankt voor uw beoordeling!",
+    thanksText: "Uw beoordeling verschijnt binnen 48 uur in het ZZP-paspoort van {name}.",
+    used: "Met deze link is al een beoordeling gegeven. Bedankt!",
+    notFound: "Deze link bestaat niet of is verlopen.",
+    own: "Dit is uw eigen beoordelingslink. Stuur hem naar uw opdrachtgever.",
+    verified: "Beoordelingen op Haaks komen alleen van opdrachtgevers die via Haaks met de vakman werkten. Haaks controleert of de klus bestaat; de tekst is van de opdrachtgever zelf.",
+    reviews: "Beoordelingen",
+    newcomer: "Nieuw op Haaks",
+    count: "{n} beoordelingen",
+    one: "1 beoordeling",
+  },
+  en: {
+    pageTitle: "Review",
+    title: "How was the work of {name}?",
+    intro: "{name} worked for you through Haaks. Your honest review helps other clients. It takes 1 minute.",
+    job: "Job",
+    overall: "Your overall rating",
+    details: "More details (optional)",
+    criteria: { quality: "Quality of work", timing: "On time and on schedule", communication: "Communication", cleanliness: "Tidiness afterwards" },
+    body: "Your experience (optional)",
+    bodyHint: "What went well, what could be better?",
+    name: "Your name",
+    nameHint: "We only show your first name and the first letter of your last name.",
+    city: "Town (optional)",
+    send: "Send review",
+    needStars: "Choose the number of stars first.",
+    thanks: "Thank you for your review!",
+    thanksText: "Your review will appear in the ZZP passport of {name} within 48 hours.",
+    used: "A review has already been given with this link. Thank you!",
+    notFound: "This link does not exist or has expired.",
+    own: "This is your own review link. Send it to your client.",
+    verified: "Reviews on Haaks only come from clients who worked with the builder through Haaks. Haaks checks that the job exists; the text is the client's own.",
+    reviews: "Reviews",
+    newcomer: "New on Haaks",
+    count: "{n} reviews",
+    one: "1 review",
+  },
+} as const;
