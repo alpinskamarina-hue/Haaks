@@ -16,6 +16,9 @@ import { createServerAccountClient } from "@/lib/supabase/server";
 import { dutchToday } from "@/lib/quotes";
 import { withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { describeProfile, getWorkerDict, PUBLIC_PROFILE } from "@/lib/worker-profile-text";
+import { WorkCard } from "@/components/WorkCard";
+import type { Work } from "@/lib/works";
+import { PUBLIC_WORKS } from "@/lib/works-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +63,24 @@ export default async function PassportPage({
     .returns<DocumentRow[]>();
   const documents = docs ?? [];
 
+  const { data: workRows } = await admin
+    .from("works")
+    .select("*")
+    .eq("user_id", profile.id)
+    .order("done_on", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(30)
+    .returns<Work[]>();
+  const works = workRows ?? [];
+
   const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
   const avatarPath = (profile as { avatar_path?: string | null }).avatar_path ?? null;
-  const paths = [...documents.map((d) => d.file_path), ...worker.work_photos, ...(avatarPath ? [avatarPath] : [])];
+  const paths = [
+    ...documents.map((d) => d.file_path),
+    ...worker.work_photos,
+    ...works.flatMap((x) => [...x.photos_after, ...x.photos_before]),
+    ...(avatarPath ? [avatarPath] : []),
+  ];
   const signed = paths.length
     ? (await admin.storage.from("documents").createSignedUrls(paths, SIGNED_URL_SECONDS)).data ?? []
     : [];
@@ -131,6 +149,26 @@ export default async function PassportPage({
       </section>
 
       <WorkerBlock worker={worker} lang={lang} photoUrls={worker.work_photos.flatMap((p) => urlByPath.get(p) ?? [])} />
+
+      {works.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">
+            {PUBLIC_WORKS[lang].title} · {works.length}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {works.map((x) => (
+              <WorkCard
+                key={x.id}
+                work={x}
+                lang={lang}
+                trade={x.trade ? (getWorkerDict(lang).trades as Record<string, string>)[x.trade] ?? null : null}
+                urls={urlByPath}
+                labels={{ before: PUBLIC_WORKS[lang].before, after: PUBLIC_WORKS[lang].after }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold">{t.documents}</h2>

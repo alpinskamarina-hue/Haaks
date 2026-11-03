@@ -7,6 +7,7 @@ import { docStatus, type DocumentRow } from "@/lib/documents";
 import { AVAILABILITY, completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { describeProfile, getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
+import { getWorksDict } from "@/lib/works-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
 const MISSING_ICON: Record<string, string> = {
@@ -35,7 +36,17 @@ export default async function MyProfile() {
   const docs = (docRows ?? []).filter((d) => docStatus(d) !== "expired");
   const score = completeness(p, docs);
   const d = describeProfile(p, w, lang);
-  const urls = await signedUrls(supabase, [...p.work_photos, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
+  const wk = getWorksDict(lang);
+  const { data: workRows } = await supabase
+    .from("works")
+    .select("id, photos_after")
+    .eq("user_id", user.id)
+    .order("done_on", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .returns<{ id: string; photos_after: string[] }[]>();
+  const works = workRows ?? [];
+  const workCovers = works.slice(0, 3).flatMap((x) => x.photos_after.slice(0, 1));
+  const urls = await signedUrls(supabase, [...p.work_photos, ...workCovers, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
   const name = profile.full_name || profile.company_name || user.email || "";
   const initials = name
     .split(/[\s@]+/)
@@ -205,6 +216,34 @@ export default async function MyProfile() {
             ),
           )}
         </div>
+      </section>
+
+      <section id="works" className={card}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">
+              {wk.title} · {works.length}
+            </p>
+            <p className="text-sm text-slate-600">{wk.profileHint}</p>
+          </div>
+          <Link href="/dashboard/works" className="shrink-0 text-sm font-medium text-orange-700 underline">
+            {wk.nav} →
+          </Link>
+        </div>
+        {workCovers.length > 0 ? (
+          <Link href="/dashboard/works" className="mt-3 grid grid-cols-3 gap-2">
+            {workCovers.map((path) => (
+              <span key={path} className="block aspect-square overflow-hidden rounded-lg bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {urls.get(path) && <img src={urls.get(path)} alt="" className="h-full w-full object-cover" />}
+              </span>
+            ))}
+          </Link>
+        ) : (
+          <Link href="/dashboard/works/new" className="mt-3 inline-block rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+            {wk.add}
+          </Link>
+        )}
       </section>
 
       <section id="photos" className={card}>
