@@ -80,7 +80,8 @@ export default async function FeedPage({
     supabase.from("company_jobs").select("id, feed_item_id").eq("company_id", user.id).not("feed_item_id", "is", null),
   ]);
   const ownJobByItem = new Map((myJobRows ?? []).map((j) => [j.feed_item_id as string, j.id as string]));
-  const yourJob = getHelperDict(lang).yourJob;
+  const helper = getHelperDict(lang);
+  const yourJob = helper.yourJob;
   // Replies to company jobs, by feed card.
   const myReplies = (myReplyRows ?? []) as MyReply[];
   const replyByItem = new Map(myReplies.filter((r) => r.feed_item_id).map((r) => [r.feed_item_id!, r]));
@@ -151,6 +152,15 @@ export default async function FeedPage({
           )}
         </Link>
       )}
+
+      {/* "Need a helper": a builder posts a job for other builders. */}
+      <Link href="/dashboard/helpers" className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+        <span>
+          <span className="block font-semibold text-sky-900">👷 {helper.nav}</span>
+          <span className="block text-sm text-slate-700">{helper.cardText}</span>
+        </span>
+        <span className="shrink-0 font-semibold text-sky-900">→</span>
+      </Link>
 
       <LeadsTabs
         active="feed"
