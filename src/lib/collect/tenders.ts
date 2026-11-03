@@ -2,6 +2,7 @@
 
 import type { Lang } from "@/lib/i18n";
 import { TRADE_LABELS } from "@/lib/feed";
+import { cityCoords } from "@/lib/worker-profile";
 import { gemeentePlace, mapLimit } from "./geo";
 import { COLLECT_LANGS, daysAgo, type CollectedItem } from "./types";
 
@@ -96,17 +97,26 @@ const REGION_CITY: [RegExp, string][] = [
   [/Drenthe/i, "Assen"],
 ];
 
+// Known cities use the same centre as the worker's home city (a municipality's own centre
+// can be far off: Rotterdam's lies in the port).
+async function placeOf(city: string) {
+  const known = cityCoords(city);
+  if (known) return { ...known, place: city, gemeente: city, city };
+  const geo = await gemeentePlace(city);
+  return geo ? { ...geo, city } : null;
+}
+
 async function tenderPlace(detail: Detail) {
   const gemeente = /Gemeente\s+(.+)$/i.exec(detail.opdrachtgeverNaam ?? "")?.[1]?.trim();
   if (gemeente) {
-    const geo = await gemeentePlace(gemeente);
-    if (geo) return { ...geo, city: gemeente };
+    const geo = await placeOf(gemeente);
+    if (geo) return geo;
   }
   for (const nuts of detail.nutsCodes ?? []) {
     const city = REGION_CITY.find(([re]) => re.test(nuts.omschrijving ?? ""))?.[1];
     if (!city) continue;
-    const geo = await gemeentePlace(city);
-    if (geo) return { ...geo, city };
+    const geo = await placeOf(city);
+    if (geo) return geo;
   }
   return null;
 }
