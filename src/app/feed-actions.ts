@@ -39,6 +39,14 @@ export async function unlockFeedItem(id: string) {
   refresh();
 }
 
+// "Reply" to a company job: the company sees the worker's profile; contacts open when it accepts.
+export async function replyToCompanyJob(id: string) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("reply_to_job", { p_item: id });
+  if (error) console.error("Reply to company job failed", error.message);
+  refresh();
+}
+
 // "Reply": the job becomes one of the worker's leads, with a Dutch reply, and the lead page opens.
 export async function takeFeedItem(id: string) {
   const { supabase, user } = await requireUser();

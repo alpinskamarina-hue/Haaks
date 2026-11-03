@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { closeCompanyJob, saveCompanyDetails } from "@/app/company-actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -57,7 +58,17 @@ export function CompanyDetailsForm({ t, profile, email }: { t: CompanyDict; prof
   );
 }
 
-export function CompanyJobRow({ job, t, lang }: { job: CompanyJob; t: CompanyDict; lang: "nl" | "en" }) {
+export function CompanyJobRow({
+  job,
+  t,
+  lang,
+  replies,
+}: {
+  job: CompanyJob;
+  t: CompanyDict;
+  lang: "nl" | "en";
+  replies?: { total: number; fresh: number };
+}) {
   const expired = job.status === "published" && job.expires_at && Date.parse(job.expires_at) <= Date.now();
   const status = expired ? "expired" : job.status;
   const pay =
@@ -78,6 +89,17 @@ export function CompanyJobRow({ job, t, lang }: { job: CompanyJob; t: CompanyDic
         <p className="mt-2 text-xs text-slate-500">{fill(t.onlineUntil, { d: dayMonthYear(job.expires_at.slice(0, 10)) })}</p>
       )}
       {status === "rejected" && job.reject_reason && <p className="mt-2 text-sm text-red-700">{fill(t.rejectedBecause, { r: job.reject_reason })}</p>}
+      {job.status !== "pending" && job.status !== "rejected" && (
+        <Link
+          href={`/company/jobs/${job.id}`}
+          className={`mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+            replies?.total ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          👷 {replies?.total ? fill(t.replies, { n: replies.total }) : t.repliesNone}
+          {!!replies?.fresh && <span className="rounded-full bg-white px-1.5 text-xs text-orange-700">+{replies.fresh}</span>}
+        </Link>
+      )}
       {(status === "pending" || status === "published") && (
         <form action={closeCompanyJob} className="mt-3">
           <input type="hidden" name="id" value={job.id} />

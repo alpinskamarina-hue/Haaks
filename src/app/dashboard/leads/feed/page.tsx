@@ -7,6 +7,7 @@ import {
   takeFeedItem,
   unhideFeedItem,
   unlockFeedItem,
+  replyToCompanyJob,
 } from "@/app/feed-actions";
 import { LeadsTabs } from "@/components/LeadsTabs";
 import { PushToggle } from "@/components/PushToggle";
@@ -15,6 +16,7 @@ import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "
 import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
+import { getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
 import { vapidPublicKey } from "@/lib/push";
@@ -68,11 +70,16 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
     markFeedSeen(supabase, user.id, extra),
+    supabase.rpc("my_job_replies"),
   ]);
+  // Replies to company jobs, by feed card.
+  const myReplies = (myReplyRows ?? []) as MyReply[];
+  const replyByItem = new Map(myReplies.filter((r) => r.feed_item_id).map((r) => [r.feed_item_id!, r]));
+  const rt = getReplyDict(lang);
   // "New": came in since the visit before this one.
   const since = newSince(lastVisit);
 
@@ -124,6 +131,16 @@ export default async function FeedPage({
         <h1 className="text-2xl font-bold">{f.tabFeed}</h1>
         <p className="text-slate-600">{f.feedSubtitle}</p>
       </div>
+
+      {myReplies.length > 0 && (
+        <Link
+          href="/dashboard/replies"
+          className="flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-800"
+        >
+          <span>🙋 {rt.myLink} ({myReplies.length})</span>
+          {myReplies.some((r) => r.status === "accepted") && <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">✓ {rt.accepted}</span>}
+        </Link>
+      )}
 
       <LeadsTabs
         active="feed"
@@ -241,6 +258,8 @@ export default async function FeedPage({
                 opensLeft={opensLeft}
                 worker={worker}
                 isNew={isNewJob(item, since)}
+                reply={replyByItem.get(item.id)}
+                rt={rt}
               />
             ))}
           </ul>
@@ -372,6 +391,8 @@ function FeedCard({
   opensLeft,
   worker,
   isNew,
+  reply,
+  rt,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -380,6 +401,8 @@ function FeedCard({
   opensLeft: number;
   worker: Worker;
   isNew: boolean;
+  reply?: MyReply;
+  rt: ReplyDict;
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -389,7 +412,9 @@ function FeedCard({
   const info = sectionInfo(item.kind);
   const left = item.kind === "tender" ? daysLeft(item.timing) : null;
   const meta = [item.city, item.trades.map((tr) => tradeLabel(tr, lang)).join(", "), item.timing, item.budget].filter(Boolean);
-  const resumeLink = pro
+  // A job a company posted on Haaks: builders reply here, contacts open when the company accepts.
+  const companyJob = item.source === "haaks";
+  const resumeLink = pro && !companyJob
     ? emailLink(item.contact, `ZZP vakman voor uw klus: ${item.title ?? title}`, resumeMessage({ ...worker, job: item.title ?? title }))
     : null;
   return (
@@ -427,7 +452,23 @@ function FeedCard({
       </p>
       <p className="mt-2 break-words text-sm text-slate-700">{summary}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm">
-        {item.leadId ? (
+        {companyJob && reply ? (
+          <Link
+            href="/dashboard/replies"
+            className={`rounded-lg px-3 py-1.5 font-medium ${
+              reply.status === "accepted" ? "bg-green-600 text-white" : reply.status === "declined" ? "bg-slate-100 text-slate-500" : "bg-purple-50 text-purple-800"
+            }`}
+          >
+            {reply.status === "accepted" ? `✓ ${rt.accepted}` : reply.status === "declined" ? rt.declined : `⏳ ${rt.sent}`}
+          </Link>
+        ) : companyJob && pro ? (
+          <div className="w-full">
+            <form action={replyToCompanyJob.bind(null, item.id)}>
+              <SubmitButton className="rounded-lg bg-purple-700 px-4 py-2 font-semibold text-white disabled:opacity-60">🙋 {rt.reply}</SubmitButton>
+            </form>
+            <p className="mt-1 text-xs text-slate-500">{rt.hint}</p>
+          </div>
+        ) : item.leadId ? (
           <Link href={`/dashboard/leads/${item.leadId}`} className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium">
             ✓ {f.taken} · {f.openLead}
           </Link>
