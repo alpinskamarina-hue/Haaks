@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { setLanguage, signOut } from "@/app/actions";
 import { CompanyTabs } from "@/components/CompanyTabs";
+import { Flag } from "@/components/Flag";
 import { HtmlLang } from "@/components/HtmlLang";
+import { LANG_NAMES } from "@/lib/i18n";
 import { Icon } from "@/components/icons";
 import { requireUser } from "@/lib/auth";
 import { companyLang, getCompanyDict } from "@/lib/company-i18n";
@@ -28,7 +30,13 @@ export default async function CompanyLayout({ children }: { children: React.Reac
           </Link>
           <div className="flex items-center gap-3">
             <form action={setLanguage.bind(null, other)}>
-              <button className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold uppercase text-slate-600">{other}</button>
+              <button
+                className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold uppercase text-slate-600"
+                title={LANG_NAMES[other]}
+              >
+                <Flag lang={other} className="h-4 w-6" />
+                {other}
+              </button>
             </form>
             <form action={signOut}>
               <button className="p-1 text-slate-500" aria-label={t.signOut} title={t.signOut}>
