@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PassportTabs } from "@/components/PassportTabs";
 import { RatingSummary } from "@/components/RatingSummary";
 import { replyReview, reportReview } from "@/app/reviews-actions";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -11,7 +12,7 @@ import { loadWorkspace } from "@/lib/workspace";
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function ReviewsPage() {
-  const { supabase, user, lang } = await loadWorkspace();
+  const { supabase, user, profile, lang } = await loadWorkspace();
   const r = getReviewsDict(lang);
   const { data } = await supabase
     .from("reviews")
@@ -30,7 +31,7 @@ export default async function ReviewsPage() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <h1 className="text-2xl font-bold">{r.title}</h1>
+      <PassportTabs active="reviews" lang={lang} userId={user.id} token={profile.passport_token} />
       <p className="text-slate-600">{r.intro}</p>
 
       <section className={card}>

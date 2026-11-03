@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 
 // section: the path prefix that marks the item active, when it differs from href.
+// also: more path prefixes that belong to the same item (passport: works and reviews).
 // badge: a number (new jobs); dot: something waiting without a number (new leads).
 // clearOn: once this page is opened the number is gone until the next full load.
 export type NavItem = {
   href: string;
   section?: string;
+  also?: string[];
   label: string;
   short?: string;
   icon: IconName;
@@ -42,8 +44,9 @@ function useBadges(items: NavItem[]) {
 
 const count = (n: number) => (n > 99 ? "99+" : String(n));
 
-function isActive(pathname: string, { href, section }: NavItem) {
-  return href === "/dashboard" ? pathname === href : pathname.startsWith(section ?? href);
+function isActive(pathname: string, { href, section, also }: NavItem) {
+  if (href === "/dashboard") return pathname === href;
+  return [section ?? href, ...(also ?? [])].some((p) => pathname.startsWith(p));
 }
 
 // Left column on large screens.

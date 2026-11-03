@@ -9,8 +9,6 @@ import { legalSummary } from "@/lib/legal";
 import { getHelperDict } from "@/lib/helper-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
-import { getWorksDict } from "@/lib/works-i18n";
-import { getReviewsDict } from "@/lib/reviews-i18n";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadWorkspace } from "@/lib/workspace";
 
@@ -48,10 +46,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/materials", label: getMaterialsDict(lang).nav, icon: "cart" },
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },
-    { href: "/dashboard/passport", label: t.navPassport, icon: "passport" },
+    { href: "/dashboard/passport", label: t.navPassport, icon: "passport", also: ["/dashboard/works", "/dashboard/reviews"] },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
-    { href: "/dashboard/works", label: getWorksDict(lang).nav, icon: "image" },
-    { href: "/dashboard/reviews", label: getReviewsDict(lang).nav, icon: "star" },
     { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
     ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }] : []),
   ];
@@ -110,7 +106,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => !["/dashboard/passport", "/dashboard/profile", "/dashboard/materials", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
+      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
     </div>
   );
 }
