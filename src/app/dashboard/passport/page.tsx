@@ -10,6 +10,7 @@ import {
 } from "@/app/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
+import { PassportTabs } from "@/components/PassportTabs";
 import { UploadForm } from "@/components/UploadForm";
 import {
   docStatus,
@@ -58,6 +59,7 @@ export default async function Dashboard() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
+      <PassportTabs active="docs" lang={lang} userId={user.id} token={profile.passport_token} />
 
       <section className={card}>
         <h2 className="text-xl font-semibold">{t.passportTitle}</h2>
