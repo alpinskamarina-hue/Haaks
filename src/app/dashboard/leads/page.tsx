@@ -62,7 +62,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         mineCount={leads.filter((l) => l.status === "new").length}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <section className={card}>
             <h2 className="mb-1 font-semibold">{t.leadPasteTitle}</h2>
@@ -71,7 +71,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           </section>
 
           <section className={card}>
-            <nav className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1">
+            <nav className="mb-4 flex flex-wrap gap-1">
               {TABS.map((key) => {
                 const n = leads.filter((l) => l.status === key).length;
                 return (

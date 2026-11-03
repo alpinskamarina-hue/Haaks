@@ -136,7 +136,7 @@ export default async function Home() {
         ))}
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <section className={card}>
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">{t.homeLeadsTitle}</h2>

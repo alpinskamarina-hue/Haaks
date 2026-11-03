@@ -124,7 +124,7 @@ export default async function FeedPage({
         mineCount={mineCount ?? 0}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
           {!pro && locked.length > 0 && (
             <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
