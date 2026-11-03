@@ -4,6 +4,7 @@ import { LeadCard } from "@/components/LeadCard";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createMaterialList } from "@/app/materials-actions";
 import { listTotal, STATUS_COLOR, type MaterialList } from "@/lib/materials";
+import { getHelperDict } from "@/lib/helper-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { fill, getFeedDict, pushTexts } from "@/lib/feed-i18n";
 import { PushToggle } from "@/components/PushToggle";
@@ -24,6 +25,7 @@ const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 // Home: what needs attention today across all services.
 export default async function Home() {
   const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const helper = getHelperDict(lang);
   const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
   // First visit after sign-up: the four profile questions (they can be skipped).
   if (!worker.onboarded_at) redirect("/dashboard/onboarding");
@@ -194,6 +196,14 @@ export default async function Home() {
               <p className="mt-1 text-sm text-slate-600">{t.noCurrentOrder}</p>
             )}
           </section>
+
+          <Link href="/dashboard/helpers" className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <span>
+              <span className="block font-semibold text-sky-900">👷 {helper.nav}</span>
+              <span className="block text-sm text-slate-700">{helper.cardText}</span>
+            </span>
+            <span className="shrink-0 font-semibold text-sky-900">→</span>
+          </Link>
 
           <Link href="/dashboard/passport" className={`${card} block hover:border-orange-300`}>
             <div className="flex items-center justify-between">
