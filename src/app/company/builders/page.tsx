@@ -6,11 +6,12 @@ import { JOB_TRADES } from "@/lib/company-jobs";
 export default async function CompanyBuildersPage({ searchParams }: { searchParams: Promise<{ trade?: string; ok?: string; error?: string }> }) {
   const { supabase, user } = await requireUser();
   const sp = await searchParams;
-  const [{ data: profile }, { data: workers }, { data: invites }, { data: jobs }] = await Promise.all([
+  const [{ data: profile }, { data: workers }, { data: invites }, { data: jobs }, { data: reports }] = await Promise.all([
     supabase.from("profiles").select("language").eq("id", user.id).single(),
     supabase.rpc("worker_catalog"),
     supabase.rpc("company_sent_invites"),
     supabase.from("company_jobs").select("id, title").eq("company_id", user.id).eq("status", "published").gt("expires_at", new Date().toISOString()),
+    supabase.from("reports").select("target_id").eq("target_kind", "worker"),
   ]);
   const lang = companyLang(profile?.language);
   const trade = sp.trade && JOB_TRADES.includes(sp.trade) ? sp.trade : null;
@@ -24,6 +25,7 @@ export default async function CompanyBuildersPage({ searchParams }: { searchPara
       lang={lang}
       ok={sp.ok}
       error={sp.error}
+      reported={new Set((reports ?? []).map((r) => r.target_id as string))}
     />
   );
 }

@@ -11,6 +11,7 @@ import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { replyTemplate } from "@/lib/leads";
 import { short } from "@/lib/quotes";
+import { CATALOG_DAYS } from "@/lib/job-replies";
 import { getFeedDict } from "@/lib/feed-i18n";
 import { sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
@@ -212,10 +213,27 @@ export async function sendTestPush() {
 }
 
 // "Looking for work": the builder shows or hides their profile in the company catalog.
+// "Looking for work": on (or extended) for 30 days, then it switches itself off.
 export async function setInCatalog(on: boolean) {
   const { supabase, user } = await requireUser();
-  await supabase.from("profiles").update({ in_catalog: on }).eq("id", user.id);
+  await supabase
+    .from("profiles")
+    .update({ in_catalog: on, catalog_until: on ? new Date(Date.now() + CATALOG_DAYS * 24 * 60 * 60 * 1000).toISOString() : null })
+    .eq("id", user.id);
   refresh();
+}
+
+// A builder reports a job in the feed, or a company reports a builder card.
+export async function reportTarget(formData: FormData) {
+  const { supabase } = await requireUser();
+  const kind = formData.get("kind") === "worker" ? "worker" : "job";
+  const { error } = await supabase.rpc("report", {
+    p_kind: kind,
+    p_target: String(formData.get("target")),
+    p_reason: String(formData.get("reason") ?? "other"),
+  });
+  if (error) console.error("Report failed", error.message);
+  revalidatePath(kind === "worker" ? "/company/builders" : "/dashboard/leads/feed");
 }
 
 // The builder accepts or declines a company's invitation; accepting opens contacts on both sides.

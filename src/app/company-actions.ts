@@ -238,3 +238,25 @@ export async function rejectCompanyJob(formData: FormData) {
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard/moderation?ok=rejected");
 }
+
+// A report about a job or a builder card: take it down, or dismiss the reports.
+export async function resolveReport(formData: FormData) {
+  const server = await requireAdmin();
+  const kind = formData.get("kind") === "worker" ? "worker" : "job";
+  const target = String(formData.get("target"));
+  if (formData.get("remove") === "1") {
+    if (kind === "job") {
+      const { data: job } = await server
+        .from("company_jobs")
+        .select("id, feed_item_id")
+        .eq("feed_item_id", target)
+        .maybeSingle<Pick<CompanyJob, "id" | "feed_item_id">>();
+      if (job) await takeJobOffline(server, job, "rejected", "Verwijderd na meldingen / Removed after reports");
+    } else {
+      await server.from("profiles").update({ in_catalog: false, catalog_until: null }).eq("id", target);
+    }
+  }
+  await server.from("reports").delete().eq("target_kind", kind).eq("target_id", target);
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/moderation?ok=${formData.get("remove") === "1" ? "removed" : "dismissed"}`);
+}

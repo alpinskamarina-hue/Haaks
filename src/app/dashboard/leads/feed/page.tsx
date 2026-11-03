@@ -17,7 +17,9 @@ import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
-import { getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
+import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
+import { ReportButton } from "@/components/ReportButton";
+import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
 import { vapidPublicKey } from "@/lib/push";
@@ -71,14 +73,17 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }, { data: myJobRows }] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
     markFeedSeen(supabase, user.id, extra),
     supabase.rpc("my_job_replies"),
     // "Need a helper" jobs this builder posted: their own card links to the replies.
     supabase.from("company_jobs").select("id, feed_item_id").eq("company_id", user.id).not("feed_item_id", "is", null),
+    supabase.from("reports").select("target_id").eq("target_kind", "job"),
   ]);
+  const reportedJobs = new Set((myReports ?? []).map((r) => r.target_id as string));
+  const reportT = getReportDict(lang);
   const ownJobByItem = new Map((myJobRows ?? []).map((j) => [j.feed_item_id as string, j.id as string]));
   const helper = getHelperDict(lang);
   const yourJob = helper.yourJob;
@@ -86,7 +91,7 @@ export default async function FeedPage({
   const myReplies = (myReplyRows ?? []) as MyReply[];
   const replyByItem = new Map(myReplies.filter((r) => r.feed_item_id).map((r) => [r.feed_item_id!, r]));
   const rt = getReplyDict(lang);
-  const inCatalog = Boolean((profile as typeof profile & { in_catalog?: boolean }).in_catalog);
+  const inCatalog = catalogActive(profile as typeof profile & { in_catalog?: boolean; catalog_until?: string | null });
   // "New": came in since the visit before this one.
   const since = newSince(lastVisit);
 
@@ -282,6 +287,8 @@ export default async function FeedPage({
                 rt={rt}
                 ownJob={ownJobByItem.get(item.id)}
                 yourJob={yourJob}
+                reportT={reportT}
+                reported={reportedJobs.has(item.id)}
               />
             ))}
           </ul>
@@ -417,6 +424,8 @@ function FeedCard({
   rt,
   ownJob,
   yourJob,
+  reportT,
+  reported,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -429,6 +438,8 @@ function FeedCard({
   rt: ReplyDict;
   ownJob?: string;
   yourJob: string;
+  reportT: ReportDict;
+  reported: boolean;
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -532,6 +543,11 @@ function FeedCard({
           </SubmitButton>
         </form>
       </div>
+      {companyJob && !ownJob && (
+        <div className="mt-2">
+          <ReportButton kind="job" target={item.id} reasons={JOB_REASONS} t={reportT} sent={reported} />
+        </div>
+      )}
     </li>
   );
 }

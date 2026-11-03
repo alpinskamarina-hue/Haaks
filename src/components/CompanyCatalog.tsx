@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { inviteWorker } from "@/app/company-actions";
+import { ReportButton } from "@/components/ReportButton";
 import { SubmitButton } from "@/components/SubmitButton";
+import { getReportDict, WORKER_REASONS } from "@/lib/report-i18n";
 import { fill, type CompanyDict, type CompanyLang } from "@/lib/company-i18n";
 import { dayMonthYear, JOB_TRADES } from "@/lib/company-jobs";
 import { tradeLabel } from "@/lib/feed";
@@ -47,6 +49,7 @@ export function CompanyCatalog({
   lang,
   ok,
   error,
+  reported,
 }: {
   workers: CatalogWorker[];
   invites: SentInvite[];
@@ -56,6 +59,7 @@ export function CompanyCatalog({
   lang: CompanyLang;
   ok?: string;
   error?: string;
+  reported: Set<string>;
 }) {
   const shown = trade ? workers.filter((w) => w.trades.includes(trade)) : workers;
   const chip = (active: boolean) =>
@@ -166,6 +170,9 @@ export function CompanyCatalog({
                   <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60">{t.inviteBtn}</SubmitButton>
                 </form>
               )}
+              <div className="mt-2">
+                <ReportButton kind="worker" target={w.id} reasons={WORKER_REASONS} t={getReportDict(lang)} sent={reported.has(w.id)} />
+              </div>
             </li>
           ))}
         </ul>
