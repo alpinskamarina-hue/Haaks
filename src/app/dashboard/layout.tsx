@@ -33,9 +33,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           Promise.all([
             server.from("company_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"),
             server.from("reports").select("id", { count: "exact", head: true }),
+            server.from("reviews").select("id", { count: "exact", head: true }).eq("status", "submitted").not("report_reason", "is", null),
           ]),
         )
-        .then(([jobs, reports]) => (jobs.count ?? 0) + (reports.count ?? 0))
+        .then(([jobs, reports, reviews]) => (jobs.count ?? 0) + (reports.count ?? 0) + (reviews.count ?? 0))
         .catch(() => 0)
     : 0;
 
