@@ -91,6 +91,15 @@ function description(title: string, text: string) {
   return (work ?? "").slice(0, 240);
 }
 
+// "Aanvraag omgevingsvergunning Kraaipanstraat" -> "Kraaipanstraat".
+function cleanStreet(raw: string | undefined) {
+  const street = (raw ?? "")
+    .replace(/^.*?(omgevingsvergunning|vergunning|locatie|adres:?)\s+/i, "")
+    .replace(/^(aan de|op de|te)\s+/i, "")
+    .trim();
+  return street.length >= 3 ? street : null;
+}
+
 const POSTCODE = /\b(\d{4})\s?([A-Z]{2})\b/;
 
 // Street, postcode and place from the title or the text. The house number is left out:
@@ -100,12 +109,12 @@ function address(title: string, text: string, creator: string) {
     const pc = POSTCODE.exec(source);
     if (!pc) continue;
     const before = source.slice(Math.max(0, pc.index - 80), pc.index);
-    const street = /([A-Z][A-Za-zÀ-ÿ'.\- ]{2,50}?)\s+\d+[\w\-\s]{0,8}[,\s]*$/.exec(before)?.[1]?.trim() ?? null;
+    const street = cleanStreet(/([A-Z][A-Za-zÀ-ÿ'.\- ]{2,50}?)\s+\d+[\w\-\s]{0,8}[,\s]*$/.exec(before)?.[1]);
     const after = source.slice(pc.index + pc[0].length).trim();
     const place = /^([A-Z][A-Za-zÀ-ÿ'\- ]{1,40}?)(?:[,.;]|\s+(?:Datum|GU-|Z-|De |Het |Omschrijving)|$)/.exec(after)?.[1]?.trim() ?? creator;
     return { street, postcode: `${pc[1]}${pc[2]}`, pc4: pc[1], place };
   }
-  const street = /(?:locatie|Zaakadres:)\s*([A-Z][A-Za-zÀ-ÿ'.\- ]{2,50}?)\s+\d+/.exec(text)?.[1]?.trim() ?? null;
+  const street = cleanStreet(/(?:locatie|Zaakadres:)\s*([A-Z][A-Za-zÀ-ÿ'.\- ]{2,50}?)\s+\d+/.exec(text)?.[1]);
   return { street, postcode: null, pc4: null, place: creator };
 }
 

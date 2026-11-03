@@ -51,7 +51,7 @@ export const WORK_TYPES: WorkType[] = [
   },
   {
     id: "bijgebouw",
-    match: /bijgebouw|carport|schuur|tuinhuis|overkapping|berging|blokhut|veranda/,
+    match: /bijgebouw|carport|schuur|tuinhuis|overkapping|blokhut|veranda/,
     trades: ["timmerman", "klusjesman"],
     label: { nl: "Bijgebouw of overkapping", en: "Shed or canopy", ru: "Сарай, навес или постройка в саду", uk: "Сарай, навіс або садова споруда", pl: "Budynek gospodarczy lub wiata", ro: "Anexă sau copertină" },
   },
@@ -101,12 +101,15 @@ const GENERIC: WorkType = {
   label: { nl: "Bouwwerk", en: "Building work", ru: "Строительные работы", uk: "Будівельні роботи", pl: "Prace budowlane", ro: "Lucrări de construcție" },
 };
 
-// Permits that are not building work for a vakman: trees, signs, events, use of a place.
-const NOT_WORK = /\bkap(pen)?\b|kapvergunning|\bboom|bomen|reclame|uitrit|uitweg|evenement|exploitatie|standplaats|terras(?!.*dak)|steiger|\bbrug|ligplaats|alcohol|drank|horeca|gebruik(en)? van (de |het )?(gronden|openbare)/;
+// Never work for a vakman, whatever else the text says: trees, signs, events, legalising.
+const NEVER_WORK = /\bkap(pen)?\b|kapvergunning|\bboom|bomen|reclame|uithangbord|lichtbak|pakketautomaat|vlaggenmast|antenne|zonwering|legaliser|evenement|exploitatie|standplaats|ligplaats|alcohol|drank|horeca|uitrit|uitweg/;
+// Not building work unless a clear kind of work is named too.
+const NOT_WORK = /terras|steiger|\bbrug|gebruik|tijdelijk/;
 
 // What kind of work a permit text describes, or null when it is not building work.
 export function workType(text: string) {
   const t = text.toLowerCase();
+  if (NEVER_WORK.test(t)) return null;
   const hits = WORK_TYPES.filter((w) => w.match.test(t));
   if (!hits.length) {
     if (NOT_WORK.test(t) || !GENERIC.match.test(t)) return null;
