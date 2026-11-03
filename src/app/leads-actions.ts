@@ -114,7 +114,7 @@ export async function deleteLead(id: string) {
   if (lead.image_path) await supabase.storage.from("documents").remove([lead.image_path]);
   await supabase.from("leads").delete().eq("id", id);
   refresh();
-  redirect("/dashboard/leads");
+  redirect("/dashboard/leads/feed");
 }
 
 // The client said yes to talking: the lead becomes an order and the worker goes straight to a quote for it.
