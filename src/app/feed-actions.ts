@@ -210,3 +210,18 @@ export async function sendTestPush() {
   }
   return { ok };
 }
+
+// "Looking for work": the builder shows or hides their profile in the company catalog.
+export async function setInCatalog(on: boolean) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("profiles").update({ in_catalog: on }).eq("id", user.id);
+  refresh();
+}
+
+// The builder accepts or declines a company's invitation; accepting opens contacts on both sides.
+export async function decideInvite(id: string, accept: boolean) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("decide_invite", { p_invite: id, p_accept: accept });
+  if (error) console.error("Deciding an invitation failed", error.message);
+  refresh();
+}
