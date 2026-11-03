@@ -13,20 +13,45 @@ import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "
 import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, loadFeed, newFittingCount, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
-import { scoreColor } from "@/lib/leads";
+import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
+import { siteUrl } from "@/lib/lang";
 import { telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
+// Sections of the feed, each with its own colour: real jobs first, then signals.
+type Section = "jobs" | "soon" | "tender" | "business";
+const SECTION_OF: Record<ScoredFeedItem["kind"], Section> = {
+  private: "jobs",
+  permit: "soon",
+  tender: "tender",
+  business: "business",
+};
+const SECTIONS: { key: Section; icon: string; label: (f: FeedDict) => string; chip: string; bg: string; stripe: string; text: string }[] = [
+  { key: "jobs", icon: "🔥", label: (f) => f.secJobs, chip: "border-orange-500 text-orange-700", bg: "bg-orange-50", stripe: "border-l-orange-500", text: "text-orange-700" },
+  { key: "soon", icon: "🏗", label: (f) => f.secSoon, chip: "border-green-600 text-green-700", bg: "bg-green-50", stripe: "border-l-green-600", text: "text-green-700" },
+  { key: "tender", icon: "📋", label: (f) => f.secTender, chip: "border-blue-600 text-blue-700", bg: "bg-blue-50", stripe: "border-l-blue-600", text: "text-blue-700" },
+  { key: "business", icon: "🏢", label: (f) => f.secBusiness, chip: "border-purple-600 text-purple-700", bg: "bg-purple-50", stripe: "border-l-purple-600", text: "text-purple-700" },
+];
+const sectionInfo = (kind: ScoredFeedItem["kind"]) => SECTIONS.find((x) => x.key === SECTION_OF[kind])!;
+
+// "inschrijven tot 2026-11-30" -> days left until the tender closes.
+function daysLeft(timing: string | null) {
+  const date = timing?.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  if (!date) return null;
+  return Math.ceil((new Date(`${date}T23:59:59`).getTime() - Date.now()) / 86400000);
+}
+
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string; hidden?: string; saved?: string }>;
+  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; section?: string }>;
 }) {
   const params = await searchParams;
   const showAll = params.all === "1";
   const showHidden = params.hidden === "1";
+  const section = SECTIONS.find((x) => x.key === params.section)?.key ?? null;
   const { supabase, user, profile, lang } = await loadWorkspace();
   const f = getFeedDict(lang);
   const extra = profile as typeof profile & {
@@ -42,9 +67,29 @@ export default async function FeedPage({
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
   ]);
 
-  const visible = items
+  const base = items
     .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
     .filter((i) => showAll || showHidden || i.score >= FIT_SCORE);
+  const sectionOrder = SECTIONS.map((x) => x.key);
+  const visible = base
+    .filter((i) => !section || SECTION_OF[i.kind] === section)
+    .sort((a, b) => sectionOrder.indexOf(SECTION_OF[a.kind]) - sectionOrder.indexOf(SECTION_OF[b.kind]));
+  const sectionCount = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key).length;
+  const query = (next: Record<string, string | null>) => {
+    const q = new URLSearchParams();
+    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, section, ...next };
+    for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
+    const str = q.toString();
+    return `/dashboard/leads/feed${str ? `?${str}` : ""}`;
+  };
+  const passportUrl = profile.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
+  const worker = {
+    name: profile.company_name || profile.full_name || null,
+    trades: trades.map((tr) => tradeLabel(tr, "nl")),
+    city: profile.city,
+    phone: profile.phone,
+    passportUrl,
+  };
   const locked = visible.filter((i) => i.locked);
   const open = visible.filter((i) => !i.locked);
   const hiddenCount = items.filter((i) => i.action === "hidden").length;
@@ -88,15 +133,31 @@ export default async function FeedPage({
             </p>
           )}
 
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm sm:mx-0 sm:flex-wrap sm:px-0">
-            <Link href="/dashboard/leads/feed" className={chip(!showAll && !showHidden)}>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link href={query({ section: null })} className={chip(!section)}>
+              {f.secAll} {base.length}
+            </Link>
+            {SECTIONS.map((x) => (
+              <Link
+                key={x.key}
+                href={query({ section: x.key })}
+                className={`shrink-0 rounded-full border-2 px-3 py-1 font-medium ${
+                  section === x.key ? `${x.chip} ${x.bg} shadow-sm` : `${x.chip} bg-white`
+                }`}
+              >
+                {x.icon} {x.label(f)} {sectionCount(x.key)}
+              </Link>
+            ))}
+          </div>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-xs sm:mx-0 sm:flex-wrap sm:px-0">
+            <Link href={query({ all: null, hidden: null })} className={chip(!showAll && !showHidden)}>
               {f.filterMine}
             </Link>
-            <Link href="/dashboard/leads/feed?all=1" className={chip(showAll)}>
+            <Link href={query({ all: "1", hidden: null })} className={chip(showAll)}>
               {f.filterAll}
             </Link>
             {hiddenCount > 0 && (
-              <Link href="/dashboard/leads/feed?hidden=1" className={chip(showHidden)}>
+              <Link href={query({ hidden: "1", all: null })} className={chip(showHidden)}>
                 {f.showHidden} {hiddenCount}
               </Link>
             )}
@@ -119,7 +180,7 @@ export default async function FeedPage({
               <LockedCard key={item.id} item={item} f={f} lang={lang} />
             ))}
             {open.map((item) => (
-              <FeedCard key={item.id} item={item} f={f} lang={lang} pro={pro} />
+              <FeedCard key={item.id} item={item} f={f} lang={lang} pro={pro} worker={worker} />
             ))}
           </ul>
         </div>
@@ -236,12 +297,29 @@ function kindLabel(kind: ScoredFeedItem["kind"], f: FeedDict) {
   return { private: f.kindPrivate, business: f.kindBusiness, permit: f.kindPermit, tender: f.kindTender }[kind];
 }
 
-function FeedCard({ item, f, lang, pro }: { item: ScoredFeedItem; f: FeedDict; lang: Lang; pro: boolean }) {
+type Worker = Omit<Parameters<typeof resumeMessage>[0], "job">;
+
+function FeedCard({ item, f, lang, pro, worker }: { item: ScoredFeedItem; f: FeedDict; lang: Lang; pro: boolean; worker: Worker }) {
   const { title, summary } = feedText(item, lang);
-  const fresh = Date.now() - new Date(item.published_at).getTime() < 24 * 60 * 60 * 1000;
+  const age = Date.now() - new Date(item.published_at).getTime();
+  const fresh = age < 24 * 60 * 60 * 1000;
+  const old = age > 14 * 24 * 60 * 60 * 1000;
+  const info = sectionInfo(item.kind);
+  const left = item.kind === "tender" ? daysLeft(item.timing) : null;
   const meta = [item.city, item.trades.map((tr) => tradeLabel(tr, lang)).join(", "), item.timing, item.budget].filter(Boolean);
+  const resumeLink = pro
+    ? emailLink(item.contact, `ZZP vakman voor uw klus: ${item.title ?? title}`, resumeMessage({ ...worker, job: item.title ?? title }))
+    : null;
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <li className={`rounded-2xl border border-l-[6px] border-slate-200 ${info.stripe} bg-white p-4 shadow-sm ${old ? "opacity-70" : ""}`}>
+      <p className={`mb-1 text-xs font-bold uppercase tracking-wide ${info.text}`}>
+        {info.icon} {info.label(f)}
+        {left !== null && left >= 0 && (
+          <span className={`ml-2 rounded-full px-2 py-0.5 normal-case ${left < 7 ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+            {left === 0 ? f.lastDay : fill(f.daysLeft, { n: left })}
+          </span>
+        )}
+      </p>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
         <span
           className={`rounded-full px-2 py-0.5 font-medium ${item.source === "haaks" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-700"}`}
@@ -272,6 +350,11 @@ function FeedCard({ item, f, lang, pro }: { item: ScoredFeedItem; f: FeedDict; l
         ) : (
           <a href="#pro" className="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-600">
             🔒 {f.lockedActions}
+          </a>
+        )}
+        {resumeLink && (
+          <a href={resumeLink} className="rounded-lg bg-slate-900 px-3 py-1.5 font-semibold text-white">
+            ✉️ {f.sendResume}
           </a>
         )}
         {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
