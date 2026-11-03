@@ -44,7 +44,10 @@ export default async function Home({
           </span>
           <div className="flex items-center gap-3">
             <LanguageSwitcher current={lang} label={t.language} />
-            <Link href="/?mode=signin#signup" className="hidden text-sm font-semibold text-orange-700 sm:inline">
+            <Link
+              href="/?mode=signin#signup"
+              className="inline-flex items-center rounded-lg border-2 border-orange-600 px-4 py-2 text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
+            >
               {l.login}
             </Link>
           </div>
@@ -69,6 +72,12 @@ export default async function Home({
                 </a>
                 <span className="text-sm text-slate-400">{l.ctaNote}</span>
               </div>
+              <Link
+                href="/?mode=signin#signup"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-base font-semibold text-white transition hover:bg-white/20"
+              >
+                {t.toSignIn}
+              </Link>
             </div>
             <HeroDocs lead={l.leadCard} />
           </div>
@@ -152,15 +161,17 @@ export default async function Home({
         <section id="signup" className="scroll-mt-20 bg-gradient-to-b from-slate-50 to-orange-50">
           <div className="mx-auto max-w-md px-4 py-16">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_0_#e2e8f0,0_30px_60px_-20px_rgba(234,88,12,.35)]">
-              <h2 className="text-2xl font-bold">{l.signupTitle}</h2>
-              <p className="mb-5 mt-2 text-slate-600">{l.signupText}</p>
-              {error && <p className="mb-3 text-sm text-red-700">{t.loginError}</p>}
               <LoginForm
                 key={mode}
                 t={t}
                 initialMode={mode === "signin" ? "signin" : "signup"}
                 consent={<SignupConsent lang={lang} />}
+                heads={{
+                  signin: { title: l.signinTitle, text: l.signinText },
+                  signup: { title: l.signupTitle, text: l.signupText },
+                }}
               />
+              {error && <p className="mt-3 text-sm text-red-700">{t.loginError}</p>}
               <p className="mt-4 text-xs text-slate-500">{t.privacyNote}</p>
             </div>
           </div>

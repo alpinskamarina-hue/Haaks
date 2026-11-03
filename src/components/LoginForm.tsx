@@ -16,10 +16,13 @@ export function LoginForm({
   t,
   initialMode = "signin",
   consent,
+  heads,
 }: {
   t: Dict;
   initialMode?: LoginMode;
   consent?: React.ReactNode;
+  // Optional heading and short text per mode, shown above the fields.
+  heads?: Record<"signin" | "signup", { title: string; text: string }>;
 }) {
   const [mode, setMode] = useState<LoginMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -78,11 +81,26 @@ export function LoginForm({
     setBusy(false);
   }
 
+  const head = heads?.[mode === "signup" ? "signup" : "signin"];
+  const heading = head && (
+    <>
+      <h2 className="text-2xl font-bold">{head.title}</h2>
+      <p className="mb-5 mt-2 text-slate-600">{head.text}</p>
+    </>
+  );
+
   if (sent) {
-    return <p className="rounded-lg bg-green-50 p-4 text-green-800">{t.linkSent}</p>;
+    return (
+      <>
+        {heading}
+        <p className="rounded-lg bg-green-50 p-4 text-green-800">{t.linkSent}</p>
+      </>
+    );
   }
 
   return (
+    <>
+    {heading}
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="block text-sm font-medium">
         {t.emailLabel}
@@ -135,5 +153,6 @@ export function LoginForm({
         )}
       </div>
     </form>
+    </>
   );
 }
