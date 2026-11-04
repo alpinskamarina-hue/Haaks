@@ -14,6 +14,8 @@ const ru = {
   openFeed: "Открыть в моей ленте",
   tagline: "Haaks: заказы и все бумаги для ZZP-строителей на родном языке",
   more_jobs: "Каждый день новые заказы рядом с вами",
+  source: "Источник",
+  unhide: "Вернуть",
 };
 type ShareDict = typeof ru;
 
@@ -32,6 +34,8 @@ const DICTS: Record<Lang, ShareDict> = {
     openFeed: "Відкрити в моїй стрічці",
     tagline: "Haaks: замовлення і всі папери для ZZP-будівельників рідною мовою",
     more_jobs: "Щодня нові замовлення поруч із вами",
+    source: "Джерело",
+    unhide: "Повернути",
   },
   pl: {
     share: "Udostępnij",
@@ -46,6 +50,8 @@ const DICTS: Record<Lang, ShareDict> = {
     openFeed: "Otwórz w moim feedzie",
     tagline: "Haaks: zlecenia i wszystkie papiery dla budowlańców ZZP w twoim języku",
     more_jobs: "Codziennie nowe zlecenia w twojej okolicy",
+    source: "Źródło",
+    unhide: "Przywróć",
   },
   ro: {
     share: "Distribuie",
@@ -60,6 +66,8 @@ const DICTS: Record<Lang, ShareDict> = {
     openFeed: "Deschide în fluxul meu",
     tagline: "Haaks: lucrări și toate actele pentru constructori ZZP în limba ta",
     more_jobs: "Lucrări noi lângă tine în fiecare zi",
+    source: "Sursa",
+    unhide: "Readu",
   },
   en: {
     share: "Share",
@@ -74,6 +82,8 @@ const DICTS: Record<Lang, ShareDict> = {
     openFeed: "Open in my feed",
     tagline: "Haaks: jobs and all paperwork for ZZP builders in your own language",
     more_jobs: "New jobs near you every day",
+    source: "Source",
+    unhide: "Restore",
   },
   nl: {
     share: "Delen",
@@ -88,6 +98,8 @@ const DICTS: Record<Lang, ShareDict> = {
     openFeed: "Openen in mijn feed",
     tagline: "Haaks: klussen en alle papieren voor ZZP-vakmensen in je eigen taal",
     more_jobs: "Elke dag nieuwe klussen bij jou in de buurt",
+    source: "Bron",
+    unhide: "Terugzetten",
   },
 };
 
