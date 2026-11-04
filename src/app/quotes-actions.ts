@@ -29,7 +29,6 @@ export async function generateQuote(input: {
     .slice(0, MAX_QUOTE_PHOTOS);
   const hourlyRate = money(input.hourlyRate);
   const vatRate = [21, 9, 0].includes(Number(input.vatRate)) ? Number(input.vatRate) : 21;
-  if (!description && !photos.length) throw new Error("Empty request");
 
   const [{ data: profile }, { data: order }] = await Promise.all([
     supabase.from("profiles").select("language").eq("id", user.id).single(),
@@ -70,7 +69,7 @@ export async function markQuoteSent(id: string) {
   const { supabase } = await requireUser();
   await supabase
     .from("quotes")
-    .update({ status: "sent", updated_at: new Date().toISOString() })
+    .update({ status: "sent", sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("status", "draft");
   refresh();
@@ -112,6 +111,8 @@ export async function setQuoteStatus(id: string, status: Quote["status"]) {
       status,
       updated_at: new Date().toISOString(),
       ...(status === "accepted" ? {} : { accepted_at: null, accepted_name: null }),
+      ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}),
+      ...(status === "draft" ? { sent_at: null, viewed_at: null } : {}),
     })
     .eq("id", id);
   refresh();
