@@ -1,12 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 
 type Labels = { share: string; more: string; copy: string; copied: string; email: string };
 
 // «Share»: a small menu with WhatsApp, Telegram, Facebook, Viber, e-mail and copy link;
 // on a phone also «Other apps», which opens the phone's own share sheet.
-export function ShareButton({ url, text, labels, className }: { url: string; text: string; labels: Labels; className?: string }) {
+export function ShareButton({
+  url,
+  text,
+  labels,
+  className,
+  compact,
+}: {
+  url: string;
+  text: string;
+  labels: Labels;
+  className?: string;
+  // A quiet grey icon with a small caption, for the bottom row of a feed card.
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [native, setNative] = useState(false);
@@ -43,9 +57,13 @@ export function ShareButton({ url, text, labels, className }: { url: string; tex
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className={className ?? "rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700"}
+        className={
+          compact
+            ? "flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+            : (className ?? "rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700")
+        }
       >
-        ↗ {labels.share}
+        {compact ? <Icon name="share" className="h-5 w-5" /> : "↗"} {labels.share}
       </button>
       {open && (
         <div className="absolute left-0 z-30 mt-1 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">

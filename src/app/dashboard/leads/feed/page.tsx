@@ -20,6 +20,7 @@ import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
 import { ShareButton } from "@/components/ShareButton";
+import { Icon } from "@/components/icons";
 import { getShareDict } from "@/lib/share-i18n";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
@@ -496,78 +497,95 @@ function FeedCard({
         {kindLabel(item.kind, f)} · {meta.join(" · ")}
       </p>
       <p className="mt-2 break-words text-sm text-slate-700">{summary}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm">
+      {/* One bright main action; a second one, if any, is outlined; small actions are grey icons below. */}
+      <div className="mt-3 flex flex-col gap-2 text-sm">
         {companyJob && ownJob ? (
-          <Link href={`/dashboard/helpers/jobs/${ownJob}`} className="rounded-lg bg-sky-50 px-3 py-1.5 font-medium text-sky-800">
+          <Link href={`/dashboard/helpers/jobs/${ownJob}`} className="rounded-xl bg-sky-50 px-4 py-2.5 text-center font-medium text-sky-800">
             👷 {yourJob}
           </Link>
         ) : companyJob && reply ? (
           <Link
             href="/dashboard/replies"
-            className={`rounded-lg px-3 py-1.5 font-medium ${
+            className={`rounded-xl px-4 py-2.5 text-center font-medium ${
               reply.status === "accepted" ? "bg-green-600 text-white" : reply.status === "declined" ? "bg-slate-100 text-slate-500" : "bg-purple-50 text-purple-800"
             }`}
           >
             {reply.status === "accepted" ? `✓ ${rt.accepted}` : reply.status === "declined" ? rt.declined : `⏳ ${rt.sent}`}
           </Link>
         ) : companyJob && pro && replyQuota && replyQuota.left === 0 ? (
-          <div className="w-full">
+          <div>
             <p className="text-sm font-medium text-slate-600">⏳ {fill(limitText(lang, "job_reply").none, { h: replyQuota.hours })}</p>
             <a href="#pro" className="mt-1 inline-block text-sm font-semibold text-orange-700 underline">{limitText(lang, "job_reply").pro}</a>
           </div>
         ) : companyJob && pro ? (
-          <div className="w-full">
+          <div>
             <form action={replyToCompanyJob.bind(null, item.id)}>
-              <SubmitButton className="rounded-lg bg-purple-700 px-4 py-2 font-semibold text-white disabled:opacity-60">🙋 {rt.reply}</SubmitButton>
+              <SubmitButton className="w-full rounded-xl bg-purple-700 px-4 py-2.5 font-semibold text-white disabled:opacity-60">🙋 {rt.reply}</SubmitButton>
             </form>
             <p className="mt-1 text-xs text-slate-500">{rt.hint}</p>
             {replyQuota && <p className="mt-1 text-xs font-medium text-orange-800">{fill(limitText(lang, "job_reply").left, { n: replyQuota.left })}</p>}
           </div>
         ) : item.leadId ? (
-          <Link href={`/dashboard/leads/${item.leadId}`} className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium">
+          <Link href={`/dashboard/leads/${item.leadId}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-center font-medium">
             ✓ {f.taken} · {f.openLead}
           </Link>
+        ) : pro && item.kind === "permit" ? (
+          // A permit has no client contact: the letter to the owner is the main action.
+          <>
+            <Link href={`/dashboard/leads/letter/${item.id}`} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-center font-semibold text-white">
+              ✉️ {letterLabel}
+            </Link>
+            <form action={takeFeedItem.bind(null, item.id)}>
+              <SubmitButton className="w-full rounded-xl border border-orange-300 bg-white px-4 py-2.5 font-semibold text-orange-700 disabled:opacity-60">
+                ✨ {f.reply}
+              </SubmitButton>
+            </form>
+          </>
         ) : pro ? (
           <form action={takeFeedItem.bind(null, item.id)}>
-            <SubmitButton className="rounded-lg bg-orange-600 px-3 py-1.5 font-semibold text-white disabled:opacity-60">
+            <SubmitButton className="w-full rounded-xl bg-orange-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60">
               ✨ {f.reply}
             </SubmitButton>
           </form>
         ) : opensLeft > 0 ? (
           <OpenButton id={item.id} f={f} opensLeft={opensLeft} />
         ) : (
-          <a href="#pro" className="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-600">
+          <a href="#pro" className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-slate-600">
             🔒 {f.lockedActions}
           </a>
         )}
-        {resumeLink && (
-          <a href={resumeLink} className="rounded-lg bg-slate-900 px-3 py-1.5 font-semibold text-white">
-            ✉️ {f.sendResume}
-          </a>
-        )}
-        {pro && item.kind === "permit" && (
-          <Link href={`/dashboard/leads/letter/${item.id}`} className="rounded-lg bg-emerald-700 px-3 py-1.5 font-semibold text-white">
+        {pro && item.kind === "permit" && item.leadId && (
+          <Link href={`/dashboard/leads/letter/${item.id}`} className="rounded-xl border border-emerald-600 px-4 py-2.5 text-center font-semibold text-emerald-800">
             ✉️ {letterLabel}
           </Link>
         )}
-        {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
-        {pro && item.source_url && (
-          <a href={item.source_url} target="_blank" rel="noreferrer" className="text-slate-500 underline">
-            ↗
+        {resumeLink && (
+          <a href={resumeLink} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center font-semibold text-slate-800">
+            ✉️ {f.sendResume}
           </a>
         )}
-        <ShareButton url={`${share.base}/job/${item.id}?lang=${lang}`} text={`${share.t.message} ${title}`} labels={share.t} />
-        <form action={(item.action === "hidden" ? unhideFeedItem : hideFeedItem).bind(null, item.id)} className="ml-auto">
-          <SubmitButton className="text-slate-400 hover:text-slate-700">
-            {item.action === "hidden" ? "↺" : f.hide}
+        {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-2.5">
+        <ShareButton url={`${share.base}/job/${item.id}?lang=${lang}`} text={`${share.t.message} ${title}`} labels={share.t} compact />
+        {pro && item.source_url && (
+          <a href={item.source_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800">
+            <Icon name="external" className="h-5 w-5" />
+            {share.t.source}
+          </a>
+        )}
+        <form action={(item.action === "hidden" ? unhideFeedItem : hideFeedItem).bind(null, item.id)}>
+          <SubmitButton className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800">
+            <Icon name={item.action === "hidden" ? "undo" : "eyeOff"} className="h-5 w-5" />
+            {item.action === "hidden" ? share.t.unhide : f.hide}
           </SubmitButton>
         </form>
+        {companyJob && !ownJob && (
+          <div className="ml-auto">
+            <ReportButton kind="job" target={item.id} reasons={JOB_REASONS} t={reportT} sent={reported} />
+          </div>
+        )}
       </div>
-      {companyJob && !ownJob && (
-        <div className="mt-2">
-          <ReportButton kind="job" target={item.id} reasons={JOB_REASONS} t={reportT} sent={reported} />
-        </div>
-      )}
     </li>
   );
 }
