@@ -8,7 +8,9 @@ import { LANG_NAMES, LANGS, type Lang } from "@/lib/i18n";
 
 // Language picker: the button shows the flag of the current language, the list shows
 // all flags with the language name next to each.
-export function LanguageSwitcher({ current, label, up }: { current: Lang; label: string; up?: boolean }) {
+// up: the list opens above the button; alignRight: the list grows to the left from the button's right edge
+// (for a button on the right side of a phone screen).
+export function LanguageSwitcher({ current, label, up, alignRight }: { current: Lang; label: string; up?: boolean; alignRight?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -57,7 +59,7 @@ export function LanguageSwitcher({ current, label, up }: { current: Lang; label:
           role="listbox"
           aria-label={label}
           className={`absolute z-30 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg ${
-            up ? "bottom-full left-0 mb-1" : "right-0 mt-1"
+            `${up ? "bottom-full mb-1" : "mt-1"} ${alignRight || !up ? "right-0" : "left-0"}`
           }`}
         >
           {LANGS.map((l) => (
