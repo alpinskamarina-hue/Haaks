@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { isPaid } from "@/lib/plans";
 import { getPricingDict } from "@/lib/pricing-i18n";
-import { getSettingsDict } from "@/lib/settings-i18n";
 import { getFeedPlusDict, HIDE_REASONS, type FeedPlusDict } from "@/lib/feed-plus-i18n";
 import {
   answerFeedTip,
@@ -41,11 +40,11 @@ const SECTION_OF: Record<ScoredFeedItem["kind"], Section> = {
   tender: "tender",
   business: "business",
 };
-const SECTIONS: { key: Section; icon: string; label: (f: FeedDict) => string; chip: string; bg: string; stripe: string; text: string }[] = [
-  { key: "jobs", icon: "🔥", label: (f) => f.secJobs, chip: "border-orange-500 text-orange-700", bg: "bg-orange-50", stripe: "border-l-orange-500", text: "text-orange-700" },
-  { key: "soon", icon: "🏗", label: (f) => f.secSoon, chip: "border-green-600 text-green-700", bg: "bg-green-50", stripe: "border-l-green-600", text: "text-green-700" },
-  { key: "tender", icon: "📋", label: (f) => f.secTender, chip: "border-blue-600 text-blue-700", bg: "bg-blue-50", stripe: "border-l-blue-600", text: "text-blue-700" },
-  { key: "business", icon: "🏢", label: (f) => f.secBusiness, chip: "border-purple-600 text-purple-700", bg: "bg-purple-50", stripe: "border-l-purple-600", text: "text-purple-700" },
+const SECTIONS: { key: Section; icon: string; solid: string; label: (f: FeedDict) => string; chip: string; bg: string; stripe: string; text: string }[] = [
+  { key: "jobs", icon: "🔥", solid: "bg-orange-600", label: (f) => f.secJobs, chip: "border-orange-500 text-orange-700", bg: "bg-orange-50", stripe: "border-l-orange-500", text: "text-orange-700" },
+  { key: "soon", icon: "🏗", solid: "bg-green-700", label: (f) => f.secSoon, chip: "border-green-600 text-green-700", bg: "bg-green-50", stripe: "border-l-green-600", text: "text-green-700" },
+  { key: "tender", icon: "📋", solid: "bg-blue-700", label: (f) => f.secTender, chip: "border-blue-600 text-blue-700", bg: "bg-blue-50", stripe: "border-l-blue-600", text: "text-blue-700" },
+  { key: "business", icon: "🏢", solid: "bg-purple-700", label: (f) => f.secBusiness, chip: "border-purple-600 text-purple-700", bg: "bg-purple-50", stripe: "border-l-purple-600", text: "text-purple-700" },
 ];
 const sectionInfo = (kind: ScoredFeedItem["kind"]) => SECTIONS.find((x) => x.key === SECTION_OF[kind])!;
 
@@ -163,19 +162,12 @@ export default async function FeedPage({
   const open = visible.filter((i) => !i.locked);
   const hiddenCount = items.filter((i) => i.action === "hidden").length;
   const hasDemo = items.some((i) => i.is_demo);
-  const chip = (active: boolean) =>
-    `shrink-0 rounded-full px-3 py-1.5 ${active ? "bg-slate-900 text-white" : "border border-slate-300 bg-white text-slate-700"}`;
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{f.tabFeed}</h1>
-          <p className="text-slate-600">{f.feedSubtitle}</p>
-        </div>
-        <Link href="/dashboard/settings#feed" className="shrink-0 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700">
-          ⚙️ {getSettingsDict(lang).configureFeed}
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold">{f.tabFeed}</h1>
+        <p className="text-slate-600">{f.feedSubtitle}</p>
       </div>
 
       {(myReplies.length > 0 || !inCatalog) && (
@@ -225,39 +217,52 @@ export default async function FeedPage({
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2 text-sm">
-            <Link href={query({ section: null })} className={chip(!section)}>
-              {f.secAll} {base.length}
+          {/* Sections: one calm row of tabs that scrolls sideways on a phone; empty ones are left out. */}
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+            <Link
+              href={query({ section: null })}
+              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${!section ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"}`}
+            >
+              {f.secAll} <span className="opacity-70">{base.length}</span>
             </Link>
-            {SECTIONS.map((x) => (
+            {SECTIONS.filter((x) => sectionCount(x.key) > 0 || section === x.key).map((x) => (
               <Link
                 key={x.key}
                 href={query({ section: x.key })}
-                className={`shrink-0 rounded-full border-2 px-3 py-1 font-medium ${
-                  section === x.key ? `${x.chip} ${x.bg} shadow-sm` : `${x.chip} bg-white`
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${
+                  section === x.key ? `${x.solid} text-white` : `${x.bg} ${x.text}`
                 }`}
               >
-                {x.icon} {x.label(f)} {sectionCount(x.key)}
+                {x.icon} {x.label(f)} <span className="opacity-70">{sectionCount(x.key)}</span>
                 {sectionNew(x.key) > 0 && (
                   <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">+{sectionNew(x.key)}</span>
                 )}
               </Link>
             ))}
           </div>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-xs sm:mx-0 sm:flex-wrap sm:px-0">
-            <Link href={query({ all: null, hidden: null, starred: null, city: null })} className={chip(!showAll && !showHidden && !showSaved)}>
-              {f.filterMine}
-            </Link>
-            <Link href={query({ all: "1", hidden: null, starred: null })} className={chip(showAll)}>
-              {f.filterAll}
-            </Link>
+          {/* Which jobs: a two-way switch, then saved and hidden as small links. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <div className="flex rounded-full bg-slate-200/70 p-1">
+              <Link
+                href={query({ all: null, hidden: null, starred: null, city: null })}
+                className={`rounded-full px-3.5 py-1 ${!showAll && !showHidden && !showSaved ? "bg-white font-semibold text-slate-900 shadow-sm" : "text-slate-600"}`}
+              >
+                {f.filterMine}
+              </Link>
+              <Link
+                href={query({ all: "1", hidden: null, starred: null })}
+                className={`rounded-full px-3.5 py-1 ${showAll ? "bg-white font-semibold text-slate-900 shadow-sm" : "text-slate-600"}`}
+              >
+                {f.filterAll}
+              </Link>
+            </div>
             {savedCount > 0 && (
-              <Link href={query({ starred: "1", all: null, hidden: null })} className={chip(showSaved)}>
+              <Link href={query({ starred: "1", all: null, hidden: null })} className={showSaved ? "font-semibold text-amber-700" : "text-slate-600"}>
                 ⭐ {fp.savedTab} {savedCount}
               </Link>
             )}
             {hiddenCount > 0 && (
-              <Link href={query({ hidden: "1", all: null, starred: null })} className={chip(showHidden)}>
+              <Link href={query({ hidden: "1", all: null, starred: null })} className={showHidden ? "font-semibold text-slate-900" : "text-slate-500"}>
                 {f.showHidden} {hiddenCount}
               </Link>
             )}
@@ -292,10 +297,7 @@ export default async function FeedPage({
                       ]
                         .filter(Boolean)
                         .join(", ") || "—",
-              })}{" "}
-              <Link href="/dashboard/profile" className="underline">
-                {f.profileLink}
-              </Link>
+              })}
             </p>
           )}
 
@@ -382,11 +384,6 @@ export default async function FeedPage({
               </Link>
             </section>
           )}
-
-          <Link href="/dashboard/settings#notify" className={`${card} block`}>
-            <p className="font-semibold">⚙️ {getSettingsDict(lang).configureFeed}</p>
-            <p className="mt-1 text-sm text-slate-600">{getSettingsDict(lang).feedSettings}</p>
-          </Link>
 
           <section className={card}>
             <h2 className="mb-3 font-semibold">{f.sourcesTitle}</h2>
@@ -493,7 +490,7 @@ function FeedCard({
         <span
           className={`rounded-full px-2 py-0.5 font-medium ${item.source === "haaks" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-700"}`}
         >
-          {sourceLabel(item)}
+          {item.source === "bekendmakingen" ? sourceLabel(item).split(" · ")[0] : sourceLabel(item)}
         </span>
         <span>{timeAgo(item.published_at, lang)}</span>
         {item.distance !== null && (
