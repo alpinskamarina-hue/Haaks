@@ -15,13 +15,10 @@ import { loadWorkspace } from "@/lib/workspace";
 // One cabinet for every service: sidebar on a computer, tab bar on a phone.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile, lang, t } = await loadWorkspace();
-  const [{ count: newLeads }, newJobs] = await Promise.all([
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
-    // New fitting jobs since the worker last opened the feed: the number on the Feed button.
-    loadFeed(supabase, user.id, profile)
-      .then(({ items }) => newFittingCount(items, (profile as typeof profile & { feed_seen_at?: string | null }).feed_seen_at))
-      .catch(() => 0),
-  ]);
+  // New fitting jobs since the worker last opened the feed: the number on the Feed button.
+  const newJobs = await loadFeed(supabase, user.id, profile)
+    .then(({ items }) => newFittingCount(items, (profile as typeof profile & { feed_seen_at?: string | null }).feed_seen_at))
+    .catch(() => 0);
 
   // Haaks admin: jobs waiting for a check, plus complaints.
   const isAdmin = Boolean((profile as typeof profile & { is_admin?: boolean }).is_admin);
@@ -41,7 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const w = getWorkerDict(lang);
   const items: NavItem[] = [
     { href: "/dashboard", label: t.navHome, icon: "home" },
-    { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "feed", badge: newJobs, dot: (newLeads ?? 0) > 0, clearOn: "/dashboard/leads/feed" },
+    { href: "/dashboard/leads/feed", section: "/dashboard/leads", label: t.navLeads, short: t.navLeadsShort, icon: "feed", badge: newJobs, clearOn: "/dashboard/leads/feed" },
     { href: "/dashboard/quotes", label: t.navQuotes, icon: "quote" },
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/materials", label: getMaterialsDict(lang).nav, icon: "cart" },

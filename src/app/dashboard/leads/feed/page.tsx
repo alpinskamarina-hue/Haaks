@@ -9,12 +9,11 @@ import {
   unlockFeedItem,
   replyToCompanyJob,
 } from "@/app/feed-actions";
-import { LeadsTabs } from "@/components/LeadsTabs";
 import { PushToggle } from "@/components/PushToggle";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
 import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
-import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newFittingCount, newSince, type ScoredFeedItem } from "@/lib/feed-server";
+import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
 import { getLetterDict } from "@/lib/letter-i18n";
@@ -74,9 +73,8 @@ export default async function FeedPage({
   };
   const pro = extra.plan === "pro";
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours }, { count: mineCount }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
     markFeedSeen(supabase, user.id, extra),
     supabase.rpc("my_job_replies"),
     // "Need a helper" jobs this builder posted: their own card links to the replies.
@@ -169,14 +167,6 @@ export default async function FeedPage({
         <span className="shrink-0 font-semibold text-sky-900">→</span>
       </Link>
 
-      <LeadsTabs
-        active="feed"
-        feedLabel={f.tabFeed}
-        mineLabel={f.tabMine}
-        feedCount={newFittingCount(items, lastVisit)}
-        mineCount={mineCount ?? 0}
-      />
-
       <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
           {!pro && locked.length > 0 && (
@@ -195,7 +185,7 @@ export default async function FeedPage({
           {trades.length === 0 && regions.length === 0 && (
             <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
               {f.profileHint}{" "}
-              <Link href="/dashboard/leads" className="font-semibold underline">
+              <Link href="/dashboard/profile" className="font-semibold underline">
                 {f.profileLink}
               </Link>
             </p>
@@ -264,7 +254,7 @@ export default async function FeedPage({
                         .filter(Boolean)
                         .join(", ") || "—",
               })}{" "}
-              <Link href="/dashboard/leads" className="underline">
+              <Link href="/dashboard/profile" className="underline">
                 {f.profileLink}
               </Link>
             </p>
