@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Social-style profiles live at /@nick; the page itself is /u/[handle].
+  async rewrites() {
+    return [{ source: "/@:handle", destination: "/u/:handle" }];
+  },
 };
 
 export default nextConfig;

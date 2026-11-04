@@ -23,7 +23,7 @@ export default async function WorksPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <PassportTabs active="works" lang={lang} userId={user.id} token={profile.passport_token} />
+      <PassportTabs active="works" lang={lang} userId={user.id} token={profile.passport_token} username={(profile as { username?: string | null }).username} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 flex-1 text-slate-600">{w.intro}</p>
         <Link href="/dashboard/works/new" className="rounded-lg bg-orange-600 px-4 py-2.5 font-semibold text-white">
