@@ -347,7 +347,7 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="font-medium">{t.language}</p>
-            <LanguageSwitcher current={lang} label={t.language} up />
+            <LanguageSwitcher current={lang} label={t.language} up alignRight />
           </div>
           <div className="border-t border-slate-200 pt-4">
             <p className="mb-2 flex items-center gap-2 font-medium">
