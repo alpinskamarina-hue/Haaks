@@ -19,6 +19,8 @@ import { getWorksDict } from "@/lib/works-i18n";
 import { RatingSummary } from "@/components/RatingSummary";
 import { ratingSummary, type Review } from "@/lib/reviews";
 import { getReviewsDict } from "@/lib/reviews-i18n";
+import { planOf } from "@/lib/plans";
+import { getPricingDict } from "@/lib/pricing-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
 const MISSING_ICON: Record<string, string> = {
@@ -341,6 +343,10 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
       <section id="settings" className={card}>
         <p className="mb-3 text-lg font-semibold">⚙️ {t.settingsTitle}</p>
         <div className="space-y-4">
+          <Link href="/dashboard/plan" className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+            <span className="font-medium">💳 {getPricingDict(lang).myTitle}</span>
+            <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-bold uppercase text-white">{planOf(profile as typeof profile & { plan?: string; plan_until?: string | null })}</span>
+          </Link>
           <div>
             <p className="text-sm text-slate-500">{t.emailLabel}</p>
             <p className="font-medium break-all">{user.email}</p>

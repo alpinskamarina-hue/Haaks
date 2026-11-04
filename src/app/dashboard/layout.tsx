@@ -7,6 +7,7 @@ import { legalSummary } from "@/lib/legal";
 import { getHelperDict } from "@/lib/helper-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
+import { getPricingDict } from "@/lib/pricing-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadWorkspace } from "@/lib/workspace";
@@ -68,6 +69,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
           <Link href="/dashboard/profile#settings" className="flex items-center gap-2 text-sm text-slate-600">
             ⚙️ {t.settingsTitle}
+          </Link>
+          <Link href="/dashboard/plan" className="flex items-center gap-2 text-sm text-slate-600">
+            💳 {getPricingDict(lang).myTitle}
           </Link>
           <nav className="flex flex-wrap gap-x-3 text-xs text-slate-400">
             <Link href="/privacy">{legalSummary(lang).links.privacy}</Link>

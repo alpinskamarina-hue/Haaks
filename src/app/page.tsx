@@ -7,6 +7,7 @@ import { LoginForm } from "@/components/LoginForm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getDict } from "@/lib/i18n";
 import { getLanding } from "@/lib/landing";
+import { getPricingDict } from "@/lib/pricing-i18n";
 import { legalSummary } from "@/lib/legal";
 import { requestLang } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
@@ -43,6 +44,9 @@ export default async function Home({
             Haaks<span className="text-orange-600">.</span>
           </span>
           <div className="flex items-center gap-3">
+            <Link href="/pricing" className="hidden text-sm font-medium text-slate-700 hover:text-orange-700 sm:inline">
+              {getPricingDict(lang).nav}
+            </Link>
             <LanguageSwitcher current={lang} label={t.language} />
             <Link
               href="/?mode=signin#signup"

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { aiAllowed } from "@/lib/free-limits";
+import { isPaid } from "@/lib/plans";
 import { analyzeLead } from "@/lib/extract";
 import { feedScore, feedText, tradeLabel, workerMatch, type FeedItem } from "@/lib/feed";
 import { isLang, type Lang } from "@/lib/i18n";
@@ -140,8 +141,8 @@ export async function takeFeedItem(id: string) {
 export async function saveFeedNotifications(formData: FormData) {
   const { supabase, user } = await requireUser();
   const mode = String(formData.get("feed_email") ?? "off");
-  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-  const allowed = profile?.plan === "pro" ? ["off", "daily", "instant"] : ["off", "daily"];
+  const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
+  const allowed = isPaid(profile) ? ["off", "daily", "instant"] : ["off", "daily"];
   const email = short(formData.get("notify_email"), 200).trim();
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
   await supabase
@@ -158,8 +159,8 @@ export async function saveFeedNotifications(formData: FormData) {
 // Saves a one-time code and opens the Haaks bot with it; the bot links the chat (api/telegram/webhook).
 export async function connectTelegram() {
   const { supabase, user } = await requireUser();
-  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-  if (profile?.plan !== "pro" || !telegramEnabled()) redirect("/dashboard/leads/feed#telegram");
+  const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
+  if (!isPaid(profile) || !telegramEnabled()) redirect("/dashboard/leads/feed#telegram");
   const code = randomBytes(16).toString("hex");
   const { error } = await supabase.from("profiles").update({ telegram_link_code: code }).eq("id", user.id);
   if (error) {

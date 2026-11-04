@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isPaid } from "@/lib/plans";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { LetterSheet } from "@/components/LetterSheet";
@@ -26,7 +27,7 @@ export default async function OwnerLetterPage({
   const { items } = await loadFeed(supabase, user.id, profile);
   const item = items.find((i) => i.id === id && i.kind === "permit");
   if (!item) notFound();
-  const pro = (profile as typeof profile & { plan?: string }).plan === "pro";
+  const pro = isPaid(profile as typeof profile & { plan?: string; plan_until?: string | null });
   if (item.locked || !(pro || item.opened)) {
     return (
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
