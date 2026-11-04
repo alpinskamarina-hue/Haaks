@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { cleanUsername } from "@/lib/username";
 import { requireUser } from "@/lib/auth";
 import { parseAmount } from "@/lib/quotes";
 import { AVAILABILITY, cleanProfileInput, MAX_WORK_PHOTOS, TRADES } from "@/lib/worker-profile";
@@ -101,4 +103,16 @@ export async function removeAvatar() {
   const old = data?.avatar_path;
   if (old?.startsWith(`${user.id}/avatar/`)) await supabase.storage.from("documents").remove([old]);
   revalidatePath("/dashboard", "layout");
+}
+
+// The builder's @nick for the public page /@nick. Taken or invalid nicks come back as ?nick=… on the profile page.
+export async function setUsername(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const raw = String(formData.get("username") ?? "");
+  const username = raw.trim() ? cleanUsername(raw) : null;
+  if (raw.trim() && !username) redirect("/dashboard/profile?nick=bad#nick");
+  const { error } = await supabase.from("profiles").update({ username }).eq("id", user.id);
+  if (error) redirect(`/dashboard/profile?nick=${error.code === "23505" ? "taken" : "bad"}#nick`);
+  revalidatePath("/dashboard", "layout");
+  redirect("/dashboard/profile?nick=saved#nick");
 }

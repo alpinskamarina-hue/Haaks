@@ -31,7 +31,7 @@ export default async function ReviewsPage() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <PassportTabs active="reviews" lang={lang} userId={user.id} token={profile.passport_token} />
+      <PassportTabs active="reviews" lang={lang} userId={user.id} token={profile.passport_token} username={(profile as { username?: string | null }).username} />
       <p className="text-slate-600">{r.intro}</p>
 
       <section className={card}>

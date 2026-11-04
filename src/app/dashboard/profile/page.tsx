@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { saveRate, setAvailability } from "@/app/profile-actions";
+import { saveRate, setAvailability, setUsername } from "@/app/profile-actions";
+import { CopyButton } from "@/components/CopyButton";
+import { siteUrl } from "@/lib/lang";
+import { getSocialDict } from "@/lib/social-i18n";
+import { suggestUsername } from "@/lib/username";
 import { SubmitButton } from "@/components/SubmitButton";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { WorkPhotos } from "@/components/WorkPhotos";
@@ -31,8 +35,12 @@ const MISSING_LINK: Record<string, string> = {
 };
 
 // "My profile": what clients see about the worker, and what to add next.
-export default async function MyProfile() {
+export default async function MyProfile({ searchParams }: { searchParams: Promise<{ nick?: string }> }) {
+  const { nick } = await searchParams;
   const { supabase, user, profile, lang, t } = await loadWorkspace();
+  const so = getSocialDict(lang);
+  const username = (profile as typeof profile & { username?: string | null }).username ?? null;
+  const profileUrl = username ? `${await siteUrl()}/@${username}` : null;
   const w = getWorkerDict(lang);
   const p = withDefaults(profile as unknown as Partial<WorkerProfile>);
   const { data: docRows } = await supabase.from("documents").select("*").eq("user_id", user.id).returns<DocumentRow[]>();
@@ -128,6 +136,39 @@ export default async function MyProfile() {
             </ul>
           </>
         )}
+      </section>
+
+      <section id="nick" className={card}>
+        <h2 className="font-semibold">{so.nickTitle}</h2>
+        <p className="mt-1 text-sm text-slate-600">{so.nickHint}</p>
+        <form action={setUsername} className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="flex min-w-0 flex-1 items-center rounded-lg border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-orange-400">
+            <span className="font-semibold text-slate-400">@</span>
+            <input
+              name="username"
+              defaultValue={username ?? suggestUsername(profile.full_name)}
+              maxLength={30}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label={so.nickTitle}
+              className="min-w-0 flex-1 py-2 pl-0.5 text-base outline-none"
+            />
+          </label>
+          <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">{so.nickSave}</SubmitButton>
+        </form>
+        {nick === "saved" && <p className="mt-2 text-sm font-medium text-green-700">✓ {so.nickSaved}</p>}
+        {nick === "taken" && <p className="mt-2 text-sm font-medium text-red-700">{so.nickTaken}</p>}
+        {nick === "bad" && <p className="mt-2 text-sm font-medium text-red-700">{so.nickBad}</p>}
+        {profileUrl && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <a href={`/@${username}`} className="rounded-lg bg-slate-900 px-3 py-2 font-medium text-white">
+              👤 {so.nickOpen}
+            </a>
+            <CopyButton value={profileUrl} label={so.share} />
+          </div>
+        )}
+        {profileUrl && !profile.passport_enabled && <p className="mt-2 text-xs text-amber-700">{so.nickPassportOff}</p>}
       </section>
 
       <section id="availability" className={card}>
