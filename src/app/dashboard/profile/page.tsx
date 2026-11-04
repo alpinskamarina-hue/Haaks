@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { signOut } from "@/app/actions";
+import { Icon } from "@/components/icons";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { PasswordForm } from "@/components/PasswordForm";
 import { saveRate, setAvailability, setInSearch, setUsername } from "@/app/profile-actions";
 import { CopyButton } from "@/components/CopyButton";
 import { siteUrl } from "@/lib/lang";
@@ -331,6 +335,34 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
           userId={user.id}
           photos={p.work_photos.map((path) => ({ path, url: urls.get(path) ?? null }))}
         />
+      </section>
+
+      {/* Account settings live here (moved from the header): e-mail, language, password, sign out. */}
+      <section id="settings" className={card}>
+        <p className="mb-3 text-lg font-semibold">⚙️ {t.settingsTitle}</p>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-slate-500">{t.emailLabel}</p>
+            <p className="font-medium break-all">{user.email}</p>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-medium">{t.language}</p>
+            <LanguageSwitcher current={lang} label={t.language} up />
+          </div>
+          <div className="border-t border-slate-200 pt-4">
+            <p className="mb-2 flex items-center gap-2 font-medium">
+              <Icon name="key" className="h-4 w-4" />
+              {t.navPassword}
+            </p>
+            <PasswordForm t={t} />
+          </div>
+          <form action={signOut} className="border-t border-slate-200 pt-4">
+            <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 font-semibold text-slate-700">
+              <Icon name="logout" className="h-4 w-4" />
+              {t.signOut}
+            </button>
+          </form>
+        </div>
       </section>
     </main>
   );

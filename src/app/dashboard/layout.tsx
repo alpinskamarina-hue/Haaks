@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { signOut } from "@/app/actions";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
@@ -65,18 +63,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </Link>
         <SideNav items={items} />
         <div className="mt-auto space-y-3 border-t border-slate-200 px-3 pt-4">
-          <p className="truncate text-sm font-medium">{name}</p>
-          <LanguageSwitcher current={lang} label={t.language} up />
-          <Link href="/dashboard/password" className="flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="key" className="h-4 w-4" />
-            {t.navPassword}
+          <Link href="/dashboard/profile" className="block truncate text-sm font-medium">
+            {name}
           </Link>
-          <form action={signOut}>
-            <button className="flex items-center gap-2 text-sm text-slate-600">
-              <Icon name="logout" className="h-4 w-4" />
-              {t.signOut}
-            </button>
-          </form>
+          <Link href="/dashboard/profile#settings" className="flex items-center gap-2 text-sm text-slate-600">
+            ⚙️ {t.settingsTitle}
+          </Link>
           <nav className="flex flex-wrap gap-x-3 text-xs text-slate-400">
             <Link href="/privacy">{legalSummary(lang).links.privacy}</Link>
             <Link href="/terms">{legalSummary(lang).links.terms}</Link>
@@ -92,20 +84,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
-          <div className="flex shrink-0 items-center gap-1">
-            <LanguageSwitcher current={lang} label={t.language} />
-            <Link href="/dashboard/profile" className="p-1 text-slate-500" aria-label={w.navProfile}>
-              <Icon name="user" />
-            </Link>
-            <Link href="/dashboard/password" className="p-1 text-slate-500" aria-label={t.navPassword}>
-              <Icon name="key" />
-            </Link>
-            <form action={signOut}>
-              <button className="p-1 text-slate-500" aria-label={t.signOut}>
-                <Icon name="logout" />
-              </button>
-            </form>
-          </div>
+          <Link href="/dashboard/profile" className="shrink-0 p-1 text-slate-500" aria-label={w.navProfile}>
+            <Icon name="user" />
+          </Link>
         </header>
         {children}
       </div>
