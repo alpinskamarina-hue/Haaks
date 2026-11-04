@@ -19,6 +19,8 @@ import { getHelperDict } from "@/lib/helper-i18n";
 import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
+import { ShareButton } from "@/components/ShareButton";
+import { getShareDict } from "@/lib/share-i18n";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
@@ -125,7 +127,9 @@ export default async function FeedPage({
     const str = q.toString();
     return `/dashboard/leads/feed${str ? `?${str}` : ""}`;
   };
-  const passportUrl = profile.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
+  const site = await siteUrl();
+  const share = { base: site, t: getShareDict(lang) };
+  const passportUrl = profile.passport_enabled ? `${site}/p/${profile.passport_token}` : null;
   const worker = {
     name: profile.company_name || profile.full_name || null,
     trades: trades.map((tr) => tradeLabel(tr, "nl")),
@@ -286,6 +290,7 @@ export default async function FeedPage({
                 reportT={reportT}
                 reported={reportedJobs.has(item.id)}
                 letterLabel={letterLabel}
+                share={share}
               />
             ))}
           </ul>
@@ -425,6 +430,7 @@ function FeedCard({
   reportT,
   reported,
   letterLabel,
+  share,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -441,6 +447,7 @@ function FeedCard({
   reportT: ReportDict;
   reported: boolean;
   letterLabel: string;
+  share: { base: string; t: ReturnType<typeof getShareDict> };
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -549,6 +556,7 @@ function FeedCard({
             ↗
           </a>
         )}
+        <ShareButton url={`${share.base}/job/${item.id}?lang=${lang}`} text={`${share.t.message} ${title}`} labels={share.t} />
         <form action={(item.action === "hidden" ? unhideFeedItem : hideFeedItem).bind(null, item.id)} className="ml-auto">
           <SubmitButton className="text-slate-400 hover:text-slate-700">
             {item.action === "hidden" ? "↺" : f.hide}
