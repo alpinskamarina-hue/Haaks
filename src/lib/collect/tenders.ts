@@ -128,6 +128,7 @@ const TEXTS: Record<Lang, { title: string; buyer: string; work: string; until: s
   uk: { title: "Тендер", buyer: "Замовник", work: "Робота для", until: "Заявки до", start: "Початок робіт" },
   pl: { title: "Przetarg", buyer: "Zamawiający", work: "Praca dla", until: "Oferty do", start: "Start prac" },
   ro: { title: "Licitație", buyer: "Client", work: "Lucrare pentru", until: "Oferte până la", start: "Începerea lucrărilor" },
+  tr: { title: "İhale", buyer: "İşveren", work: "İş", until: "Son teklif tarihi", start: "İşin başlangıcı" },
 };
 
 const isWorks = (s: Summary) => (s.typeOpdracht?.code ?? s.typeOpdrachtCode?.code) === "W";

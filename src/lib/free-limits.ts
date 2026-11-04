@@ -51,6 +51,11 @@ const TEXT: Record<Lang, Record<FreeFeature, LimitText>> = {
     profile_view: { left: "Azi mai ai {n} din 3 profiluri gratuite", none: "Cele 3 profiluri gratuite de azi sunt văzute. Următorul în {h} h", pro: "Pro fără limite" },
     ai: { left: "Azi mai ai {n} din 3 analize AI", none: "Cele 3 analize AI de azi sunt folosite. Următoarea în {h} h", pro: "Pro fără limite" },
   },
+  tr: {
+    job_reply: { left: "Bugün 3 ücretsiz başvurudan {n} kaldı", none: "Bugünkü 3 ücretsiz başvuru kullanıldı. Sonraki {h} saat sonra", pro: "Pro'da sınır yok" },
+    profile_view: { left: "Bugün 3 ücretsiz profilden {n} kaldı", none: "Bugünkü 3 ücretsiz profil görüntülendi. Sonraki {h} saat sonra", pro: "Pro'da sınır yok" },
+    ai: { left: "Bugün 3 yapay zekâ kontrolünden {n} kaldı", none: "Bugünkü 3 yapay zekâ kontrolü kullanıldı. Sonraki {h} saat sonra", pro: "Pro'da sınır yok" },
+  },
   en: {
     job_reply: { left: "{n} of 3 free replies left today", none: "Today's 3 free replies are used. Next one in {h} h", pro: "Pro has no limits" },
     profile_view: { left: "{n} of 3 free profiles left today", none: "Today's 3 free profiles are viewed. Next one in {h} h", pro: "Pro has no limits" },

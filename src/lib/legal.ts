@@ -588,6 +588,26 @@ const SUMMARIES: Record<Lang, Summary> = {
     signupConsent: "Creând un cont, accepți {terms} și confirmi că ai citit {privacy}.",
     consentLinks: { terms: "Condițiile de utilizare", privacy: "Politica de confidențialitate" },
   },
+  tr: {
+    links: { privacy: "Gizlilik", terms: "Kullanım koşulları", cookies: "Çerezler" },
+    summaryTitle: "Kısaca",
+    binding: "Aşağıdaki tam metin İngilizcedir. Bağlayıcı olan Felemenkçe versiyondur.",
+    privacy: [
+      "Verilerinizi yalnızca Haaks'ı sizin için çalıştırmak için kullanırız. Satmayız ve reklam göstermeyiz.",
+      "Verileriniz Frankfurt, Almanya'da saklanır. Yapay zekâ ile okuma Anthropic (Claude) tarafından yapılır.",
+      "Pasaportunuzu, kimlik kartınızı veya BSN numaranızı yüklemeyin: gerekli değiller.",
+      "Verilerinizi görmek, düzeltmek veya silmek için istediğiniz zaman e-posta ile başvurabilirsiniz.",
+    ],
+    terms: [
+      "Haaks şu anda ücretsiz. Ücretli seçenekler önceden duyurulacak.",
+      "Haaks aracı değildir ve komisyon almaz. Müşterilerinizle doğrudan çalışırsınız.",
+      "Faturalarınızdan, KDV'den ve vergilerden siz sorumlusunuz. Yapay zekâ sonuçlarını her zaman kontrol edin.",
+      "İstediğiniz zaman bırakabilir ve hesabınızın silinmesini isteyebilirsiniz.",
+    ],
+    cookies: ["Yalnızca giriş ve dilinizi hatırlamak için çerezler. Takip yok, reklam yok."],
+    signupConsent: "Hesap oluşturarak {terms} kabul etmiş ve {privacy} okumuş olursunuz.",
+    consentLinks: { terms: "Kullanım koşullarını", privacy: "Gizlilik bildirimini" },
+  },
 };
 
 export function legalSummary(lang: Lang): Summary {

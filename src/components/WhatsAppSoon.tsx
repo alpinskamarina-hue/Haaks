@@ -5,6 +5,7 @@ const SOON: Record<Lang, string> = {
   uk: "незабаром",
   pl: "wkrótce",
   ro: "în curând",
+  tr: "yakında",
   en: "soon",
   nl: "binnenkort",
 };

@@ -49,10 +49,10 @@ export const JOB_DAYS = 30;
 type FeedLang = Lang;
 
 const REQ_LABELS: Record<JobRequirement, Record<FeedLang, string>> = {
-  vca: { nl: "VCA", en: "VCA", ru: "VCA", uk: "VCA", pl: "VCA", ro: "VCA" },
-  tools: { nl: "eigen gereedschap", en: "own tools", ru: "свой инструмент", uk: "власний інструмент", pl: "własne narzędzia", ro: "scule proprii" },
-  transport: { nl: "eigen vervoer", en: "own transport", ru: "своя машина", uk: "власне авто", pl: "własny transport", ro: "mașină proprie" },
-  avb: { nl: "AVB-verzekering", en: "AVB insurance", ru: "страховка AVB", uk: "страховка AVB", pl: "ubezpieczenie AVB", ro: "asigurare AVB" },
+  vca: { nl: "VCA", en: "VCA", ru: "VCA", uk: "VCA", pl: "VCA", ro: "VCA", tr: "VCA" },
+  tools: { nl: "eigen gereedschap", en: "own tools", ru: "свой инструмент", uk: "власний інструмент", pl: "własne narzędzia", ro: "scule proprii", tr: "kendi aletleri" },
+  transport: { nl: "eigen vervoer", en: "own transport", ru: "своя машина", uk: "власне авто", pl: "własny transport", ro: "mașină proprie", tr: "kendi aracı" },
+  avb: { nl: "AVB-verzekering", en: "AVB insurance", ru: "страховка AVB", uk: "страховка AVB", pl: "ubezpieczenie AVB", ro: "asigurare AVB", tr: "AVB sigortası" },
   language: {
     nl: "Nederlands of Engels",
     en: "Dutch or English",
@@ -60,6 +60,7 @@ const REQ_LABELS: Record<JobRequirement, Record<FeedLang, string>> = {
     uk: "нідерландська або англійська",
     pl: "niderlandzki lub angielski",
     ro: "neerlandeză sau engleză",
+    tr: "Hollandaca veya İngilizce",
   },
 };
 
@@ -88,6 +89,7 @@ const FEED_TEXT: Record<
   uk: { wanted: "Шукають", start: "Початок: {d}", weeks: "{n} тиж.", people: "{n} осіб", hour: "Оплата: €{x} за годину", fixed: "Проєктно: €{x} за весь проєкт", ask: "Оплата: за домовленістю", needs: "Потрібно: {list}", original: "Від компанії (нідерландською): «{text}»", originalZzp: "Від будівельника: «{text}»", helper: "Потрібен помічник" },
   pl: { wanted: "Szukają", start: "Start: {d}", weeks: "{n} tyg.", people: "{n} os.", hour: "Stawka: €{x} za godzinę", fixed: "Projektowo: €{x} za cały projekt", ask: "Stawka: do uzgodnienia", needs: "Wymagane: {list}", original: "Od firmy (po niderlandzku): «{text}»", originalZzp: "Od fachowca: «{text}»", helper: "Potrzebny pomocnik" },
   ro: { wanted: "Caută", start: "Început: {d}", weeks: "{n} săpt.", people: "{n} pers.", hour: "Tarif: €{x} pe oră", fixed: "Pe proiect: €{x} pentru tot proiectul", ask: "Tarif: de stabilit", needs: "Necesar: {list}", original: "De la firmă (în neerlandeză): «{text}»", originalZzp: "De la constructor: «{text}»", helper: "Caut ajutor" },
+  tr: { wanted: "Aranıyor", start: "Başlangıç: {d}", weeks: "{n} hafta", people: "{n} kişi", hour: "Ücret: saatlik €{x}", fixed: "Proje fiyatı: tüm proje için €{x}", ask: "Ücret: anlaşmaya göre", needs: "Gerekli: {list}", original: "Firmadan (Hollandaca): «{text}»", originalZzp: "Ustadan: «{text}»", helper: "Yardımcı aranıyor" },
 };
 
 const put = (text: string, values: Record<string, string | number>) =>
@@ -134,7 +136,7 @@ export function hasContactInText(text: string) {
   return /[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(text) || /(\+|00)?\d[\d\s().-]{7,}\d/.test(text);
 }
 
-const FEED_LANGS: FeedLang[] = ["en", "ru", "uk", "pl", "ro"];
+const FEED_LANGS: FeedLang[] = ["en", "ru", "uk", "pl", "ro", "tr"];
 
 // Puts an approved job into the feed and sends the alerts. Runs with the server account.
 export async function publishCompanyJob(server: SupabaseClient, jobId: string, siteUrl: string) {
