@@ -1,0 +1,96 @@
+import type { Lang } from "@/lib/i18n";
+
+// Texts for sharing a feed job and for the public job page (/job/<id>).
+const ru = {
+  share: "Поделиться",
+  more: "Другие приложения",
+  copy: "Скопировать ссылку",
+  copied: "Ссылка скопирована",
+  email: "E-mail",
+  message: "Заказ для строителей в Haaks:",
+  notFound: "Объявление не найдено или уже закрыто.",
+  contactsHidden: "Контакты заказчика видны строителям, зарегистрированным в Haaks.",
+  signUp: "Откликнуться: бесплатная регистрация в Haaks",
+  openFeed: "Открыть в моей ленте",
+  tagline: "Haaks: заказы и все бумаги для ZZP-строителей на родном языке",
+  more_jobs: "Каждый день новые заказы рядом с вами",
+};
+type ShareDict = typeof ru;
+
+const DICTS: Record<Lang, ShareDict> = {
+  ru,
+  uk: {
+    share: "Поділитися",
+    more: "Інші застосунки",
+    copy: "Скопіювати посилання",
+    copied: "Посилання скопійовано",
+    email: "E-mail",
+    message: "Замовлення для будівельників у Haaks:",
+    notFound: "Оголошення не знайдено або вже закрито.",
+    contactsHidden: "Контакти замовника бачать будівельники, зареєстровані в Haaks.",
+    signUp: "Відгукнутися: безкоштовна реєстрація в Haaks",
+    openFeed: "Відкрити в моїй стрічці",
+    tagline: "Haaks: замовлення і всі папери для ZZP-будівельників рідною мовою",
+    more_jobs: "Щодня нові замовлення поруч із вами",
+  },
+  pl: {
+    share: "Udostępnij",
+    more: "Inne aplikacje",
+    copy: "Kopiuj link",
+    copied: "Link skopiowany",
+    email: "E-mail",
+    message: "Zlecenie dla budowlańców w Haaks:",
+    notFound: "Ogłoszenie nie istnieje lub jest już zamknięte.",
+    contactsHidden: "Kontakt do klienta widzą fachowcy zarejestrowani w Haaks.",
+    signUp: "Odpowiedz: darmowa rejestracja w Haaks",
+    openFeed: "Otwórz w moim feedzie",
+    tagline: "Haaks: zlecenia i wszystkie papiery dla budowlańców ZZP w twoim języku",
+    more_jobs: "Codziennie nowe zlecenia w twojej okolicy",
+  },
+  ro: {
+    share: "Distribuie",
+    more: "Alte aplicații",
+    copy: "Copiază linkul",
+    copied: "Link copiat",
+    email: "E-mail",
+    message: "Lucrare pentru constructori în Haaks:",
+    notFound: "Anunțul nu există sau este deja închis.",
+    contactsHidden: "Contactul clientului îl văd constructorii înregistrați în Haaks.",
+    signUp: "Răspunde: înregistrare gratuită în Haaks",
+    openFeed: "Deschide în fluxul meu",
+    tagline: "Haaks: lucrări și toate actele pentru constructori ZZP în limba ta",
+    more_jobs: "Lucrări noi lângă tine în fiecare zi",
+  },
+  en: {
+    share: "Share",
+    more: "Other apps",
+    copy: "Copy link",
+    copied: "Link copied",
+    email: "E-mail",
+    message: "A job for builders on Haaks:",
+    notFound: "This job was not found or is already closed.",
+    contactsHidden: "The client's contact details are visible to builders registered on Haaks.",
+    signUp: "Reply: sign up free on Haaks",
+    openFeed: "Open in my feed",
+    tagline: "Haaks: jobs and all paperwork for ZZP builders in your own language",
+    more_jobs: "New jobs near you every day",
+  },
+  nl: {
+    share: "Delen",
+    more: "Andere apps",
+    copy: "Link kopiëren",
+    copied: "Link gekopieerd",
+    email: "E-mail",
+    message: "Een klus voor vakmensen op Haaks:",
+    notFound: "Deze klus is niet gevonden of al gesloten.",
+    contactsHidden: "De contactgegevens van de opdrachtgever zijn zichtbaar voor vakmensen die op Haaks staan.",
+    signUp: "Reageren: gratis aanmelden bij Haaks",
+    openFeed: "Openen in mijn feed",
+    tagline: "Haaks: klussen en alle papieren voor ZZP-vakmensen in je eigen taal",
+    more_jobs: "Elke dag nieuwe klussen bij jou in de buurt",
+  },
+};
+
+export function getShareDict(lang: Lang): ShareDict {
+  return DICTS[lang];
+}
