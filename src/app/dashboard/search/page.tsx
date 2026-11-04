@@ -162,7 +162,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       {!inSearch && (
         <p className="text-sm text-slate-600">
           💡{" "}
-          <Link href="/dashboard/profile#nick" className="underline">
+          <Link href="/dashboard/settings#nick" className="underline">
             {s.inSearchOff}
           </Link>
         </p>

@@ -1,20 +1,17 @@
 import Link from "next/link";
 import { isPaid } from "@/lib/plans";
 import { getPricingDict } from "@/lib/pricing-i18n";
+import { getSettingsDict } from "@/lib/settings-i18n";
 import {
-  connectTelegram,
-  disconnectTelegram,
   hideFeedItem,
-  saveFeedNotifications,
   takeFeedItem,
   unhideFeedItem,
   unlockFeedItem,
   replyToCompanyJob,
 } from "@/app/feed-actions";
-import { PushToggle } from "@/components/PushToggle";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
-import { fill, getFeedDict, pushTexts, type FeedDict } from "@/lib/feed-i18n";
+import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
@@ -27,8 +24,6 @@ import { getShareDict } from "@/lib/share-i18n";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
-import { vapidPublicKey } from "@/lib/push";
-import { telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
 import { freeLeft, limitText, type FreeQuota } from "@/lib/free-limits";
 
@@ -150,9 +145,14 @@ export default async function FeedPage({
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-bold">{f.tabFeed}</h1>
-        <p className="text-slate-600">{f.feedSubtitle}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{f.tabFeed}</h1>
+          <p className="text-slate-600">{f.feedSubtitle}</p>
+        </div>
+        <Link href="/dashboard/settings#feed" className="shrink-0 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700">
+          ⚙️ {getSettingsDict(lang).configureFeed}
+        </Link>
       </div>
 
       {(myReplies.length > 0 || !inCatalog) && (
@@ -329,74 +329,10 @@ export default async function FeedPage({
             </section>
           )}
 
-          <div id="push">
-            <PushToggle publicKey={vapidPublicKey()} t={pushTexts(f)} />
-          </div>
-
-          <section id="notify" className={card}>
-            <h2 className="mb-3 font-semibold">{f.notifyTitle}</h2>
-            <form action={saveFeedNotifications} className="space-y-2 text-sm">
-              {(
-                [
-                  ["off", f.notifyOff],
-                  ["daily", f.notifyDaily],
-                  ["instant", f.notifyInstant],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value} className={`flex items-center gap-2 ${value === "instant" && !pro ? "text-slate-400" : ""}`}>
-                  <input
-                    type="radio"
-                    name="feed_email"
-                    value={value}
-                    defaultChecked={(extra.feed_email ?? "off") === value}
-                    disabled={value === "instant" && !pro}
-                  />
-                  {label}
-                </label>
-              ))}
-              <label className="block pt-1 font-medium">
-                {f.notifyEmail}
-                <input
-                  name="notify_email"
-                  type="email"
-                  defaultValue={extra.notify_email ?? user.email ?? ""}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal"
-                />
-              </label>
-              <div className="flex items-center gap-3 pt-1">
-                <SubmitButton className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white">{f.notifySave}</SubmitButton>
-                {params.saved && <span className="text-green-700">{f.notifySaved}</span>}
-              </div>
-            </form>
-            <p className="mt-3 text-xs text-slate-500">{f.notifyNext}</p>
-          </section>
-
-          <section id="telegram" className={card}>
-            <h2 className="mb-2 font-semibold">{f.tgTitle}</h2>
-            {extra.telegram_chat_id ? (
-              <>
-                <p className="text-sm text-green-700">✓ {f.tgConnected}</p>
-                <form action={disconnectTelegram} className="mt-3">
-                  <SubmitButton className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
-                    {f.tgDisconnect}
-                  </SubmitButton>
-                </form>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-slate-600">{f.tgText}</p>
-                {!pro ? (
-                  <p className="mt-3 rounded-lg bg-orange-50 p-3 text-xs text-orange-800">{f.tgProOnly}</p>
-                ) : telegramEnabled() ? (
-                  <form action={connectTelegram} className="mt-3">
-                    <SubmitButton className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white">{f.tgConnect}</SubmitButton>
-                  </form>
-                ) : (
-                  <p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{f.tgNotReady}</p>
-                )}
-              </>
-            )}
-          </section>
+          <Link href="/dashboard/settings#notify" className={`${card} block`}>
+            <p className="font-semibold">⚙️ {getSettingsDict(lang).configureFeed}</p>
+            <p className="mt-1 text-sm text-slate-600">{getSettingsDict(lang).feedSettings}</p>
+          </Link>
 
           <section className={card}>
             <h2 className="mb-3 font-semibold">{f.sourcesTitle}</h2>

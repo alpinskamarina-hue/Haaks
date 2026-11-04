@@ -169,7 +169,7 @@ ${b.contact ? `<p style="margin:6px 0 0;font-size:14px;color:#475569">${escapeHt
   .join("\n")}
 ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml(f.mailLocked)}</p>`}
 <p style="margin:18px 0"><a href="${feedUrl}" style="background:#ea580c;color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:10px;display:inline-block">${escapeHtml(f.mailOpen)}</a></p>
-<p style="font-size:12px;color:#94a3b8;margin-top:24px">${escapeHtml(f.mailFooter)} <a href="${feedUrl}#notify" style="color:#94a3b8">${feedUrl}#notify</a></p>
+<p style="font-size:12px;color:#94a3b8;margin-top:24px">${escapeHtml(f.mailFooter)} <a href="${siteUrl}/dashboard/settings#notify" style="color:#94a3b8">${siteUrl}/dashboard/settings#notify</a></p>
 </div></body></html>`;
 
   const text = [
@@ -179,7 +179,7 @@ ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml
     ...(pro ? [] : [f.mailLocked, ""]),
     `${f.mailOpen}: ${feedUrl}`,
     "",
-    `${f.mailFooter} ${feedUrl}#notify`,
+    `${f.mailFooter} ${siteUrl}/dashboard/settings#notify`,
   ].join("\n");
 
   return { subject, html, text };

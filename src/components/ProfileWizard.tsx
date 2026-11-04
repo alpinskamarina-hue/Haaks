@@ -102,6 +102,7 @@ export function ProfileWizard({
   startStep,
   edit,
   must = false,
+  backTo = "/dashboard/profile",
   contact,
 }: {
   w: WorkerDict;
@@ -110,6 +111,7 @@ export function ProfileWizard({
   startStep: Step;
   edit: boolean;
   must?: boolean; // name/phone missing after sign-up: no way around this step
+  backTo?: string; // where an edit returns: profile or settings
   contact: { firstName: string; lastName: string; phone: string };
 }) {
   const router = useRouter();
@@ -160,7 +162,7 @@ export function ProfileWizard({
         return;
       }
       if (next === "done") {
-        router.push(edit && !must ? "/dashboard/profile" : "/dashboard");
+        router.push(edit && !must ? backTo : "/dashboard");
         router.refresh();
       } else {
         setStep(next);
@@ -192,7 +194,7 @@ export function ProfileWizard({
         {must ? (
           <span />
         ) : edit ? (
-          <button type="button" onClick={() => router.push("/dashboard/profile")} className="text-slate-500">
+          <button type="button" onClick={() => router.push(backTo)} className="text-slate-500">
             ← {w.back}
           </button>
         ) : step > 0 ? (

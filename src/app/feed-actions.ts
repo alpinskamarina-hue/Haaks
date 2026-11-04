@@ -153,19 +153,19 @@ export async function saveFeedNotifications(formData: FormData) {
     })
     .eq("id", user.id);
   refresh();
-  redirect("/dashboard/leads/feed?saved=1#notify");
+  redirect("/dashboard/settings?saved=1#notify");
 }
 
 // Saves a one-time code and opens the Haaks bot with it; the bot links the chat (api/telegram/webhook).
 export async function connectTelegram() {
   const { supabase, user } = await requireUser();
   const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
-  if (!isPaid(profile) || !telegramEnabled()) redirect("/dashboard/leads/feed#telegram");
+  if (!isPaid(profile) || !telegramEnabled()) redirect("/dashboard/settings#telegram");
   const code = randomBytes(16).toString("hex");
   const { error } = await supabase.from("profiles").update({ telegram_link_code: code }).eq("id", user.id);
   if (error) {
     console.error("Telegram link code failed", error);
-    redirect("/dashboard/leads/feed#telegram");
+    redirect("/dashboard/settings#telegram");
   }
   await ensureWebhook(await siteUrl());
   redirect(`https://t.me/${await botUsername()}?start=${code}`);
@@ -175,7 +175,7 @@ export async function disconnectTelegram() {
   const { supabase, user } = await requireUser();
   await supabase.from("profiles").update({ telegram_chat_id: null, telegram_link_code: null }).eq("id", user.id);
   refresh();
-  redirect("/dashboard/leads/feed#telegram");
+  redirect("/dashboard/settings#telegram");
 }
 
 // Push notifications: the phone's subscription, saved for the signed-in worker.

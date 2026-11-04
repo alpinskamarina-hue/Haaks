@@ -110,11 +110,11 @@ export async function setUsername(formData: FormData) {
   const { supabase, user } = await requireUser();
   const raw = String(formData.get("username") ?? "");
   const username = raw.trim() ? cleanUsername(raw) : null;
-  if (raw.trim() && !username) redirect("/dashboard/profile?nick=bad#nick");
+  if (raw.trim() && !username) redirect("/dashboard/settings?nick=bad#nick");
   const { error } = await supabase.from("profiles").update({ username }).eq("id", user.id);
-  if (error) redirect(`/dashboard/profile?nick=${error.code === "23505" ? "taken" : "bad"}#nick`);
+  if (error) redirect(`/dashboard/settings?nick=${error.code === "23505" ? "taken" : "bad"}#nick`);
   revalidatePath("/dashboard", "layout");
-  redirect("/dashboard/profile?nick=saved#nick");
+  redirect("/dashboard/settings?nick=saved#nick");
 }
 
 // "Show me in search": other builders and companies can find the profile by nick, name, trade and town.
