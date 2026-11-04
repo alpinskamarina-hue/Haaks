@@ -62,6 +62,18 @@ const DICTS: Record<Lang, ReportDict> = {
       other: "Altceva",
     },
   },
+  tr: {
+    report: "Şikâyet et",
+    send: "Şikâyeti gönder",
+    sent: "Şikâyet gönderildi, Haaks kontrol edecek",
+    reasons: {
+      scam: "Dolandırıcılığa benziyor",
+      employment: "Bu bir işçi ilanı, serbest çalışan usta için iş değil",
+      contacts: "Metinde iletişim bilgisi veya spam var",
+      fake: "Sahte profil",
+      other: "Diğer",
+    },
+  },
   en: {
     report: "Report",
     send: "Send report",

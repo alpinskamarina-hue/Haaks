@@ -10,6 +10,7 @@ const LABELS: Record<Lang, { title: string; docs: string; works: string; reviews
   uk: { title: "ZZP-паспорт", docs: "Документи", works: "Роботи", reviews: "Відгуки", client: "Як бачить замовник" },
   pl: { title: "Paszport ZZP", docs: "Dokumenty", works: "Realizacje", reviews: "Opinie", client: "Jak widzi klient" },
   ro: { title: "Pașaport ZZP", docs: "Documente", works: "Lucrări", reviews: "Recenzii", client: "Cum vede clientul" },
+  tr: { title: "ZZP pasaportu", docs: "Belgeler", works: "İşler", reviews: "Yorumlar", client: "Müşteri nasıl görüyor" },
   en: { title: "ZZP passport", docs: "Documents", works: "Work", reviews: "Reviews", client: "How clients see it" },
   nl: { title: "ZZP-paspoort", docs: "Documenten", works: "Werk", reviews: "Beoordelingen", client: "Zo ziet de klant het" },
 };

@@ -102,7 +102,7 @@ const en: LandingDict = {
   ],
   langTitle: "In your language",
   langText:
-    "Polski, Română, Українська, Русский, English and Nederlands. You read and write in your language, the client sees everything in Dutch.",
+    "Polski, Română, Українська, Русский, Türkçe, English and Nederlands. You read and write in your language, the client sees everything in Dutch.",
   faqTitle: "Questions",
   faq: [
     {
@@ -194,7 +194,7 @@ const ru: LandingDict = {
   ],
   langTitle: "На вашем языке",
   langText:
-    "Polski, Română, Українська, Русский, English и Nederlands. Вы читаете и пишете на своём языке, а заказчик видит всё на нидерландском.",
+    "Polski, Română, Українська, Русский, Türkçe, English и Nederlands. Вы читаете и пишете на своём языке, а заказчик видит всё на нидерландском.",
   faqTitle: "Вопросы",
   faq: [
     {
@@ -286,7 +286,7 @@ const uk: LandingDict = {
   ],
   langTitle: "Вашою мовою",
   langText:
-    "Polski, Română, Українська, Русский, English і Nederlands. Ви читаєте й пишете своєю мовою, а замовник бачить усе нідерландською.",
+    "Polski, Română, Українська, Русский, Türkçe, English і Nederlands. Ви читаєте й пишете своєю мовою, а замовник бачить усе нідерландською.",
   faqTitle: "Питання",
   faq: [
     {
@@ -378,7 +378,7 @@ const pl: LandingDict = {
   ],
   langTitle: "W Twoim języku",
   langText:
-    "Polski, Română, Українська, Русский, English i Nederlands. Czytasz i piszesz w swoim języku, a klient widzi wszystko po niderlandzku.",
+    "Polski, Română, Українська, Русский, Türkçe, English i Nederlands. Czytasz i piszesz w swoim języku, a klient widzi wszystko po niderlandzku.",
   faqTitle: "Pytania",
   faq: [
     {
@@ -470,7 +470,7 @@ const ro: LandingDict = {
   ],
   langTitle: "În limba ta",
   langText:
-    "Polski, Română, Українська, Русский, English și Nederlands. Citești și scrii în limba ta, iar clientul vede totul în olandeză.",
+    "Polski, Română, Українська, Русский, Türkçe, English și Nederlands. Citești și scrii în limba ta, iar clientul vede totul în olandeză.",
   faqTitle: "Întrebări",
   faq: [
     {
@@ -562,7 +562,7 @@ const nl: LandingDict = {
   ],
   langTitle: "In je eigen taal",
   langText:
-    "Polski, Română, Українська, Русский, English en Nederlands. Jij leest en schrijft in je eigen taal, de klant ziet alles in het Nederlands.",
+    "Polski, Română, Українська, Русский, Türkçe, English en Nederlands. Jij leest en schrijft in je eigen taal, de klant ziet alles in het Nederlands.",
   faqTitle: "Vragen",
   faq: [
     {
@@ -592,7 +592,99 @@ const nl: LandingDict = {
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
 
-const dicts: Record<Lang, LandingDict> = { en, ru, uk, pl, ro, nl };
+const tr: LandingDict = {
+  login: "Giriş yap",
+  badge: "Hollanda'daki serbest çalışan inşaat ustaları için",
+  title: "Müşteri bulun ve tüm ZZP evraklarınızı kendi dilinizde halledin",
+  subtitle:
+    "Haaks size uygun işleri gösterir ve Felemenkçe cevap yazmanıza yardım eder. Teklifler, faturalar, fişler ve yükleniciler için belgeler tek bir yerde.",
+  cta: "Ücretsiz kayıt ol",
+  ctaNote: "Ücretsiz. Kart gerekmez. Sadece e-postanız.",
+  problemsTitle: "Tanıdık geliyor mu?",
+  problems: [
+    {
+      title: "Yüklenici yine evrak istiyor",
+      text: "KvK kaydı, VCA, sigorta. Her yeni şantiye aynı belgeleri ister ve her zaman bir şeyin süresi dolmuştur.",
+    },
+    {
+      title: "Felemenkçe teklif ve fatura zor",
+      text: "KDV veya btw verlegd hakkında tek bir yanlış satır ve fatura geri gelir. İyi Felemenkçe olmadan saatler sürer.",
+    },
+    {
+      title: "Müşteriler geç ödüyor",
+      text: "ZZP'lerin neredeyse yarısı parasını geç alıyor. Açık bir fatura ve hatırlatma olmadan para haftalarca bekler.",
+    },
+    {
+      title: "Aracılar kazancınızı alıyor",
+      text: "Ajanslar ve iş siteleri pay alır veya her iletişim için ücret ister, iş olmasa bile.",
+    },
+  ],
+  featuresTitle: "Haaks sizin için ne yapar",
+  features: withIcons([
+    {
+      title: "Tek bağlantıda ZZP pasaportu",
+      text: "KvK, VCA ve sigortayı bir kez yükleyin. Yüklenici her şeyi içeren tek bir bağlantı alır, siz de bir belgenin süresinin ne zaman dolduğunu görürsünüz.",
+    },
+    {
+      title: "Felemenkçe teklifler",
+      text: "İşi kendi dilinizde anlatın ve fotoğraf ekleyin. Düzgün bir Felemenkçe teklif alırsınız, müşteri tek tuşla internetten onaylar.",
+    },
+    {
+      title: "Doğru faturalar",
+      text: "Normal KDV, btw verlegd veya KOR: doğru metin sizin için eklenir. KvK, KDV numaranız ve IBAN profilinizden gelir. PDF olarak kaydedin.",
+    },
+    {
+      title: "Fişler ve üç aylık KDV",
+      text: "Yapı marketinden aldığınız fişin fotoğrafını çekin. Masraflar işe bağlanır ve çeyreklik KDV'yi görürsünüz.",
+    },
+    {
+      title: "Müşteri bulma",
+      text: "İş ilanı olan bir gönderi veya ekran görüntüsü yapıştırın. Size uyup uymadığını görür ve hazır bir Felemenkçe cevap alırsınız. İletişim başına ücret yok.",
+    },
+    {
+      title: "Her şey telefonunuzda",
+      text: "Tek bir genel bakış: ne gönderilecek, ne ödenecek, hangi belgelerin süresi doluyor. Tarayıcıda çalışır, uygulama kurmaya gerek yok.",
+    },
+  ]),
+  stepsTitle: "Nasıl çalışır",
+  steps: [
+    { title: "Kayıt ol", text: "E-postanızı girin ve bir şifre seçin." },
+    { title: "Profilinizi doldurun", text: "KvK numarası, KDV numarası, meslek ve belgeler. Yaklaşık 10 dakika sürer." },
+    { title: "Çalışın", text: "Pasaport bağlantısını yüklenicilere gönderin, teklif ve faturaları dakikalar içinde hazırlayın." },
+  ],
+  langTitle: "Kendi dilinizde",
+  langText:
+    "Polski, Română, Українська, Русский, Türkçe, English ve Nederlands. Siz kendi dilinizde okur ve yazarsınız, müşteri her şeyi Felemenkçe görür.",
+  faqTitle: "Sorular",
+  faq: [
+    {
+      q: "Gerçekten ücretsiz mi?",
+      a: "Evet. Kayıt ve kullanım şu anda ücretsiz. İleride ücretli seçenekler gelirse önceden haber veririz, siz karar verirsiniz.",
+    },
+    {
+      q: "KvK kaydı gerekli mi?",
+      a: "ZZP olarak çalışmak için evet. Haaks hangi belgelere ihtiyacınız olduğunu ve bunları nereden alacağınızı kendi dilinizde anlatır.",
+    },
+    {
+      q: "Verilerim güvende mi?",
+      a: "Belgelerinizi yalnızca siz ve bağlantıyı gönderdiğiniz kişiler görür. Pasaportunuzu, kimlik kartınızı veya BSN numaranızı yüklemeyin: gerekli değiller.",
+    },
+    {
+      q: "Bu bir ajans veya aracı mı?",
+      a: "Hayır. Müşterilerinizle doğrudan çalışırsınız. Haaks işlerinizden pay almaz.",
+    },
+  ],
+  signupTitle: "Ücretsiz başlayın",
+  signupText: "Bir e-posta ve şifre seçin. Gönderdiğimiz bağlantıyla adresinizi bir kez onaylayın, sonra sadece şifrenizle giriş yapın.",
+  signinTitle: "Giriş yap",
+  signinText: "Kayıt olduğunuz e-posta ve şifreyi girin.",
+  roles: { label: "Siz kimsiniz?", worker: "Ustayım (ZZP)", company: "Firmayım, ustalara ihtiyacım var", companyText: "Firmalar ücretsiz iş ilanı verir. Yakındaki ustalar ilanları kendi dillerinde görür." },
+  companyLink: "Firma mısınız? Ücretsiz iş ilanı verin",
+  leadCard: { found: "Size yeni iş", match: "size uygun", reply: "Felemenkçe cevap ver" },
+  footer: "Haaks: Hollanda'daki serbest çalışan inşaat ustaları için araçlar.",
+};
+
+const dicts: Record<Lang, LandingDict> = { en, ru, uk, pl, ro, tr, nl };
 
 export function getLanding(lang: Lang): LandingDict {
   return dicts[lang];

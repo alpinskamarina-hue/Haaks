@@ -126,6 +126,7 @@ const STATUS: Record<Lang, { aangevraagd: string; verleend: string }> = {
   uk: { aangevraagd: "Подано заявку на дозвіл", verleend: "Дозвіл видано" },
   pl: { aangevraagd: "Złożono wniosek o pozwolenie", verleend: "Pozwolenie wydane" },
   ro: { aangevraagd: "Cerere de autorizație depusă", verleend: "Autorizație acordată" },
+  tr: { aangevraagd: "İnşaat izni başvurusu yapıldı", verleend: "İnşaat izni verildi" },
 };
 
 const HINT: Record<Lang, string> = {
@@ -135,6 +136,7 @@ const HINT: Record<Lang, string> = {
   uk: "Сигнал про майбутнє будівництво. Роботи зазвичай починаються через 1–3 місяці після дозволу.",
   pl: "Sygnał, że wkrótce będzie tu budowa. Prace zwykle zaczynają się 1–3 miesiące po pozwoleniu.",
   ro: "Semn că aici urmează o construcție. Lucrările încep de obicei la 1–3 luni după autorizație.",
+  tr: "Burada yakında inşaat başlayacağına dair bir işaret. İşler genellikle izinden 1–3 ay sonra başlar.",
 };
 
 const DESC: Record<Lang, string> = {
@@ -144,6 +146,7 @@ const DESC: Record<Lang, string> = {
   uk: "Опис (нідерл.)",
   pl: "Opis (niderl.)",
   ro: "Descriere (neerl.)",
+  tr: "Açıklama (Hollandaca)",
 };
 
 async function toItem(pub: Publication): Promise<CollectedItem | null> {

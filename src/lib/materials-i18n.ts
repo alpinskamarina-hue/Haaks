@@ -281,7 +281,53 @@ const nl: MaterialsDict = {
   order: "Klus",
 };
 
-const DICTS: Record<Lang, MaterialsDict> = { ru, en, pl, ro, uk, nl };
+const tr: MaterialsDict = {
+  nav: "Malzemeler",
+  listsTitle: "Malzeme listeleri",
+  listsHint: "Mağazalardan ürünleri bağlantıyla toplayın ve müşteriye tek bir bağlantı olarak gönderin.",
+  newList: "Yeni liste",
+  newListFor: "Yeni malzeme listesi",
+  noLists: "Henüz liste yok.",
+  titleLabel: "Ad",
+  titleDefault: "Malzemeler",
+  clientLabel: "Müşteri",
+  linkLabel: "Bağlantıyla ekle",
+  linkPlaceholder: "Mağazadaki bir ürünün bağlantısını yapıştırın",
+  add: "Ekle",
+  fetching: "Yükleniyor…",
+  fetchPartial: "Mağaza tüm bilgileri vermedi. Adı ve fiyatı kontrol edin.",
+  addManual: "+ Elle ekle",
+  itemTitle: "Ürün",
+  price: "Fiyat btw dahil, €",
+  qty: "Adet",
+  unit: "Birim",
+  remove: "Kaldır",
+  total: "Toplam btw dahil",
+  save: "Kaydet",
+  saved: "Kaydedildi",
+  saveError: "Kaydedilmedi. Bağlantınızı kontrol edip tekrar deneyin.",
+  empty: "Liste boş. Yukarıya bir ürün bağlantısı yapıştırın.",
+  priceHint: "Mağaza fiyatlarına btw dahildir. Faturada ürünler btw'siz yazılır ve üstüne %21 eklenir.",
+  sendTitle: "Müşteriye gönder",
+  sendHint: "Müşteri bağlantıyı açar, ürünleri fiyatlarıyla görür, kimin alacağını seçer ve Akkoord'a basar.",
+  copy: "Mesajı kopyala",
+  copied: "Kopyalandı",
+  preview: "Müşteri gibi gör",
+  status: { draft: "Taslak", sent: "Gönderildi", accepted: "Onaylandı" },
+  viewed: "Müşteri açtı",
+  buyerWorker: "Müşteri seçti: malzemeleri siz alıyorsunuz",
+  buyerClient: "Malzemeleri müşteri alıyor",
+  acceptedBy: "Akkoord: {name}",
+  addToInvoice: "Faturaya ekle",
+  openInvoice: "Faturayı aç",
+  addToInvoiceHint: "Ürünler bu işin taslak faturasına, her biri ayrı satır olarak eklenir.",
+  deleteList: "Listeyi sil",
+  deleteConfirm: "Bu malzeme listesi silinsin mi?",
+  items: "{n} ürün",
+  order: "İş",
+};
+
+const DICTS: Record<Lang, MaterialsDict> = { ru, en, pl, ro, uk, tr, nl };
 
 export function getMaterialsDict(lang: Lang): MaterialsDict {
   return DICTS[lang];

@@ -30,29 +30,29 @@ export type FeedEmailMode = "off" | "daily" | "instant";
 // Dutch trade keys stored on feed items, and words that point to them in the
 // free-text "trade" field of a worker's profile (any of the cabinet languages).
 const TRADE_WORDS: Record<string, string[]> = {
-  tegelzetter: ["tegel", "tile", "tiling", "плит", "кафел", "плитк", "glazur", "płyt", "plytk", "faian", "gresie"],
-  timmerman: ["timmer", "carpent", "joiner", "плотн", "столяр", "тесл", "cieśl", "ciesl", "stolarz", "tâmplar", "tamplar", "dulgher", "laminat", "ламинат", "ламінат", "vloer"],
-  stukadoor: ["stuka", "plaster", "штукат", "tynk", "ipsos", "tencuial"],
-  schilder: ["schilder", "painter", "маляр", "malarz", "zugrav", "zugrăv", "vopsit"],
-  loodgieter: ["loodgiet", "plumb", "сантех", "hydraulik", "instalator", "instalat"],
-  elektricien: ["elektric", "electric", "электр", "електр", "elektryk"],
-  metselaar: ["metsel", "mason", "brick", "камен", "кладк", "мурар", "murarz", "zidar"],
-  dakdekker: ["dakdek", "roof", "кровел", "покрів", "dekarz", "acoperi"],
-  aannemer: ["aannemer", "contractor", "подряд", "підряд", "budowlan", "construct", "строит", "будів"],
-  klusjesman: ["klus", "handyman", "мастер на все", "złota rączka", "zlota raczka"],
+  tegelzetter: ["tegel", "tile", "tiling", "плит", "кафел", "плитк", "glazur", "płyt", "plytk", "faian", "gresie", "fayans", "seramik"],
+  timmerman: ["timmer", "carpent", "joiner", "плотн", "столяр", "тесл", "cieśl", "ciesl", "stolarz", "tâmplar", "tamplar", "dulgher", "laminat", "ламинат", "ламінат", "vloer", "marangoz", "doğrama"],
+  stukadoor: ["stuka", "plaster", "штукат", "tynk", "ipsos", "tencuial", "sıva", "alçı"],
+  schilder: ["schilder", "painter", "маляр", "malarz", "zugrav", "zugrăv", "vopsit", "boya"],
+  loodgieter: ["loodgiet", "plumb", "сантех", "hydraulik", "instalator", "instalat", "tesisat", "sıhhi"],
+  elektricien: ["elektric", "electric", "электр", "електр", "elektryk", "elektrik"],
+  metselaar: ["metsel", "mason", "brick", "камен", "кладк", "мурар", "murarz", "zidar", "duvar", "tuğla"],
+  dakdekker: ["dakdek", "roof", "кровел", "покрів", "dekarz", "acoperi", "çatı"],
+  aannemer: ["aannemer", "contractor", "подряд", "підряд", "budowlan", "construct", "строит", "будів", "müteahhit", "inşaat"],
+  klusjesman: ["klus", "handyman", "мастер на все", "złota rączka", "zlota raczka", "tamir"],
 };
 
 export const TRADE_LABELS: Record<string, Partial<Record<Lang, string>>> = {
-  tegelzetter: { en: "tiler", ru: "плиточник", uk: "плиточник", pl: "glazurnik", ro: "faianțar", nl: "tegelzetter" },
-  timmerman: { en: "carpenter", ru: "плотник", uk: "тесляр", pl: "cieśla", ro: "tâmplar", nl: "timmerman" },
-  stukadoor: { en: "plasterer", ru: "штукатур", uk: "штукатур", pl: "tynkarz", ro: "tencuitor", nl: "stukadoor" },
-  schilder: { en: "painter", ru: "маляр", uk: "маляр", pl: "malarz", ro: "zugrav", nl: "schilder" },
-  loodgieter: { en: "plumber", ru: "сантехник", uk: "сантехнік", pl: "hydraulik", ro: "instalator", nl: "loodgieter" },
-  elektricien: { en: "electrician", ru: "электрик", uk: "електрик", pl: "elektryk", ro: "electrician", nl: "elektricien" },
-  metselaar: { en: "bricklayer", ru: "каменщик", uk: "муляр", pl: "murarz", ro: "zidar", nl: "metselaar" },
-  dakdekker: { en: "roofer", ru: "кровельщик", uk: "покрівельник", pl: "dekarz", ro: "acoperișar", nl: "dakdekker" },
-  aannemer: { en: "contractor", ru: "подрядчик", uk: "підрядник", pl: "wykonawca", ro: "antreprenor", nl: "aannemer" },
-  klusjesman: { en: "handyman", ru: "мастер", uk: "майстер", pl: "złota rączka", ro: "meșter", nl: "klusjesman" },
+  tegelzetter: { en: "tiler", ru: "плиточник", uk: "плиточник", pl: "glazurnik", ro: "faianțar", tr: "fayansçı", nl: "tegelzetter" },
+  timmerman: { en: "carpenter", ru: "плотник", uk: "тесляр", pl: "cieśla", ro: "tâmplar", tr: "marangoz", nl: "timmerman" },
+  stukadoor: { en: "plasterer", ru: "штукатур", uk: "штукатур", pl: "tynkarz", ro: "tencuitor", tr: "sıvacı", nl: "stukadoor" },
+  schilder: { en: "painter", ru: "маляр", uk: "маляр", pl: "malarz", ro: "zugrav", tr: "boyacı", nl: "schilder" },
+  loodgieter: { en: "plumber", ru: "сантехник", uk: "сантехнік", pl: "hydraulik", ro: "instalator", tr: "tesisatçı", nl: "loodgieter" },
+  elektricien: { en: "electrician", ru: "электрик", uk: "електрик", pl: "elektryk", ro: "electrician", tr: "elektrikçi", nl: "elektricien" },
+  metselaar: { en: "bricklayer", ru: "каменщик", uk: "муляр", pl: "murarz", ro: "zidar", tr: "duvarcı", nl: "metselaar" },
+  dakdekker: { en: "roofer", ru: "кровельщик", uk: "покрівельник", pl: "dekarz", ro: "acoperișar", tr: "çatı ustası", nl: "dakdekker" },
+  aannemer: { en: "contractor", ru: "подрядчик", uk: "підрядник", pl: "wykonawca", ro: "antreprenor", tr: "müteahhit", nl: "aannemer" },
+  klusjesman: { en: "handyman", ru: "мастер", uk: "майстер", pl: "złota rączka", ro: "meșter", tr: "tamirci", nl: "klusjesman" },
 };
 
 export function tradeLabel(key: string, lang: Lang) {

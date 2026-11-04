@@ -31,7 +31,7 @@ export type WorkInput = {
   photos_after: string[];
 };
 
-const LOCALES: Record<Lang, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", en: "en-GB", nl: "nl-NL" };
+const LOCALES: Record<Lang, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
 
 // "September 2026" in the reader's language.
 export function monthLabel(doneOn: string | null, lang: Lang) {
