@@ -10,7 +10,7 @@ import type { FeedItem } from "@/lib/feed";
 import { findContact, replyTemplate, type Lead } from "@/lib/leads";
 import { createQuoteDraft } from "@/lib/quote-draft";
 import { PHOTO_MIME, short } from "@/lib/quotes";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -47,7 +47,7 @@ export async function addLead(input: {
   const lang: Lang = isLang(profile?.language) ? profile.language : "en";
   const passportUrl = profile?.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
 
-  if (!claudeEnabled()) {
+  if (!(await aiAllowed(supabase))) {
     // No AI yet: still give the worker a contact and a ready Dutch reply.
     await supabase
       .from("leads")

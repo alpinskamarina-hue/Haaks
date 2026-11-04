@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
 import { draftQuote } from "@/lib/extract";
 import { getDict, type Lang } from "@/lib/i18n";
 import { addDays, cleanLines, DEFAULT_TERMS_NL, dutchToday, money, short, type QuoteLine } from "@/lib/quotes";
@@ -44,7 +44,7 @@ export async function createQuoteDraft(
     notes: [],
   };
 
-  if (claudeEnabled()) {
+  if (await aiAllowed(supabase)) {
     try {
       const files = await Promise.all(
         input.photos.map(async (p) => ({ base64: await p.base64(), mimeType: p.mimeType })),

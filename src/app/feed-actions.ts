@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
 import { analyzeLead } from "@/lib/extract";
 import { feedScore, feedText, tradeLabel, workerMatch, type FeedItem } from "@/lib/feed";
 import { isLang, type Lang } from "@/lib/i18n";
@@ -81,7 +81,7 @@ export async function takeFeedItem(id: string) {
   let reply = replyTemplate({ name, passportUrl });
   let reason: string | null = null;
   let aiStatus: "done" | "skipped" = "skipped";
-  if (claudeEnabled()) {
+  if (await aiAllowed(supabase)) {
     try {
       const result = await analyzeLead({
         text: original,
