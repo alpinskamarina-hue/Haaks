@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { isPaid } from "@/lib/plans";
+import { getPricingDict } from "@/lib/pricing-i18n";
 import {
   connectTelegram,
   disconnectTelegram,
@@ -69,13 +71,14 @@ export default async function FeedPage({
   const f = getFeedDict(lang);
   const extra = profile as typeof profile & {
     plan?: string;
+    plan_until?: string | null;
     feed_email?: FeedEmailMode;
     notify_email?: string | null;
     telegram_chat_id?: number | null;
     feed_seen_at?: string | null;
     feed_last_visit?: string | null;
   };
-  const pro = extra.plan === "pro";
+  const pro = isPaid(extra);
   // Free plan: replies to company and helper jobs, 3 per 24 hours.
   const replyQuota = pro ? null : await freeLeft(supabase, "job_reply");
 
@@ -305,6 +308,9 @@ export default async function FeedPage({
                 <span className="rounded-full bg-orange-600 px-2 py-0.5 text-xs font-semibold text-white">PRO</span>
               </div>
               <p className="mt-2 text-sm text-slate-600">{f.planPro}</p>
+              <Link href="/dashboard/plan" className="mt-2 inline-block text-sm font-semibold text-orange-700 underline">
+                {getPricingDict(lang).myTitle} →
+              </Link>
             </section>
           ) : (
             <section id="pro" className="rounded-2xl border border-orange-300 bg-white p-5 shadow-sm">
@@ -317,7 +323,9 @@ export default async function FeedPage({
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{f.proSoon}</p>
+              <Link href="/dashboard/plan" className="mt-4 block rounded-xl bg-orange-600 px-4 py-2.5 text-center text-sm font-bold text-white">
+                {getPricingDict(lang).nav} →
+              </Link>
             </section>
           )}
 
