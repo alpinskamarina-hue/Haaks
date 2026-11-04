@@ -408,7 +408,7 @@ function FeedCard({
     ? emailLink(item.contact, `ZZP vakman voor uw klus: ${item.title ?? title}`, resumeMessage({ ...worker, job: item.title ?? title }))
     : null;
   return (
-    <li className={`rounded-2xl border border-l-[6px] border-slate-200 ${info.stripe} bg-white p-4 shadow-sm ${old ? "opacity-70" : ""}`}>
+    <li id={`job-${item.id}`} className={`scroll-mt-20 rounded-2xl border border-l-[6px] border-slate-200 ${info.stripe} bg-white p-4 shadow-sm ${old ? "opacity-70" : ""}`}>
       <p className={`mb-1 text-xs font-bold uppercase tracking-wide ${info.text}`}>
         {info.icon} {info.label(f)}
         {left !== null && left >= 0 && (
@@ -552,7 +552,7 @@ function OpenButton({ id, f, opensLeft, center }: { id: string; f: FeedDict; ope
 function LockedCard({ item, f, lang, opensLeft }: { item: ScoredFeedItem; f: FeedDict; lang: Lang; opensLeft: number }) {
   const opensIn = Math.max(1, Math.ceil(24 - (Date.now() - new Date(item.published_at).getTime()) / 3600000));
   return (
-    <li className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <li id={`job-${item.id}`} className="relative scroll-mt-20 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div aria-hidden className="select-none blur-[5px]">
         <div className="flex gap-2 text-xs">
           <span className="rounded-full bg-slate-100 px-2 py-0.5">Telegram · ••••••</span>
