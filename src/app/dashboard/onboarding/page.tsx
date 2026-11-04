@@ -8,10 +8,10 @@ import { loadWorkspace } from "@/lib/workspace";
 export default async function Onboarding({
   searchParams,
 }: {
-  searchParams: Promise<{ step?: string; edit?: string; must?: string }>;
+  searchParams: Promise<{ step?: string; edit?: string; must?: string; back?: string }>;
 }) {
   const { profile, lang } = await loadWorkspace();
-  const { step, edit, must } = await searchParams;
+  const { step, edit, must, back } = await searchParams;
   const n = step === undefined ? 0 : Number(step);
   const startStep = (n >= 0 && n <= 4 ? n : 0) as 0 | 1 | 2 | 3 | 4;
   const [firstName = "", ...rest] = (profile.full_name ?? "").trim().split(/\s+/);
@@ -23,6 +23,7 @@ export default async function Onboarding({
       startStep={startStep}
       edit={edit === "1"}
       must={must === "1"}
+      backTo={back === "settings" ? "/dashboard/settings#feed" : "/dashboard/profile"}
       contact={{ firstName, lastName: rest.join(" "), phone: profile.phone ?? "" }}
     />
   );

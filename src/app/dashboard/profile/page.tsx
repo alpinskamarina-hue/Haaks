@@ -1,13 +1,6 @@
 import Link from "next/link";
-import { signOut } from "@/app/actions";
-import { Icon } from "@/components/icons";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { PasswordForm } from "@/components/PasswordForm";
-import { saveRate, setAvailability, setInSearch, setUsername } from "@/app/profile-actions";
-import { CopyButton } from "@/components/CopyButton";
-import { siteUrl } from "@/lib/lang";
-import { getSocialDict } from "@/lib/social-i18n";
-import { suggestUsername } from "@/lib/username";
+import { saveRate, setAvailability } from "@/app/profile-actions";
+import { redirect } from "next/navigation";
 import { SubmitButton } from "@/components/SubmitButton";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { WorkPhotos } from "@/components/WorkPhotos";
@@ -19,8 +12,7 @@ import { getWorksDict } from "@/lib/works-i18n";
 import { RatingSummary } from "@/components/RatingSummary";
 import { ratingSummary, type Review } from "@/lib/reviews";
 import { getReviewsDict } from "@/lib/reviews-i18n";
-import { planOf } from "@/lib/plans";
-import { getPricingDict } from "@/lib/pricing-i18n";
+import { getSettingsDict } from "@/lib/settings-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
 const MISSING_ICON: Record<string, string> = {
@@ -42,12 +34,10 @@ const MISSING_LINK: Record<string, string> = {
 
 // "My profile": what clients see about the worker, and what to add next.
 export default async function MyProfile({ searchParams }: { searchParams: Promise<{ nick?: string }> }) {
+  // The nickname moved to Settings; old links land there.
   const { nick } = await searchParams;
+  if (nick) redirect(`/dashboard/settings?nick=${encodeURIComponent(nick)}#nick`);
   const { supabase, user, profile, lang, t } = await loadWorkspace();
-  const so = getSocialDict(lang);
-  const username = (profile as typeof profile & { username?: string | null }).username ?? null;
-  const profileUrl = username ? `${await siteUrl()}/@${username}` : null;
-  const inSearch = Boolean((profile as typeof profile & { in_search?: boolean }).in_search);
   const w = getWorkerDict(lang);
   const p = withDefaults(profile as unknown as Partial<WorkerProfile>);
   const { data: docRows } = await supabase.from("documents").select("*").eq("user_id", user.id).returns<DocumentRow[]>();
@@ -142,52 +132,6 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
               ))}
             </ul>
           </>
-        )}
-      </section>
-
-      <section id="nick" className={card}>
-        <h2 className="font-semibold">{so.nickTitle}</h2>
-        <p className="mt-1 text-sm text-slate-600">{so.nickHint}</p>
-        <form action={setUsername} className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="flex min-w-0 flex-1 items-center rounded-lg border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-orange-400">
-            <span className="font-semibold text-slate-400">@</span>
-            <input
-              name="username"
-              defaultValue={username ?? suggestUsername(profile.full_name)}
-              maxLength={30}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              aria-label={so.nickTitle}
-              className="min-w-0 flex-1 py-2 pl-0.5 text-base outline-none"
-            />
-          </label>
-          <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">{so.nickSave}</SubmitButton>
-        </form>
-        {nick === "saved" && <p className="mt-2 text-sm font-medium text-green-700">✓ {so.nickSaved}</p>}
-        {nick === "taken" && <p className="mt-2 text-sm font-medium text-red-700">{so.nickTaken}</p>}
-        {nick === "bad" && <p className="mt-2 text-sm font-medium text-red-700">{so.nickBad}</p>}
-        {profileUrl && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <a href={`/@${username}`} className="rounded-lg bg-slate-900 px-3 py-2 font-medium text-white">
-              👤 {so.nickOpen}
-            </a>
-            <CopyButton value={profileUrl} label={so.share} />
-          </div>
-        )}
-        {profileUrl && !profile.passport_enabled && <p className="mt-2 text-xs text-amber-700">{so.nickPassportOff}</p>}
-        {username && (
-          <form action={setInSearch.bind(null, !inSearch)} className="mt-4 border-t border-slate-100 pt-3">
-            <button className="flex w-full items-center justify-between gap-3 text-left">
-              <span>
-                <span className="block font-semibold">🔍 {so.inSearch}</span>
-                <span className="block text-xs text-slate-500">{so.inSearchHint}</span>
-              </span>
-              <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${inSearch ? "bg-green-600" : "bg-slate-300"}`}>
-                <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition ${inSearch ? "left-[22px]" : "left-0.5"}`} />
-              </span>
-            </button>
-          </form>
         )}
       </section>
 
@@ -339,37 +283,10 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
         />
       </section>
 
-      {/* Account settings live here (moved from the header): e-mail, language, password, sign out. */}
-      <section id="settings" className={card}>
-        <p className="mb-3 text-lg font-semibold">⚙️ {t.settingsTitle}</p>
-        <div className="space-y-4">
-          <Link href="/dashboard/plan" className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-            <span className="font-medium">💳 {getPricingDict(lang).myTitle}</span>
-            <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-bold uppercase text-white">{planOf(profile as typeof profile & { plan?: string; plan_until?: string | null })}</span>
-          </Link>
-          <div>
-            <p className="text-sm text-slate-500">{t.emailLabel}</p>
-            <p className="font-medium break-all">{user.email}</p>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-medium">{t.language}</p>
-            <LanguageSwitcher current={lang} label={t.language} up alignRight />
-          </div>
-          <div className="border-t border-slate-200 pt-4">
-            <p className="mb-2 flex items-center gap-2 font-medium">
-              <Icon name="key" className="h-4 w-4" />
-              {t.navPassword}
-            </p>
-            <PasswordForm t={t} />
-          </div>
-          <form action={signOut} className="border-t border-slate-200 pt-4">
-            <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 font-semibold text-slate-700">
-              <Icon name="logout" className="h-4 w-4" />
-              {t.signOut}
-            </button>
-          </form>
-        </div>
-      </section>
+      <Link href="/dashboard/settings" className={`${card} flex items-center justify-between font-semibold`}>
+        ⚙️ {getSettingsDict(lang).title}
+        <span className="text-slate-300">›</span>
+      </Link>
     </main>
   );
 }

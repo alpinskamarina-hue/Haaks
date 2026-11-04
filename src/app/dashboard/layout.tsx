@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOut } from "@/app/actions";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
@@ -67,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/profile" className="block truncate text-sm font-medium">
             {name}
           </Link>
-          <Link href="/dashboard/profile#settings" className="flex items-center gap-2 text-sm text-slate-600">
+          <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm text-slate-600">
             ⚙️ {t.settingsTitle}
           </Link>
           <Link href="/dashboard/plan" className="flex items-center gap-2 text-sm text-slate-600">
@@ -88,9 +89,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
-          <Link href="/dashboard/profile" className="shrink-0 p-1 text-slate-500" aria-label={w.navProfile}>
-            <Icon name="user" />
+          <Link href="/dashboard/settings" className="shrink-0 p-1 text-lg leading-none" aria-label={t.settingsTitle}>
+            ⚙️
           </Link>
+          {/* Profile menu: profile, settings, plan, sign out. */}
+          <details className="relative shrink-0">
+            <summary className="list-none p-1 text-slate-500 [&::-webkit-details-marker]:hidden" aria-label={w.navProfile}>
+              <Icon name="user" />
+            </summary>
+            <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-lg">
+              <Link href="/dashboard/profile" className="block px-4 py-3">
+                👤 {w.navProfile}
+              </Link>
+              <Link href="/dashboard/settings" className="block border-t border-slate-100 px-4 py-3">
+                ⚙️ {t.settingsTitle}
+              </Link>
+              <Link href="/dashboard/plan" className="block border-t border-slate-100 px-4 py-3">
+                💳 {getPricingDict(lang).myTitle}
+              </Link>
+              <form action={signOut} className="border-t border-slate-100">
+                <button className="block w-full px-4 py-3 text-left">🚪 {t.signOut}</button>
+              </form>
+            </div>
+          </details>
         </header>
         {children}
       </div>
