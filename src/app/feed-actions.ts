@@ -62,7 +62,10 @@ export async function takeFeedItem(id: string) {
   if (existing) redirect(`/dashboard/leads/${existing.id}`);
 
   // Through feed_for_me(), so a free worker cannot take a job that is still locked for them.
-  const [{ data }, { data: places }] = await Promise.all([supabase.rpc("feed_for_me"), supabase.rpc("feed_places")]);
+  const [{ data }, { data: places }] = await Promise.all([
+    supabase.rpc("feed_for_me").eq("id", id),
+    supabase.rpc("feed_places").eq("id", id),
+  ]);
   const row = ((data ?? []) as FeedItem[]).find((i) => i.id === id);
   const place = ((places ?? []) as Pick<FeedItem, "id" | "lat" | "lng" | "region">[]).find((p) => p.id === id);
   const item = row && { ...row, ...place };

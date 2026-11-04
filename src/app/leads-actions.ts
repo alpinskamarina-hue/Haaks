@@ -139,7 +139,7 @@ export async function leadToQuote(id: string) {
   // language. The client reads the offer, so it takes the Dutch ones.
   let dutch: { title: string | null; summary: string | null } | null = null;
   if (lead.feed_item_id) {
-    const { data: items } = await supabase.rpc("feed_for_me");
+    const { data: items } = await supabase.rpc("feed_for_me").eq("id", lead.feed_item_id);
     const item = ((items ?? []) as FeedItem[]).find((i) => i.id === lead.feed_item_id);
     if (item && !item.locked) dutch = { title: item.title, summary: item.summary };
   }
