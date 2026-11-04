@@ -18,6 +18,7 @@ export function QuoteRequestForm({
   defaultOrderId,
   defaultRate,
   aiEnabled,
+  manualHint = null,
 }: {
   t: Dict;
   userId: string;
@@ -25,6 +26,7 @@ export function QuoteRequestForm({
   defaultOrderId: string | null;
   defaultRate: number | null;
   aiEnabled: boolean;
+  manualHint?: string | null;
 }) {
   const router = useRouter();
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,8 @@ export function QuoteRequestForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!description.trim() && !photos.length) return;
+    // Without AI an empty request is fine: the worker adds ready work lines on the next screen.
+    if (aiEnabled && !description.trim() && !photos.length) return;
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -92,7 +95,7 @@ export function QuoteRequestForm({
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <p className="text-sm text-slate-600">{aiEnabled ? t.quoteHelp : t.quoteHelpNoAi}</p>
+      <p className="text-sm text-slate-600">{aiEnabled ? t.quoteHelp : (manualHint ?? t.quoteHelpNoAi)}</p>
       <label className="block text-sm font-medium">
         {t.quoteOrder}
         <select value={orderId} onChange={(e) => setOrderId(e.target.value)} disabled={busy} className={field}>
@@ -205,7 +208,7 @@ export function QuoteRequestForm({
       </div>
 
       <button
-        disabled={busy || (!description.trim() && !photos.length)}
+        disabled={busy || (aiEnabled && !description.trim() && !photos.length)}
         className="w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-60"
       >
         {aiEnabled ? (busy ? t.drafting : `✨ ${t.makeDraft}`) : busy ? t.uploading : t.makeQuoteManual}

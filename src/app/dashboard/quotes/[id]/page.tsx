@@ -12,6 +12,10 @@ import { siteUrl } from "@/lib/lang";
 import { emailLink, quoteMessage, type Lead } from "@/lib/leads";
 import type { Quote } from "@/lib/quotes";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
+import { templateGroups, templatePrices } from "@/lib/quote-templates";
+import { daysSince, fill, getQuotesDict, reminderMessage } from "@/lib/quotes-i18n";
+import { getWorkerDict } from "@/lib/worker-profile-text";
+import { QuoteSteps } from "@/components/QuoteSteps";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -19,10 +23,15 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const { supabase, profile, lang, t } = await loadWorkspace();
 
-  const { data: quote } = await supabase.from("quotes").select("*").eq("id", id).maybeSingle<Quote>();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle<Quote & { sent_at: string | null; viewed_at: string | null }>();
   if (!quote) notFound();
+  const q = getQuotesDict(lang);
 
-  const [{ data: order }, photos, { data: lead }] = await Promise.all([
+  const [{ data: order }, photos, { data: lead }, { data: recent }, { data: pastInvoices }, { data: invoice }] = await Promise.all([
     quote.order_id
       ? supabase.from("orders").select("id, title").eq("id", quote.order_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -33,7 +42,36 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
       .eq("quote_id", quote.id)
       .limit(1)
       .maybeSingle<Pick<Lead, "id" | "title" | "client_contact" | "source_url">>(),
+    supabase
+      .from("quotes")
+      .select("lines, client_name, client_address")
+      .eq("user_id", quote.user_id)
+      .order("updated_at", { ascending: false })
+      .limit(60)
+      .returns<Pick<Quote, "lines" | "client_name" | "client_address">[]>(),
+    supabase
+      .from("invoices")
+      .select("client_name, client_address")
+      .eq("user_id", quote.user_id)
+      .order("created_at", { ascending: false })
+      .limit(60),
+    supabase.from("invoices").select("id").eq("quote_id", quote.id).limit(1).maybeSingle(),
   ]);
+
+  // Ready work lines: the worker's trades first, with their own last prices.
+  const w = getWorkerDict(lang);
+  const trades = ((profile as { trades?: string[] | null }).trades ?? []) as string[];
+  const hourly = Number((profile as { hourly_rate?: number | string | null }).hourly_rate) || null;
+  const groups = templateGroups(lang, trades, templatePrices(recent ?? []), hourly).map((g) => ({
+    ...g,
+    label: g.id === "general" ? q.general : ((w.trades as Record<string, string>)[g.id] ?? g.id),
+  }));
+  const clients = new Map<string, string | null>();
+  for (const c of [...(recent ?? []), ...(pastInvoices ?? [])]) {
+    const name = (c.client_name ?? "").trim();
+    if (name && !clients.has(name)) clients.set(name, c.client_address ?? null);
+  }
+  const waitingDays = quote.status === "sent" ? daysSince(quote.sent_at ?? quote.updated_at) : 0;
   const link = `${await siteUrl()}/q/${quote.public_token}`;
   const message = quoteMessage({
     clientName: quote.client_name,
@@ -47,6 +85,11 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const email =
     emailLink(contact, subject, message) ?? `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
   const button = "rounded-lg border border-slate-300 px-3 py-2 text-sm";
+  const reminder = reminderMessage({ clientName: quote.client_name, title: quote.title, link, worker: profile.full_name });
+  const reminderSubject = `Herinnering offerte ${quote.number}: ${quote.title}`;
+  const reminderEmail =
+    emailLink(contact, reminderSubject, reminder) ??
+    `mailto:?subject=${encodeURIComponent(reminderSubject)}&body=${encodeURIComponent(reminder)}`;
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
@@ -74,6 +117,37 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           </p>
         )}
 
+        {quote.status !== "draft" && (
+          <QuoteSteps
+            title={q.stepsTitle}
+            steps={[
+              { label: q.stepSent, at: quote.sent_at ?? quote.updated_at },
+              { label: q.stepViewed, at: quote.viewed_at ?? (quote.status === "accepted" ? quote.accepted_at : null) },
+              { label: q.stepAccepted, at: quote.status === "accepted" ? quote.accepted_at : null },
+              { label: q.stepInvoice, at: invoice ? "done" : null },
+            ]}
+            lang={lang}
+          />
+        )}
+        {quote.status === "sent" && waitingDays >= 3 && (
+          <div className="mt-4 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm">
+            <p>
+              ⏰ <b>{fill(q.remindTitle, { n: waitingDays })}</b> {q.remindText}
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(reminder)}`}
+                target="_blank"
+                className="rounded-lg border border-orange-600 bg-white px-3 py-2 text-center font-semibold text-orange-700"
+              >
+                {q.remindWhatsapp}
+              </a>
+              <a href={reminderEmail} className="rounded-lg border border-orange-600 bg-white px-3 py-2 text-center font-semibold text-orange-700">
+                {q.remindEmail}
+              </a>
+            </div>
+          </div>
+        )}
         {quote.status !== "accepted" && (
           <div className="mt-4 rounded-xl bg-orange-50 p-4">
             <h2 className="font-semibold">{quote.status === "draft" ? t.sendQuoteTitle : t.sendQuoteAgain}</h2>
@@ -188,7 +262,13 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
 
       <section className={card}>
         {quote.status !== "draft" && <p className="mb-3 text-sm text-amber-700">{t.editSentWarning}</p>}
-        <QuoteEditor t={t} quote={quote} />
+        <QuoteEditor
+          t={t}
+          quote={quote}
+          presets={{ title: q.addWork, hint: q.myPrices, groups }}
+          clients={[...clients].map(([name, address]) => ({ name, address }))}
+          clientHint={q.clientHint}
+        />
       </section>
     </main>
   );
