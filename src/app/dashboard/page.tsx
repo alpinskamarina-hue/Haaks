@@ -359,7 +359,7 @@ function JobRow({ job, lang, h, lockedTitle }: { job: ScoredFeedItem; lang: Lang
         >
           {h.open}
         </Link>
-        <form action={hideFeedItem.bind(null, job.id)}>
+        <form action={hideFeedItem.bind(null, job.id, "")}>
           <SubmitButton className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-60">{h.hide}</SubmitButton>
         </form>
       </div>

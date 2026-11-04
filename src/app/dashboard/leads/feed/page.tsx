@@ -2,7 +2,10 @@ import Link from "next/link";
 import { isPaid } from "@/lib/plans";
 import { getPricingDict } from "@/lib/pricing-i18n";
 import { getSettingsDict } from "@/lib/settings-i18n";
+import { getFeedPlusDict, HIDE_REASONS, type FeedPlusDict } from "@/lib/feed-plus-i18n";
 import {
+  answerFeedTip,
+  saveFeedItem,
   hideFeedItem,
   takeFeedItem,
   unhideFeedItem,
@@ -18,6 +21,7 @@ import { getHelperDict } from "@/lib/helper-i18n";
 import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
+import { HideMenu } from "@/components/HideMenu";
 import { ShareButton } from "@/components/ShareButton";
 import { Icon } from "@/components/icons";
 import { getShareDict } from "@/lib/share-i18n";
@@ -55,15 +59,17 @@ function daysLeft(timing: string | null) {
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; section?: string; city?: string }>;
+  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; starred?: string; section?: string; city?: string }>;
 }) {
   const params = await searchParams;
   const showAll = params.all === "1";
   const showHidden = params.hidden === "1";
+  const showSaved = params.starred === "1";
   const section = SECTIONS.find((x) => x.key === params.section)?.key ?? null;
   const cityFilter = params.city?.trim() || null;
   const { supabase, user, profile, lang } = await loadWorkspace();
   const f = getFeedDict(lang);
+  const fp = getFeedPlusDict(lang);
   const extra = profile as typeof profile & {
     plan?: string;
     plan_until?: string | null;
@@ -72,12 +78,15 @@ export default async function FeedPage({
     telegram_chat_id?: number | null;
     feed_seen_at?: string | null;
     feed_last_visit?: string | null;
+    feed_tip_at?: string | null;
+    travel_km?: number | null;
+    home_lat?: number | null;
   };
   const pro = isPaid(extra);
   // Free plan: replies to company and helper jobs, 3 per 24 hours.
   const replyQuota = pro ? null : await freeLeft(supabase, "job_reply");
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
+  const [{ items, trades, regions, match, opensLeft, opensInHours, hides }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     markFeedSeen(supabase, user.id, extra),
     supabase.rpc("my_job_replies"),
@@ -99,9 +108,23 @@ export default async function FeedPage({
   // "New": came in since the visit before this one.
   const since = newSince(lastVisit);
 
-  const shown = items
-    .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
-    .filter((i) => showAll || showHidden || i.score >= FIT_SCORE);
+  const shown = showSaved
+    ? items.filter((i) => i.saved)
+    : items
+        .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
+        .filter((i) => showAll || showHidden || i.score >= FIT_SCORE);
+  const savedCount = items.filter((i) => i.saved).length;
+  // Feed tip: after 3 hides for the same reason since the last tip, offer to fix the settings.
+  const tipSince = extra.feed_tip_at ? Date.parse(extra.feed_tip_at) : 0;
+  const reasonCount = (r: string) => hides.filter((x) => x.reason === r && Date.parse(x.at) > tipSince).length;
+  const radius = extra.travel_km ?? 30;
+  const smaller = Math.max(5, Math.round(radius / 2 / 5) * 5);
+  const tip =
+    reasonCount("far") >= 3 && extra.travel_km !== 0 && extra.home_lat != null && radius > 5
+      ? ({ kind: "far", n: reasonCount("far") } as const)
+      : reasonCount("trade") >= 3
+        ? ({ kind: "trade", n: reasonCount("trade") } as const)
+        : null;
   // Places to pick from in "all jobs", most jobs first.
   const cityCounts = new Map<string, number>();
   for (const i of shown) if (i.city) cityCounts.set(i.city, (cityCounts.get(i.city) ?? 0) + 1);
@@ -121,7 +144,7 @@ export default async function FeedPage({
   const sectionNew = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key && isNewJob(i, since)).length;
   const query = (next: Record<string, string | null>) => {
     const q = new URLSearchParams();
-    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, section, city: cityFilter, ...next };
+    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, starred: showSaved ? "1" : null, section, city: cityFilter, ...next };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     const str = q.toString();
     return `/dashboard/leads/feed${str ? `?${str}` : ""}`;
@@ -222,14 +245,19 @@ export default async function FeedPage({
             ))}
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-xs sm:mx-0 sm:flex-wrap sm:px-0">
-            <Link href={query({ all: null, hidden: null, city: null })} className={chip(!showAll && !showHidden)}>
+            <Link href={query({ all: null, hidden: null, starred: null, city: null })} className={chip(!showAll && !showHidden && !showSaved)}>
               {f.filterMine}
             </Link>
-            <Link href={query({ all: "1", hidden: null })} className={chip(showAll)}>
+            <Link href={query({ all: "1", hidden: null, starred: null })} className={chip(showAll)}>
               {f.filterAll}
             </Link>
+            {savedCount > 0 && (
+              <Link href={query({ starred: "1", all: null, hidden: null })} className={chip(showSaved)}>
+                ⭐ {fp.savedTab} {savedCount}
+              </Link>
+            )}
             {hiddenCount > 0 && (
-              <Link href={query({ hidden: "1", all: null })} className={chip(showHidden)}>
+              <Link href={query({ hidden: "1", all: null, starred: null })} className={chip(showHidden)}>
                 {f.showHidden} {hiddenCount}
               </Link>
             )}
@@ -271,6 +299,31 @@ export default async function FeedPage({
             </p>
           )}
 
+          {tip && !showHidden && !showSaved && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-semibold">💡 {fill(tip.kind === "far" ? fp.tipFarTitle : fp.tipTradeTitle, { n: tip.n })}</p>
+              <p className="mt-1">{tip.kind === "far" ? fill(fp.tipFarText, { from: radius, to: smaller }) : fp.tipTradeText}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {tip.kind === "far" ? (
+                  <form action={answerFeedTip.bind(null, smaller)}>
+                    <SubmitButton className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-60">
+                      {fill(fp.tipFarYes, { to: smaller })}
+                    </SubmitButton>
+                  </form>
+                ) : (
+                  <Link href="/dashboard/settings#feed" className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white">
+                    {fp.tipTradeYes}
+                  </Link>
+                )}
+                <form action={answerFeedTip.bind(null, null)}>
+                  <SubmitButton className="rounded-lg border border-orange-600 bg-white px-4 py-2 font-semibold text-orange-700 disabled:opacity-60">
+                    {fp.tipKeep}
+                  </SubmitButton>
+                </form>
+              </div>
+            </div>
+          )}
+
           {visible.length === 0 && <p className={`${card} text-slate-600`}>{f.empty}</p>}
           <ul className="space-y-3">
             {locked.map((item) => (
@@ -295,6 +348,7 @@ export default async function FeedPage({
                 reported={reportedJobs.has(item.id)}
                 letterLabel={letterLabel}
                 share={share}
+                fp={fp}
               />
             ))}
           </ul>
@@ -376,6 +430,7 @@ function FeedCard({
   reported,
   letterLabel,
   share,
+  fp,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -393,17 +448,34 @@ function FeedCard({
   reported: boolean;
   letterLabel: string;
   share: { base: string; t: ReturnType<typeof getShareDict> };
+  fp: FeedPlusDict;
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
   const { title, summary } = feedText(item, lang);
   const age = Date.now() - new Date(item.published_at).getTime();
   const old = age > 14 * 24 * 60 * 60 * 1000;
+  // Real jobs: fresh ones are "hot", old ones are probably taken already.
+  const realJob = item.kind === "private" || item.kind === "business";
+  const hot = realJob && !item.action && !item.leadId && age < 24 * 60 * 60 * 1000;
+  const stale = realJob && old && !item.leadId;
   const info = sectionInfo(item.kind);
   const left = item.kind === "tender" ? daysLeft(item.timing) : null;
   const meta = [item.city, item.trades.map((tr) => tradeLabel(tr, lang)).join(", "), item.timing, item.budget].filter(Boolean);
   // A job a company posted on Haaks: builders reply here, contacts open when the company accepts.
   const companyJob = item.source === "haaks";
+  const q = item.quote;
+  const status = !q
+    ? { text: `✓ ${fp.statusTaken}`, cls: "border border-slate-300" }
+    : q.status === "accepted"
+      ? { text: `🤝 ${fp.statusAccepted}`, cls: "bg-green-600 text-white" }
+      : q.status === "declined"
+        ? { text: fp.statusDeclined, cls: "bg-slate-100 text-slate-500" }
+        : q.status === "sent" && q.viewed
+          ? { text: `👀 ${fp.statusViewed}`, cls: "bg-amber-100 text-amber-900" }
+          : q.status === "sent"
+            ? { text: `📄 ${fp.statusSent}`, cls: "bg-blue-100 text-blue-800" }
+            : { text: `📝 ${fp.statusDraft}`, cls: "border border-slate-300" };
   const resumeLink = pro && !companyJob
     ? emailLink(item.contact, `ZZP vakman voor uw klus: ${item.title ?? title}`, resumeMessage({ ...worker, job: item.title ?? title }))
     : null;
@@ -433,10 +505,23 @@ function FeedCard({
           <span className="rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-800">🔓 {f.openedBadge}</span>
         )}
         {isNew && <span className="rounded-full bg-red-600 px-2 py-0.5 font-semibold text-white">{f.newBadge}</span>}
+        {hot && <span className="rounded-full bg-orange-600 px-2 py-0.5 font-semibold text-white">⚡ {fp.hot}</span>}
+        {stale && <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">⏳ {fp.likelyTaken}</span>}
         {item.is_demo && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">{f.demoBadge}</span>}
         <span className={`ml-auto rounded-full px-2 py-0.5 font-semibold ${scoreColor(item.score)}`}>{item.score}%</span>
       </div>
-      <p className="mt-2 break-words font-semibold">{title}</p>
+      <div className="mt-2 flex items-start gap-2">
+        <p className="min-w-0 flex-1 break-words font-semibold">{title}</p>
+        <form action={saveFeedItem.bind(null, item.id, !item.saved)}>
+          <SubmitButton
+            className={`-mr-1 -mt-1 px-1 text-2xl leading-none ${item.saved ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+          >
+            <span aria-label={item.saved ? fp.saved : fp.save} title={item.saved ? fp.saved : fp.save}>
+              {item.saved ? "★" : "☆"}
+            </span>
+          </SubmitButton>
+        </form>
+      </div>
       <p className="text-sm text-slate-500">
         {kindLabel(item.kind, f)} · {meta.join(" · ")}
       </p>
@@ -470,8 +555,8 @@ function FeedCard({
             {replyQuota && <p className="mt-1 text-xs font-medium text-orange-800">{fill(limitText(lang, "job_reply").left, { n: replyQuota.left })}</p>}
           </div>
         ) : item.leadId ? (
-          <Link href={`/dashboard/leads/${item.leadId}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-center font-medium">
-            ✓ {f.taken} · {f.openLead}
+          <Link href={`/dashboard/leads/${item.leadId}`} className={`rounded-xl px-4 py-2.5 text-center font-medium ${status.cls}`}>
+            {status.text} · {f.openLead}
           </Link>
         ) : pro && item.kind === "permit" ? (
           // A permit has no client contact: the letter to the owner is the main action.
@@ -518,12 +603,24 @@ function FeedCard({
             {share.t.source}
           </a>
         )}
-        <form action={(item.action === "hidden" ? unhideFeedItem : hideFeedItem).bind(null, item.id)}>
-          <SubmitButton className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800">
-            <Icon name={item.action === "hidden" ? "undo" : "eyeOff"} className="h-5 w-5" />
-            {item.action === "hidden" ? share.t.unhide : f.hide}
-          </SubmitButton>
-        </form>
+        {item.action === "hidden" ? (
+          <form action={unhideFeedItem.bind(null, item.id)}>
+            <SubmitButton className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800">
+              <Icon name="undo" className="h-5 w-5" />
+              {share.t.unhide}
+            </SubmitButton>
+          </form>
+        ) : (
+          <HideMenu
+            icon={<Icon name="eyeOff" className="h-5 w-5" />}
+            label={f.hide}
+            title={fp.whyTitle}
+            hint={fp.whyHint}
+            choices={HIDE_REASONS.map((r) => ({ key: r, label: fp.reasons[r], action: hideFeedItem.bind(null, item.id, r) }))}
+            skip={{ label: fp.noReason, action: hideFeedItem.bind(null, item.id, "") }}
+            cancel="✕"
+          />
+        )}
         {companyJob && !ownJob && (
           <div className="ml-auto">
             <ReportButton kind="job" target={item.id} reasons={JOB_REASONS} t={reportT} sent={reported} />
