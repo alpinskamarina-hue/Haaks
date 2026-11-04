@@ -14,6 +14,7 @@ import { replyTemplate } from "@/lib/leads";
 import { short } from "@/lib/quotes";
 import { CATALOG_DAYS } from "@/lib/job-replies";
 import { getFeedDict } from "@/lib/feed-i18n";
+import { HIDE_REASONS } from "@/lib/feed-plus-i18n";
 import { sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
@@ -22,9 +23,28 @@ function refresh() {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function hideFeedItem(id: string) {
+// Hide a job, with the reason when the worker gave one (it tunes the feed tips).
+export async function hideFeedItem(id: string, reason?: string) {
   const { supabase, user } = await requireUser();
-  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "hidden" });
+  const why = HIDE_REASONS.find((r) => r === reason) ?? null;
+  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "hidden", reason: why });
+  refresh();
+}
+
+// ⭐ Save a job for later, or take it off the saved list.
+export async function saveFeedItem(id: string, on: boolean) {
+  const { supabase, user } = await requireUser();
+  if (on) await supabase.from("feed_saved").upsert({ user_id: user.id, item_id: id });
+  else await supabase.from("feed_saved").delete().eq("user_id", user.id).eq("item_id", id);
+  refresh();
+}
+
+// The worker answered a feed tip: a smaller radius (km) or "keep as it is" (null).
+export async function answerFeedTip(km: number | null) {
+  const { supabase, user } = await requireUser();
+  const update: { feed_tip_at: string; travel_km?: number } = { feed_tip_at: new Date().toISOString() };
+  if (km !== null && Number.isInteger(km) && km >= 5 && km <= 500) update.travel_km = km;
+  await supabase.from("profiles").update(update).eq("id", user.id);
   refresh();
 }
 
