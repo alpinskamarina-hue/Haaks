@@ -21,11 +21,13 @@ export async function PassportTabs({
   lang,
   userId,
   token,
+  username,
 }: {
   active: PassportTab;
   lang: Lang;
   userId: string;
   token: string;
+  username?: string | null;
 }) {
   const supabase = await createClient();
   const [{ count: works }, { count: reviews }, base] = await Promise.all([
@@ -33,7 +35,7 @@ export async function PassportTabs({
     supabase.from("reviews").select("id", { count: "exact", head: true }).eq("worker_id", userId).eq("status", "submitted"),
     siteUrl(),
   ]);
-  return <PassportTabsView active={active} lang={lang} clientHref={`${base}/p/${token}`} works={works} reviews={reviews} />;
+  return <PassportTabsView active={active} lang={lang} clientHref={`${base}/p/${token}`} works={works} reviews={reviews} username={username} />;
 }
 
 // The look on its own, without loading anything.
@@ -43,12 +45,14 @@ export function PassportTabsView({
   clientHref,
   works,
   reviews,
+  username,
 }: {
   active: PassportTab;
   lang: Lang;
   clientHref: string;
   works?: number | null;
   reviews?: number | null;
+  username?: string | null;
 }) {
   const l = LABELS[lang];
   const tabs: { id: PassportTab; href: string; label: string; n?: number | null }[] = [
@@ -60,7 +64,14 @@ export function PassportTabsView({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{l.title}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{l.title}</h1>
+          {username && (
+            <a href={`/@${username}`} className="text-sm font-semibold text-orange-600">
+              @{username}
+            </a>
+          )}
+        </div>
         <a
           href={clientHref}
           target="_blank"
