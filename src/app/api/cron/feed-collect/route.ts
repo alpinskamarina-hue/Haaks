@@ -8,7 +8,7 @@ import { telegramEnabled } from "@/lib/telegram";
 
 export const maxDuration = 60;
 
-// The daily job collector (vercel.json), with "Authorization: Bearer <CRON_SECRET>".
+// The job collector (vercel.json: tenders + permits early morning, more permit runs during the day), with "Authorization: Bearer <CRON_SECRET>".
 // Optional for a manual run: ?since=YYYY-MM-DD, ?only=permits|tenders, ?cities=Rotterdam,Utrecht.
 // New fitting jobs go out at once to Pro workers with instant e-mail or Telegram alerts.
 export async function GET(request: NextRequest) {
