@@ -43,9 +43,22 @@ function intervalMs(value: string | null) {
 }
 
 async function loadRecentItems(supabase: SupabaseClient, now: number) {
-  const { data: rows, error } = await supabase.from("feed_items").select("*").returns<Row[]>();
-  if (error) throw new Error(error.message);
-  return (rows ?? [])
+  // The whole country is collected now: read only the last days, page by page (1000 rows a page).
+  const from = new Date(now - 4 * DAY).toISOString();
+  const rows: Row[] = [];
+  for (let page = 0; page < 20; page++) {
+    const { data, error } = await supabase
+      .from("feed_items")
+      .select("*")
+      .or(`published_at.gte.${from},published_at.is.null`)
+      .order("created_at", { ascending: false })
+      .range(page * 1000, page * 1000 + 999)
+      .returns<Row[]>();
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < 1000) break;
+  }
+  return rows
     .map((row) => ({ ...row, published: row.published_at ? Date.parse(row.published_at) : now - intervalMs(row.demo_age) }))
     .filter((row) => now - row.published < 3 * DAY)
     // Expired jobs (and the old example jobs, switched off by setting expires_at) are never sent.
