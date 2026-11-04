@@ -25,6 +25,7 @@ import { siteUrl } from "@/lib/lang";
 import { vapidPublicKey } from "@/lib/push";
 import { telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
+import { freeLeft, limitText, type FreeQuota } from "@/lib/free-limits";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -72,6 +73,8 @@ export default async function FeedPage({
     feed_last_visit?: string | null;
   };
   const pro = extra.plan === "pro";
+  // Free plan: replies to company and helper jobs, 3 per 24 hours.
+  const replyQuota = pro ? null : await freeLeft(supabase, "job_reply");
 
   const [{ items, trades, regions, match, opensLeft, opensInHours }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
@@ -279,6 +282,7 @@ export default async function FeedPage({
                 rt={rt}
                 ownJob={ownJobByItem.get(item.id)}
                 yourJob={yourJob}
+                replyQuota={replyQuota}
                 reportT={reportT}
                 reported={reportedJobs.has(item.id)}
                 letterLabel={letterLabel}
@@ -417,6 +421,7 @@ function FeedCard({
   rt,
   ownJob,
   yourJob,
+  replyQuota,
   reportT,
   reported,
   letterLabel,
@@ -432,6 +437,7 @@ function FeedCard({
   rt: ReplyDict;
   ownJob?: string;
   yourJob: string;
+  replyQuota: FreeQuota | null;
   reportT: ReportDict;
   reported: boolean;
   letterLabel: string;
@@ -497,12 +503,18 @@ function FeedCard({
           >
             {reply.status === "accepted" ? `✓ ${rt.accepted}` : reply.status === "declined" ? rt.declined : `⏳ ${rt.sent}`}
           </Link>
+        ) : companyJob && pro && replyQuota && replyQuota.left === 0 ? (
+          <div className="w-full">
+            <p className="text-sm font-medium text-slate-600">⏳ {fill(limitText(lang, "job_reply").none, { h: replyQuota.hours })}</p>
+            <a href="#pro" className="mt-1 inline-block text-sm font-semibold text-orange-700 underline">{limitText(lang, "job_reply").pro}</a>
+          </div>
         ) : companyJob && pro ? (
           <div className="w-full">
             <form action={replyToCompanyJob.bind(null, item.id)}>
               <SubmitButton className="rounded-lg bg-purple-700 px-4 py-2 font-semibold text-white disabled:opacity-60">🙋 {rt.reply}</SubmitButton>
             </form>
             <p className="mt-1 text-xs text-slate-500">{rt.hint}</p>
+            {replyQuota && <p className="mt-1 text-xs font-medium text-orange-800">{fill(limitText(lang, "job_reply").left, { n: replyQuota.left })}</p>}
           </div>
         ) : item.leadId ? (
           <Link href={`/dashboard/leads/${item.leadId}`} className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium">

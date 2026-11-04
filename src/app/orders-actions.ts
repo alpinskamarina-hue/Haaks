@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { ACCEPTED_MIME } from "@/lib/documents";
 import { cleanDate, extractReceipt } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
 import { parseAmount, roundCents } from "@/lib/quotes";
 
 function text(formData: FormData, key: string) {
@@ -101,7 +101,7 @@ export async function addReceipt(input: {
     .single();
   if (error || !receipt) throw new Error(error?.message ?? "Insert failed");
 
-  if (!claudeEnabled()) {
+  if (!(await aiAllowed(supabase))) {
     await supabase.from("receipts").update({ ai_status: "skipped" }).eq("id", receipt.id);
     refresh();
     return;
