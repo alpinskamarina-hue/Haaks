@@ -7,6 +7,7 @@ import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
 import { getHelperDict } from "@/lib/helper-i18n";
+import { getSocialDict } from "@/lib/social-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { createServerAccountClient } from "@/lib/supabase/server";
@@ -49,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }] : []),
   ];
   const name = profile.company_name || profile.full_name || user.email;
+  const so = getSocialDict(lang);
 
   return (
     <div lang={lang} className="min-h-screen lg:flex">
@@ -57,6 +59,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-3 text-xl font-bold">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-600 text-white">H</span>
           Haaks
+        </Link>
+        <Link href="/dashboard/search" className="mb-4 flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-200">
+          🔍 <span className="truncate">{so.searchPlaceholder}</span>
         </Link>
         <SideNav items={items} />
         <div className="mt-auto space-y-3 border-t border-slate-200 px-3 pt-4">
@@ -81,11 +86,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       <div className="min-w-0 flex-1 pb-24 lg:pb-8">
         <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
-          <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-orange-600 text-sm text-white">H</span>
-            Haaks
+          <Link href="/dashboard" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-600 text-sm font-bold text-white" aria-label="Haaks">
+            H
           </Link>
-          <div className="flex items-center gap-2">
+          <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
+            🔍 <span className="truncate">{so.searchPlaceholder}</span>
+          </Link>
+          <div className="flex shrink-0 items-center gap-1">
             <LanguageSwitcher current={lang} label={t.language} />
             <Link href="/dashboard/profile" className="p-1 text-slate-500" aria-label={w.navProfile}>
               <Icon name="user" />

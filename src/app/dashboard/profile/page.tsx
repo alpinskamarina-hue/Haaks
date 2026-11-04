@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { saveRate, setAvailability, setUsername } from "@/app/profile-actions";
+import { saveRate, setAvailability, setInSearch, setUsername } from "@/app/profile-actions";
 import { CopyButton } from "@/components/CopyButton";
 import { siteUrl } from "@/lib/lang";
 import { getSocialDict } from "@/lib/social-i18n";
@@ -41,6 +41,7 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
   const so = getSocialDict(lang);
   const username = (profile as typeof profile & { username?: string | null }).username ?? null;
   const profileUrl = username ? `${await siteUrl()}/@${username}` : null;
+  const inSearch = Boolean((profile as typeof profile & { in_search?: boolean }).in_search);
   const w = getWorkerDict(lang);
   const p = withDefaults(profile as unknown as Partial<WorkerProfile>);
   const { data: docRows } = await supabase.from("documents").select("*").eq("user_id", user.id).returns<DocumentRow[]>();
@@ -169,6 +170,19 @@ export default async function MyProfile({ searchParams }: { searchParams: Promis
           </div>
         )}
         {profileUrl && !profile.passport_enabled && <p className="mt-2 text-xs text-amber-700">{so.nickPassportOff}</p>}
+        {username && (
+          <form action={setInSearch.bind(null, !inSearch)} className="mt-4 border-t border-slate-100 pt-3">
+            <button className="flex w-full items-center justify-between gap-3 text-left">
+              <span>
+                <span className="block font-semibold">🔍 {so.inSearch}</span>
+                <span className="block text-xs text-slate-500">{so.inSearchHint}</span>
+              </span>
+              <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${inSearch ? "bg-green-600" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition ${inSearch ? "left-[22px]" : "left-0.5"}`} />
+              </span>
+            </button>
+          </form>
+        )}
       </section>
 
       <section id="availability" className={card}>

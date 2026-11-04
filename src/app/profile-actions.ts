@@ -116,3 +116,10 @@ export async function setUsername(formData: FormData) {
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard/profile?nick=saved#nick");
 }
+
+// "Show me in search": other builders and companies can find the profile by nick, name, trade and town.
+export async function setInSearch(on: boolean) {
+  const { supabase, user } = await requireUser();
+  await supabase.from("profiles").update({ in_search: on }).eq("id", user.id);
+  revalidatePath("/dashboard", "layout");
+}
