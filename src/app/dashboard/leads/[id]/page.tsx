@@ -30,7 +30,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <Link href="/dashboard/leads" className="text-sm text-slate-600 underline">
+      <Link href="/dashboard/leads/feed" className="text-sm text-slate-600 underline">
         ← {t.leadsTitle}
       </Link>
 

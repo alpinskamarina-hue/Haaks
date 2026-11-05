@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { saveRate, setAvailability } from "@/app/profile-actions";
+import { redirect } from "next/navigation";
 import { SubmitButton } from "@/components/SubmitButton";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { WorkPhotos } from "@/components/WorkPhotos";
@@ -7,6 +8,11 @@ import { docStatus, type DocumentRow } from "@/lib/documents";
 import { AVAILABILITY, completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { describeProfile, getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
+import { getWorksDict } from "@/lib/works-i18n";
+import { RatingSummary } from "@/components/RatingSummary";
+import { ratingSummary, type Review } from "@/lib/reviews";
+import { getReviewsDict } from "@/lib/reviews-i18n";
+import { getSettingsDict } from "@/lib/settings-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
 const MISSING_ICON: Record<string, string> = {
@@ -27,7 +33,10 @@ const MISSING_LINK: Record<string, string> = {
 };
 
 // "My profile": what clients see about the worker, and what to add next.
-export default async function MyProfile() {
+export default async function MyProfile({ searchParams }: { searchParams: Promise<{ nick?: string }> }) {
+  // The nickname moved to Settings; old links land there.
+  const { nick } = await searchParams;
+  if (nick) redirect(`/dashboard/settings?nick=${encodeURIComponent(nick)}#nick`);
   const { supabase, user, profile, lang, t } = await loadWorkspace();
   const w = getWorkerDict(lang);
   const p = withDefaults(profile as unknown as Partial<WorkerProfile>);
@@ -35,7 +44,20 @@ export default async function MyProfile() {
   const docs = (docRows ?? []).filter((d) => docStatus(d) !== "expired");
   const score = completeness(p, docs);
   const d = describeProfile(p, w, lang);
-  const urls = await signedUrls(supabase, [...p.work_photos, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
+  const wk = getWorksDict(lang);
+  const { data: workRows } = await supabase
+    .from("works")
+    .select("id, photos_after")
+    .eq("user_id", user.id)
+    .order("done_on", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .returns<{ id: string; photos_after: string[] }[]>();
+  const works = workRows ?? [];
+  const rv = getReviewsDict(lang);
+  const { data: reviewRows } = await supabase.from("reviews").select("*").eq("worker_id", user.id).eq("status", "submitted").returns<Review[]>();
+  const rating = ratingSummary(reviewRows ?? []);
+  const workCovers = works.slice(0, 3).flatMap((x) => x.photos_after.slice(0, 1));
+  const urls = await signedUrls(supabase, [...p.work_photos, ...workCovers, ...(profile.avatar_path ? [profile.avatar_path] : [])]);
   const name = profile.full_name || profile.company_name || user.email || "";
   const initials = name
     .split(/[\s@]+/)
@@ -207,6 +229,49 @@ export default async function MyProfile() {
         </div>
       </section>
 
+      <section id="reviews" className={card}>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">
+              ⭐ {rv.title} · {rating.n}
+            </p>
+            <p className="text-sm text-slate-600">{rv.profileHint}</p>
+          </div>
+          <Link href="/dashboard/reviews" className="shrink-0 text-sm font-medium text-orange-700 underline">
+            {rv.nav} →
+          </Link>
+        </div>
+        <RatingSummary summary={rating} criteria={rv.criteria} averageText={rv.average} newcomerText={rv.newcomer} />
+      </section>
+
+      <section id="works" className={card}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">
+              {wk.title} · {works.length}
+            </p>
+            <p className="text-sm text-slate-600">{wk.profileHint}</p>
+          </div>
+          <Link href="/dashboard/works" className="shrink-0 text-sm font-medium text-orange-700 underline">
+            {wk.nav} →
+          </Link>
+        </div>
+        {workCovers.length > 0 ? (
+          <Link href="/dashboard/works" className="mt-3 grid grid-cols-3 gap-2">
+            {workCovers.map((path) => (
+              <span key={path} className="block aspect-square overflow-hidden rounded-lg bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {urls.get(path) && <img src={urls.get(path)} alt="" className="h-full w-full object-cover" />}
+              </span>
+            ))}
+          </Link>
+        ) : (
+          <Link href="/dashboard/works/new" className="mt-3 inline-block rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+            {wk.add}
+          </Link>
+        )}
+      </section>
+
       <section id="photos" className={card}>
         <p className="font-semibold">{w.photosTitle}</p>
         <p className="mb-3 text-sm text-slate-600">{w.photosHint}</p>
@@ -217,6 +282,11 @@ export default async function MyProfile() {
           photos={p.work_photos.map((path) => ({ path, url: urls.get(path) ?? null }))}
         />
       </section>
+
+      <Link href="/dashboard/settings" className={`${card} flex items-center justify-between font-semibold`}>
+        ⚙️ {getSettingsDict(lang).title}
+        <span className="text-slate-300">›</span>
+      </Link>
     </main>
   );
 }

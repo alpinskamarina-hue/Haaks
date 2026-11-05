@@ -6,7 +6,10 @@ import { PrintButton } from "@/components/PrintButton";
 import type { Profile } from "@/lib/documents";
 import { euro } from "@/lib/orders";
 import { dutchToday, lineTotal, quoteTotals, type Quote } from "@/lib/quotes";
-import { createServerAccountClient } from "@/lib/supabase/server";
+import { after } from "next/server";
+import { siteUrl } from "@/lib/lang";
+import { notifyQuoteViewed } from "@/lib/quote-notify";
+import { createClient, createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +33,21 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         Deze offerte bestaat niet of is verwijderd.
       </main>
     );
+  }
+
+  // First time the client opens a sent quote: mark it and tell the builder.
+  // The builder looking at their own link does not count.
+  if (quote.status === "sent") {
+    const {
+      data: { user },
+    } = await (await createClient()).auth.getUser();
+    if (user?.id !== quote.user_id) {
+      const { data: firstView } = await admin.rpc("quote_viewed", { p_token: token });
+      if (firstView) {
+        const site = await siteUrl();
+        after(() => notifyQuoteViewed(admin, firstView as string, site).catch((err) => console.error("Quote view notify failed", err)));
+      }
+    }
   }
 
   const { data: worker } = await admin.from("profiles").select("*").eq("id", quote.user_id).single<Profile>();

@@ -5,22 +5,32 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { MaterialsEditor } from "@/components/MaterialsEditor";
 import { SendMaterials } from "@/components/SendMaterials";
 import { SubmitButton } from "@/components/SubmitButton";
+import { getCardsDict } from "@/lib/cards-i18n";
 import { siteUrl } from "@/lib/lang";
 import { STATUS_COLOR, type MaterialList } from "@/lib/materials";
 import { getMaterialsDict, materialsMessage } from "@/lib/materials-i18n";
+import { storeForUrl, storeOf, type StoreCard } from "@/lib/store-cards";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 export default async function MaterialListPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, lang, t } = await loadWorkspace();
   const m = getMaterialsDict(lang);
   const { data: list } = await supabase.from("material_lists").select("*").eq("id", id).maybeSingle<MaterialList>();
   if (!list) notFound();
   const { data: order } = list.order_id
     ? await supabase.from("orders").select("id, title").eq("id", list.order_id).maybeSingle()
     : { data: null };
+
+  // Store cards for the shops in this list: one tap shows the card at the till.
+  const shops = new Set(list.items.flatMap((x) => (x.url ? [storeForUrl(x.url)?.key ?? ""] : [])).filter(Boolean));
+  const { data: myCards } = shops.size
+    ? await supabase.from("store_cards").select("id, store").eq("user_id", user.id).in("store", [...shops]).returns<Pick<StoreCard, "id" | "store">[]>()
+    : { data: [] };
+  const cardButtons = [...new Map((myCards ?? []).map((c) => [c.store, c])).values()];
+  const cd = getCardsDict(lang);
 
   const url = `${await siteUrl()}/m/${list.public_token}`;
   const worker = profile.company_name || profile.full_name || "";
@@ -54,6 +64,16 @@ export default async function MaterialListPage({ params }: { params: Promise<{ i
       )}
       {list.status === "sent" && list.viewed_at && (
         <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">👁 {m.viewed}</p>
+      )}
+
+      {cardButtons.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {cardButtons.map((c) => (
+            <Link key={c.id} href={`/dashboard/cards?show=${c.id}`} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:border-orange-300">
+              {cd.showCard.replace("{store}", storeOf({ store: c.store, custom_name: null }).name)}
+            </Link>
+          ))}
+        </div>
       )}
 
       <section className={card}>

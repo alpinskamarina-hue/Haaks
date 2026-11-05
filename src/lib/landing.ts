@@ -27,6 +27,8 @@ export type LandingDict = {
   signupText: string;
   signinTitle: string;
   signinText: string;
+  roles: { label: string; worker: string; company: string; companyText: string };
+  companyLink: string;
   leadCard: { found: string; match: string; reply: string };
   footer: string;
 };
@@ -100,7 +102,7 @@ const en: LandingDict = {
   ],
   langTitle: "In your language",
   langText:
-    "Polski, Română, Українська, Русский, English and Nederlands. You read and write in your language, the client sees everything in Dutch.",
+    "Polski, Română, Українська, Русский, Türkçe, English and Nederlands. You read and write in your language, the client sees everything in Dutch.",
   faqTitle: "Questions",
   faq: [
     {
@@ -124,6 +126,8 @@ const en: LandingDict = {
   signupText: "Choose an email and password. Confirm your address once with the link we send, then just sign in with your password.",
   signinTitle: "Sign in",
   signinText: "Enter the email and password you registered with.",
+  roles: { label: "Who are you?", worker: "I am a builder (ZZP)", company: "I am a company, I need builders", companyText: "Companies post jobs for free. Builders nearby see them in their own language." },
+  companyLink: "Are you a company? Post a job for free",
   leadCard: { found: "New job for you", match: "fits you", reply: "Reply in Dutch" },
   footer: "Haaks: tools for self-employed construction workers in the Netherlands.",
 };
@@ -190,7 +194,7 @@ const ru: LandingDict = {
   ],
   langTitle: "На вашем языке",
   langText:
-    "Polski, Română, Українська, Русский, English и Nederlands. Вы читаете и пишете на своём языке, а заказчик видит всё на нидерландском.",
+    "Polski, Română, Українська, Русский, Türkçe, English и Nederlands. Вы читаете и пишете на своём языке, а заказчик видит всё на нидерландском.",
   faqTitle: "Вопросы",
   faq: [
     {
@@ -214,6 +218,8 @@ const ru: LandingDict = {
   signupText: "Укажите почту и пароль. Один раз подтвердите адрес по ссылке из письма, дальше просто входите по паролю.",
   signinTitle: "Вход",
   signinText: "Введите почту и пароль, с которыми вы регистрировались.",
+  roles: { label: "Кто вы?", worker: "Я строитель (ZZP)", company: "Я компания, ищу строителей", companyText: "Компании размещают заказы бесплатно. Строители рядом видят их на своём языке." },
+  companyLink: "Вы компания? Разместите заказ бесплатно",
   leadCard: { found: "Новый заказ для вас", match: "подходит", reply: "Ответить на нидерландском" },
   footer: "Haaks: инструменты для самозанятых строителей в Нидерландах.",
 };
@@ -280,7 +286,7 @@ const uk: LandingDict = {
   ],
   langTitle: "Вашою мовою",
   langText:
-    "Polski, Română, Українська, Русский, English і Nederlands. Ви читаєте й пишете своєю мовою, а замовник бачить усе нідерландською.",
+    "Polski, Română, Українська, Русский, Türkçe, English і Nederlands. Ви читаєте й пишете своєю мовою, а замовник бачить усе нідерландською.",
   faqTitle: "Питання",
   faq: [
     {
@@ -304,6 +310,8 @@ const uk: LandingDict = {
   signupText: "Вкажіть пошту й пароль. Один раз підтвердьте адресу за посиланням із листа, далі просто входьте за паролем.",
   signinTitle: "Вхід",
   signinText: "Введіть пошту й пароль, з якими ви реєструвалися.",
+  roles: { label: "Хто ви?", worker: "Я будівельник (ZZP)", company: "Я компанія, шукаю будівельників", companyText: "Компанії розміщують замовлення безкоштовно. Будівельники поруч бачать їх своєю мовою." },
+  companyLink: "Ви компанія? Розмістіть замовлення безкоштовно",
   leadCard: { found: "Нове замовлення для вас", match: "підходить", reply: "Відповісти нідерландською" },
   footer: "Haaks: інструменти для самозайнятих будівельників у Нідерландах.",
 };
@@ -370,7 +378,7 @@ const pl: LandingDict = {
   ],
   langTitle: "W Twoim języku",
   langText:
-    "Polski, Română, Українська, Русский, English i Nederlands. Czytasz i piszesz w swoim języku, a klient widzi wszystko po niderlandzku.",
+    "Polski, Română, Українська, Русский, Türkçe, English i Nederlands. Czytasz i piszesz w swoim języku, a klient widzi wszystko po niderlandzku.",
   faqTitle: "Pytania",
   faq: [
     {
@@ -394,6 +402,8 @@ const pl: LandingDict = {
   signupText: "Podaj e-mail i hasło. Raz potwierdź adres linkiem z wiadomości, potem logujesz się hasłem.",
   signinTitle: "Logowanie",
   signinText: "Podaj e-mail i hasło, których użyłeś przy rejestracji.",
+  roles: { label: "Kim jesteś?", worker: "Jestem fachowcem (ZZP)", company: "Jestem firmą, szukam fachowców", companyText: "Firmy dodają zlecenia za darmo. Fachowcy w okolicy widzą je w swoim języku." },
+  companyLink: "Jesteś firmą? Dodaj zlecenie za darmo",
   leadCard: { found: "Nowe zlecenie dla Ciebie", match: "pasuje", reply: "Odpowiedz po niderlandzku" },
   footer: "Haaks: narzędzia dla samozatrudnionych budowlańców w Holandii.",
 };
@@ -460,7 +470,7 @@ const ro: LandingDict = {
   ],
   langTitle: "În limba ta",
   langText:
-    "Polski, Română, Українська, Русский, English și Nederlands. Citești și scrii în limba ta, iar clientul vede totul în olandeză.",
+    "Polski, Română, Українська, Русский, Türkçe, English și Nederlands. Citești și scrii în limba ta, iar clientul vede totul în olandeză.",
   faqTitle: "Întrebări",
   faq: [
     {
@@ -484,6 +494,8 @@ const ro: LandingDict = {
   signupText: "Alege e-mailul și parola. Confirmă o dată adresa cu linkul primit, apoi intri doar cu parola.",
   signinTitle: "Autentificare",
   signinText: "Introdu e-mailul și parola cu care te-ai înregistrat.",
+  roles: { label: "Cine ești?", worker: "Sunt constructor (ZZP)", company: "Sunt firmă, caut constructori", companyText: "Firmele publică lucrări gratuit. Constructorii din zonă le văd în limba lor." },
+  companyLink: "Ești firmă? Publică o lucrare gratuit",
   leadCard: { found: "Lucrare nouă pentru tine", match: "potrivire", reply: "Răspunde în olandeză" },
   footer: "Haaks: unelte pentru constructorii independenți din Țările de Jos.",
 };
@@ -550,7 +562,7 @@ const nl: LandingDict = {
   ],
   langTitle: "In je eigen taal",
   langText:
-    "Polski, Română, Українська, Русский, English en Nederlands. Jij leest en schrijft in je eigen taal, de klant ziet alles in het Nederlands.",
+    "Polski, Română, Українська, Русский, Türkçe, English en Nederlands. Jij leest en schrijft in je eigen taal, de klant ziet alles in het Nederlands.",
   faqTitle: "Vragen",
   faq: [
     {
@@ -574,11 +586,105 @@ const nl: LandingDict = {
   signupText: "Kies je e-mailadres en wachtwoord. Bevestig je adres één keer via de link in de mail, daarna log je in met je wachtwoord.",
   signinTitle: "Inloggen",
   signinText: "Vul het e-mailadres en wachtwoord in waarmee je je hebt aangemeld.",
+  roles: { label: "Wie bent u?", worker: "Ik ben vakman (ZZP)", company: "Ik ben een bedrijf en zoek vakmensen", companyText: "Bedrijven plaatsen gratis opdrachten. Vakmensen in de buurt zien ze in hun eigen taal." },
+  companyLink: "Bent u een bedrijf? Plaats gratis een opdracht",
   leadCard: { found: "Nieuwe klus voor jou", match: "match", reply: "Reageer in het Nederlands" },
   footer: "Haaks: hulpmiddelen voor zzp'ers in de bouw in Nederland.",
 };
 
-const dicts: Record<Lang, LandingDict> = { en, ru, uk, pl, ro, nl };
+const tr: LandingDict = {
+  login: "Giriş yap",
+  badge: "Hollanda'daki serbest çalışan inşaat ustaları için",
+  title: "Müşteri bulun ve tüm ZZP evraklarınızı kendi dilinizde halledin",
+  subtitle:
+    "Haaks size uygun işleri gösterir ve Felemenkçe cevap yazmanıza yardım eder. Teklifler, faturalar, fişler ve yükleniciler için belgeler tek bir yerde.",
+  cta: "Ücretsiz kayıt ol",
+  ctaNote: "Ücretsiz. Kart gerekmez. Sadece e-postanız.",
+  problemsTitle: "Tanıdık geliyor mu?",
+  problems: [
+    {
+      title: "Yüklenici yine evrak istiyor",
+      text: "KvK kaydı, VCA, sigorta. Her yeni şantiye aynı belgeleri ister ve her zaman bir şeyin süresi dolmuştur.",
+    },
+    {
+      title: "Felemenkçe teklif ve fatura zor",
+      text: "KDV veya btw verlegd hakkında tek bir yanlış satır ve fatura geri gelir. İyi Felemenkçe olmadan saatler sürer.",
+    },
+    {
+      title: "Müşteriler geç ödüyor",
+      text: "ZZP'lerin neredeyse yarısı parasını geç alıyor. Açık bir fatura ve hatırlatma olmadan para haftalarca bekler.",
+    },
+    {
+      title: "Aracılar kazancınızı alıyor",
+      text: "Ajanslar ve iş siteleri pay alır veya her iletişim için ücret ister, iş olmasa bile.",
+    },
+  ],
+  featuresTitle: "Haaks sizin için ne yapar",
+  features: withIcons([
+    {
+      title: "Tek bağlantıda ZZP pasaportu",
+      text: "KvK, VCA ve sigortayı bir kez yükleyin. Yüklenici her şeyi içeren tek bir bağlantı alır, siz de bir belgenin süresinin ne zaman dolduğunu görürsünüz.",
+    },
+    {
+      title: "Felemenkçe teklifler",
+      text: "İşi kendi dilinizde anlatın ve fotoğraf ekleyin. Düzgün bir Felemenkçe teklif alırsınız, müşteri tek tuşla internetten onaylar.",
+    },
+    {
+      title: "Doğru faturalar",
+      text: "Normal KDV, btw verlegd veya KOR: doğru metin sizin için eklenir. KvK, KDV numaranız ve IBAN profilinizden gelir. PDF olarak kaydedin.",
+    },
+    {
+      title: "Fişler ve üç aylık KDV",
+      text: "Yapı marketinden aldığınız fişin fotoğrafını çekin. Masraflar işe bağlanır ve çeyreklik KDV'yi görürsünüz.",
+    },
+    {
+      title: "Müşteri bulma",
+      text: "İş ilanı olan bir gönderi veya ekran görüntüsü yapıştırın. Size uyup uymadığını görür ve hazır bir Felemenkçe cevap alırsınız. İletişim başına ücret yok.",
+    },
+    {
+      title: "Her şey telefonunuzda",
+      text: "Tek bir genel bakış: ne gönderilecek, ne ödenecek, hangi belgelerin süresi doluyor. Tarayıcıda çalışır, uygulama kurmaya gerek yok.",
+    },
+  ]),
+  stepsTitle: "Nasıl çalışır",
+  steps: [
+    { title: "Kayıt ol", text: "E-postanızı girin ve bir şifre seçin." },
+    { title: "Profilinizi doldurun", text: "KvK numarası, KDV numarası, meslek ve belgeler. Yaklaşık 10 dakika sürer." },
+    { title: "Çalışın", text: "Pasaport bağlantısını yüklenicilere gönderin, teklif ve faturaları dakikalar içinde hazırlayın." },
+  ],
+  langTitle: "Kendi dilinizde",
+  langText:
+    "Polski, Română, Українська, Русский, Türkçe, English ve Nederlands. Siz kendi dilinizde okur ve yazarsınız, müşteri her şeyi Felemenkçe görür.",
+  faqTitle: "Sorular",
+  faq: [
+    {
+      q: "Gerçekten ücretsiz mi?",
+      a: "Evet. Kayıt ve kullanım şu anda ücretsiz. İleride ücretli seçenekler gelirse önceden haber veririz, siz karar verirsiniz.",
+    },
+    {
+      q: "KvK kaydı gerekli mi?",
+      a: "ZZP olarak çalışmak için evet. Haaks hangi belgelere ihtiyacınız olduğunu ve bunları nereden alacağınızı kendi dilinizde anlatır.",
+    },
+    {
+      q: "Verilerim güvende mi?",
+      a: "Belgelerinizi yalnızca siz ve bağlantıyı gönderdiğiniz kişiler görür. Pasaportunuzu, kimlik kartınızı veya BSN numaranızı yüklemeyin: gerekli değiller.",
+    },
+    {
+      q: "Bu bir ajans veya aracı mı?",
+      a: "Hayır. Müşterilerinizle doğrudan çalışırsınız. Haaks işlerinizden pay almaz.",
+    },
+  ],
+  signupTitle: "Ücretsiz başlayın",
+  signupText: "Bir e-posta ve şifre seçin. Gönderdiğimiz bağlantıyla adresinizi bir kez onaylayın, sonra sadece şifrenizle giriş yapın.",
+  signinTitle: "Giriş yap",
+  signinText: "Kayıt olduğunuz e-posta ve şifreyi girin.",
+  roles: { label: "Siz kimsiniz?", worker: "Ustayım (ZZP)", company: "Firmayım, ustalara ihtiyacım var", companyText: "Firmalar ücretsiz iş ilanı verir. Yakındaki ustalar ilanları kendi dillerinde görür." },
+  companyLink: "Firma mısınız? Ücretsiz iş ilanı verin",
+  leadCard: { found: "Size yeni iş", match: "size uygun", reply: "Felemenkçe cevap ver" },
+  footer: "Haaks: Hollanda'daki serbest çalışan inşaat ustaları için araçlar.",
+};
+
+const dicts: Record<Lang, LandingDict> = { en, ru, uk, pl, ro, tr, nl };
 
 export function getLanding(lang: Lang): LandingDict {
   return dicts[lang];

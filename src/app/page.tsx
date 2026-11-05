@@ -7,6 +7,7 @@ import { LoginForm } from "@/components/LoginForm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getDict } from "@/lib/i18n";
 import { getLanding } from "@/lib/landing";
+import { getPricingDict } from "@/lib/pricing-i18n";
 import { legalSummary } from "@/lib/legal";
 import { requestLang } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +23,7 @@ const tilt =
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; mode?: string }>;
+  searchParams: Promise<{ error?: string; mode?: string; as?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -33,7 +34,7 @@ export default async function Home({
   const lang = await requestLang();
   const t = getDict(lang);
   const l = getLanding(lang);
-  const { error, mode } = await searchParams;
+  const { error, mode, as } = await searchParams;
 
   return (
     <div className="min-h-screen">
@@ -43,6 +44,9 @@ export default async function Home({
             Haaks<span className="text-orange-600">.</span>
           </span>
           <div className="flex items-center gap-3">
+            <Link href="/pricing" className="hidden text-sm font-medium text-slate-700 hover:text-orange-700 sm:inline">
+              {getPricingDict(lang).nav}
+            </Link>
             <LanguageSwitcher current={lang} label={t.language} />
             <Link
               href="/?mode=signin#signup"
@@ -77,6 +81,9 @@ export default async function Home({
                 className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-base font-semibold text-white transition hover:bg-white/20"
               >
                 {t.toSignIn}
+              </Link>
+              <Link href="/?mode=signup&as=company#signup" className="mt-4 block text-sm text-slate-300 underline underline-offset-4 hover:text-white">
+                {l.companyLink}
               </Link>
             </div>
             <HeroDocs lead={l.leadCard} />
@@ -162,8 +169,10 @@ export default async function Home({
           <div className="mx-auto max-w-md px-4 py-16">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_0_#e2e8f0,0_30px_60px_-20px_rgba(234,88,12,.35)]">
               <LoginForm
-                key={mode}
+                key={`${mode}-${as}`}
                 t={t}
+                roles={l.roles}
+                initialRole={as === "company" ? "company" : "worker"}
                 initialMode={mode === "signin" ? "signin" : "signup"}
                 consent={<SignupConsent lang={lang} />}
                 heads={{

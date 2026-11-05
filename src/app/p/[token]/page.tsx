@@ -16,6 +16,14 @@ import { createServerAccountClient } from "@/lib/supabase/server";
 import { dutchToday } from "@/lib/quotes";
 import { withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { describeProfile, getWorkerDict, PUBLIC_PROFILE } from "@/lib/worker-profile-text";
+import { WorkCard } from "@/components/WorkCard";
+import type { Work } from "@/lib/works";
+import { PUBLIC_WORKS } from "@/lib/works-i18n";
+import { RatingSummary } from "@/components/RatingSummary";
+import { ReviewCard } from "@/components/ReviewCard";
+import { Stars } from "@/components/Stars";
+import { ratingSummary, ratingText, type Review } from "@/lib/reviews";
+import { getReviewsDict, PUBLIC_REVIEWS } from "@/lib/reviews-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +68,37 @@ export default async function PassportPage({
     .returns<DocumentRow[]>();
   const documents = docs ?? [];
 
+  const { data: workRows } = await admin
+    .from("works")
+    .select("*")
+    .eq("user_id", profile.id)
+    .order("done_on", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(30)
+    .returns<Work[]>();
+  const works = workRows ?? [];
+  const { data: reviewRows } = await admin
+    .from("reviews")
+    .select("*")
+    .eq("worker_id", profile.id)
+    .eq("status", "submitted")
+    .eq("held", false)
+    .lte("publish_at", new Date().toISOString())
+    .order("submitted_at", { ascending: false })
+    .limit(50)
+    .returns<Review[]>();
+  const rating = ratingSummary(reviewRows ?? []);
+  const pr = PUBLIC_REVIEWS[lang];
+  const rvCriteria = getReviewsDict(lang).criteria;
+
   const worker = withDefaults(profile as unknown as Partial<WorkerProfile>);
   const avatarPath = (profile as { avatar_path?: string | null }).avatar_path ?? null;
-  const paths = [...documents.map((d) => d.file_path), ...worker.work_photos, ...(avatarPath ? [avatarPath] : [])];
+  const paths = [
+    ...documents.map((d) => d.file_path),
+    ...worker.work_photos,
+    ...works.flatMap((x) => [...x.photos_after, ...x.photos_before]),
+    ...(avatarPath ? [avatarPath] : []),
+  ];
   const signed = paths.length
     ? (await admin.storage.from("documents").createSignedUrls(paths, SIGNED_URL_SECONDS)).data ?? []
     : [];
@@ -101,7 +137,18 @@ export default async function PassportPage({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={urlByPath.get(avatarPath)} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
           )}
-          <h1 className="text-2xl font-bold">{profile.full_name ?? profile.company_name ?? "—"}</h1>
+          <div>
+            <h1 className="text-2xl font-bold">{profile.full_name ?? profile.company_name ?? "—"}</h1>
+            {rating.showAverage && rating.avg !== null ? (
+              <a href="#reviews" className="flex flex-wrap items-center gap-x-1.5 text-sm">
+                <Stars value={rating.avg} className="text-lg" />
+                <b>{ratingText(rating.avg)}</b>
+                <span className="whitespace-nowrap text-slate-500">· {pr.count.replace("{n}", String(rating.n))}</span>
+              </a>
+            ) : (
+              <p className="text-sm text-sky-700">🆕 {pr.newcomer}</p>
+            )}
+          </div>
         </div>
         <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <Row label={t.company} value={profile.company_name} />
@@ -131,6 +178,47 @@ export default async function PassportPage({
       </section>
 
       <WorkerBlock worker={worker} lang={lang} photoUrls={worker.work_photos.flatMap((p) => urlByPath.get(p) ?? [])} />
+
+      {rating.n > 0 && (
+        <section id="reviews" className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-semibold">
+            {pr.reviews} · {rating.n}
+          </h2>
+          <RatingSummary summary={rating} criteria={rvCriteria} averageText={getReviewsDict(lang).average} newcomerText={pr.newcomer} />
+          <div className="space-y-3">
+            {rating.published.map((x) => (
+              <ReviewCard
+                key={x.id}
+                review={x}
+                lang={lang}
+                criteria={rvCriteria}
+                replyLabel={pr.reply.replace("{name}", (profile.full_name ?? "").split(" ")[0] || "ZZP")}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">✓ {pr.verified}</p>
+        </section>
+      )}
+
+      {works.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">
+            {PUBLIC_WORKS[lang].title} · {works.length}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {works.map((x) => (
+              <WorkCard
+                key={x.id}
+                work={x}
+                lang={lang}
+                trade={x.trade ? (getWorkerDict(lang).trades as Record<string, string>)[x.trade] ?? null : null}
+                urls={urlByPath}
+                labels={{ before: PUBLIC_WORKS[lang].before, after: PUBLIC_WORKS[lang].after }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold">{t.documents}</h2>

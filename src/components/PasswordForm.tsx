@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Dict } from "@/lib/i18n";
@@ -8,23 +7,19 @@ import type { Dict } from "@/lib/i18n";
 // Sets or changes the signed-in worker's password.
 export function PasswordForm({ t }: { t: Dict }) {
   const [password, setPassword] = useState("");
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error" | "same" | "weak">("idle");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setState("saving");
     const { error } = await createClient().auth.updateUser({ password });
-    setState(error ? "error" : "saved");
+    // "same": the worker typed the password they already have, which works; say so instead of "failed".
+    setState(!error ? "saved" : error.code === "same_password" ? "same" : error.code === "weak_password" ? "weak" : "error");
   }
 
   if (state === "saved") {
     return (
-      <div className="space-y-3">
-        <p className="rounded-lg bg-green-50 p-4 text-green-800">{t.passwordSaved}</p>
-        <Link href="/dashboard" className="inline-block font-semibold text-orange-700">
-          {t.navHome}
-        </Link>
-      </div>
+      <p className="rounded-lg bg-green-50 p-4 text-green-800">{t.passwordSaved}</p>
     );
   }
 
@@ -50,6 +45,8 @@ export function PasswordForm({ t }: { t: Dict }) {
       >
         {t.savePassword}
       </button>
+      {state === "same" && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{t.passwordSame}</p>}
+      {state === "weak" && <p className="text-sm text-red-700">{t.passwordWeak}</p>}
       {state === "error" && <p className="text-sm text-red-700">{t.passwordError}</p>}
     </form>
   );

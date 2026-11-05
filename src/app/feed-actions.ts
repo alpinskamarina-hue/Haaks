@@ -4,14 +4,17 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
+import { isPaid } from "@/lib/plans";
 import { analyzeLead } from "@/lib/extract";
 import { feedScore, feedText, tradeLabel, workerMatch, type FeedItem } from "@/lib/feed";
 import { isLang, type Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { replyTemplate } from "@/lib/leads";
 import { short } from "@/lib/quotes";
+import { CATALOG_DAYS } from "@/lib/job-replies";
 import { getFeedDict } from "@/lib/feed-i18n";
+import { HIDE_REASONS } from "@/lib/feed-plus-i18n";
 import { sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
@@ -20,15 +23,49 @@ function refresh() {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function hideFeedItem(id: string) {
+// Hide a job, with the reason when the worker gave one (it tunes the feed tips).
+export async function hideFeedItem(id: string, reason?: string) {
   const { supabase, user } = await requireUser();
-  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "hidden" });
+  const why = HIDE_REASONS.find((r) => r === reason) ?? null;
+  await supabase.from("feed_actions").upsert({ user_id: user.id, item_id: id, action: "hidden", reason: why });
+  refresh();
+}
+
+// ⭐ Save a job for later, or take it off the saved list.
+export async function saveFeedItem(id: string, on: boolean) {
+  const { supabase, user } = await requireUser();
+  if (on) await supabase.from("feed_saved").upsert({ user_id: user.id, item_id: id });
+  else await supabase.from("feed_saved").delete().eq("user_id", user.id).eq("item_id", id);
+  refresh();
+}
+
+// The worker answered a feed tip: a smaller radius (km) or "keep as it is" (null).
+export async function answerFeedTip(km: number | null) {
+  const { supabase, user } = await requireUser();
+  const update: { feed_tip_at: string; travel_km?: number } = { feed_tip_at: new Date().toISOString() };
+  if (km !== null && Number.isInteger(km) && km >= 5 && km <= 500) update.travel_km = km;
+  await supabase.from("profiles").update(update).eq("id", user.id);
   refresh();
 }
 
 export async function unhideFeedItem(id: string) {
   const { supabase, user } = await requireUser();
   await supabase.from("feed_actions").delete().eq("user_id", user.id).eq("item_id", id).eq("action", "hidden");
+  refresh();
+}
+
+// Free plan: open one card in full. The database checks the limit of free opens.
+export async function unlockFeedItem(id: string) {
+  const { supabase } = await requireUser();
+  await supabase.rpc("unlock_feed_item", { p_item: id });
+  refresh();
+}
+
+// "Reply" to a company job: the company sees the worker's profile; contacts open when it accepts.
+export async function replyToCompanyJob(id: string) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("reply_to_job", { p_item: id });
+  if (error) console.error("Reply to company job failed", error.message);
   refresh();
 }
 
@@ -45,7 +82,10 @@ export async function takeFeedItem(id: string) {
   if (existing) redirect(`/dashboard/leads/${existing.id}`);
 
   // Through feed_for_me(), so a free worker cannot take a job that is still locked for them.
-  const [{ data }, { data: places }] = await Promise.all([supabase.rpc("feed_for_me"), supabase.rpc("feed_places")]);
+  const [{ data }, { data: places }] = await Promise.all([
+    supabase.rpc("feed_for_me").eq("id", id),
+    supabase.rpc("feed_places").eq("id", id),
+  ]);
   const row = ((data ?? []) as FeedItem[]).find((i) => i.id === id);
   const place = ((places ?? []) as Pick<FeedItem, "id" | "lat" | "lng" | "region">[]).find((p) => p.id === id);
   const item = row && { ...row, ...place };
@@ -65,7 +105,7 @@ export async function takeFeedItem(id: string) {
   let reply = replyTemplate({ name, passportUrl });
   let reason: string | null = null;
   let aiStatus: "done" | "skipped" = "skipped";
-  if (claudeEnabled()) {
+  if (await aiAllowed(supabase)) {
     try {
       const result = await analyzeLead({
         text: original,
@@ -124,8 +164,8 @@ export async function takeFeedItem(id: string) {
 export async function saveFeedNotifications(formData: FormData) {
   const { supabase, user } = await requireUser();
   const mode = String(formData.get("feed_email") ?? "off");
-  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-  const allowed = profile?.plan === "pro" ? ["off", "daily", "instant"] : ["off", "daily"];
+  const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
+  const allowed = isPaid(profile) ? ["off", "daily", "instant"] : ["off", "daily"];
   const email = short(formData.get("notify_email"), 200).trim();
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
   await supabase
@@ -136,19 +176,19 @@ export async function saveFeedNotifications(formData: FormData) {
     })
     .eq("id", user.id);
   refresh();
-  redirect("/dashboard/leads/feed?saved=1#notify");
+  redirect("/dashboard/settings?saved=1#notify");
 }
 
 // Saves a one-time code and opens the Haaks bot with it; the bot links the chat (api/telegram/webhook).
 export async function connectTelegram() {
   const { supabase, user } = await requireUser();
-  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-  if (profile?.plan !== "pro" || !telegramEnabled()) redirect("/dashboard/leads/feed#telegram");
+  const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
+  if (!isPaid(profile) || !telegramEnabled()) redirect("/dashboard/settings#telegram");
   const code = randomBytes(16).toString("hex");
   const { error } = await supabase.from("profiles").update({ telegram_link_code: code }).eq("id", user.id);
   if (error) {
     console.error("Telegram link code failed", error);
-    redirect("/dashboard/leads/feed#telegram");
+    redirect("/dashboard/settings#telegram");
   }
   await ensureWebhook(await siteUrl());
   redirect(`https://t.me/${await botUsername()}?start=${code}`);
@@ -158,7 +198,7 @@ export async function disconnectTelegram() {
   const { supabase, user } = await requireUser();
   await supabase.from("profiles").update({ telegram_chat_id: null, telegram_link_code: null }).eq("id", user.id);
   refresh();
-  redirect("/dashboard/leads/feed#telegram");
+  redirect("/dashboard/settings#telegram");
 }
 
 // Push notifications: the phone's subscription, saved for the signed-in worker.
@@ -194,4 +234,36 @@ export async function sendTestPush() {
     else if (result.gone) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
   }
   return { ok };
+}
+
+// "Looking for work": the builder shows or hides their profile in the company catalog.
+// "Looking for work": on (or extended) for 30 days, then it switches itself off.
+export async function setInCatalog(on: boolean) {
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("profiles")
+    .update({ in_catalog: on, catalog_until: on ? new Date(Date.now() + CATALOG_DAYS * 24 * 60 * 60 * 1000).toISOString() : null })
+    .eq("id", user.id);
+  refresh();
+}
+
+// A builder reports a job in the feed, or a company reports a builder card.
+export async function reportTarget(formData: FormData) {
+  const { supabase } = await requireUser();
+  const kind = formData.get("kind") === "worker" ? "worker" : "job";
+  const { error } = await supabase.rpc("report", {
+    p_kind: kind,
+    p_target: String(formData.get("target")),
+    p_reason: String(formData.get("reason") ?? "other"),
+  });
+  if (error) console.error("Report failed", error.message);
+  revalidatePath(kind === "worker" ? "/company/builders" : "/dashboard/leads/feed");
+}
+
+// The builder accepts or declines a company's invitation; accepting opens contacts on both sides.
+export async function decideInvite(id: string, accept: boolean) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("decide_invite", { p_invite: id, p_accept: accept });
+  if (error) console.error("Deciding an invitation failed", error.message);
+  refresh();
 }

@@ -4,13 +4,25 @@ import { useState, useTransition } from "react";
 import { saveQuote } from "@/app/quotes-actions";
 import type { Dict } from "@/lib/i18n";
 import { euro } from "@/lib/orders";
-import { LinesEditor } from "@/components/LinesEditor";
+import { LinesEditor, type PresetGroup } from "@/components/LinesEditor";
 import { quoteTotals, type Quote } from "@/lib/quotes";
 
 type Editable = Pick<Quote, "title" | "client_name" | "client_address" | "intro" | "terms" | "valid_until" | "lines">;
 
 // Worker's own language for labels; the texts the client reads stay in Dutch.
-export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
+export function QuoteEditor({
+  t,
+  quote,
+  presets,
+  clients = [],
+  clientHint,
+}: {
+  t: Dict;
+  quote: Quote;
+  presets?: { title: string; hint: string; groups: PresetGroup[] };
+  clients?: { name: string; address: string | null }[];
+  clientHint?: string;
+}) {
   const [data, setData] = useState<Editable>({
     title: quote.title,
     client_name: quote.client_name,
@@ -45,9 +57,25 @@ export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
           {t.clientName}
           <input
             value={data.client_name ?? ""}
-            onChange={(e) => set("client_name", e.target.value)}
+            list="quote-clients"
+            autoComplete="off"
+            onChange={(e) => {
+              const name = e.target.value;
+              set("client_name", name);
+              // A client picked from the list brings their address along.
+              const known = clients.find((c) => c.name === name);
+              if (known?.address && !data.client_address) set("client_address", known.address);
+            }}
             className={field}
           />
+          <datalist id="quote-clients">
+            {clients.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.address ?? ""}
+              </option>
+            ))}
+          </datalist>
+          {clients.length > 0 && clientHint && <span className="mt-1 block text-xs font-normal text-slate-500">{clientHint}</span>}
         </label>
         <label className="block text-sm font-medium">
           {t.address}
@@ -68,7 +96,7 @@ export function QuoteEditor({ t, quote }: { t: Dict; quote: Quote }) {
         />
       </label>
 
-      <LinesEditor t={t} lines={data.lines} onChange={(lines) => set("lines", lines)} />
+      <LinesEditor t={t} lines={data.lines} onChange={(lines) => set("lines", lines)} presets={presets} />
 
       <dl className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm">
         <div className="flex justify-between">

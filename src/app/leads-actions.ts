@@ -10,7 +10,7 @@ import type { FeedItem } from "@/lib/feed";
 import { findContact, replyTemplate, type Lead } from "@/lib/leads";
 import { createQuoteDraft } from "@/lib/quote-draft";
 import { PHOTO_MIME, short } from "@/lib/quotes";
-import { claudeEnabled } from "@/lib/env";
+import { aiAllowed } from "@/lib/free-limits";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -47,7 +47,7 @@ export async function addLead(input: {
   const lang: Lang = isLang(profile?.language) ? profile.language : "en";
   const passportUrl = profile?.passport_enabled ? `${await siteUrl()}/p/${profile.passport_token}` : null;
 
-  if (!claudeEnabled()) {
+  if (!(await aiAllowed(supabase))) {
     // No AI yet: still give the worker a contact and a ready Dutch reply.
     await supabase
       .from("leads")
@@ -114,7 +114,7 @@ export async function deleteLead(id: string) {
   if (lead.image_path) await supabase.storage.from("documents").remove([lead.image_path]);
   await supabase.from("leads").delete().eq("id", id);
   refresh();
-  redirect("/dashboard/leads");
+  redirect("/dashboard/leads/feed");
 }
 
 // The client said yes to talking: the lead becomes an order and the worker goes straight to a quote for it.
@@ -139,7 +139,7 @@ export async function leadToQuote(id: string) {
   // language. The client reads the offer, so it takes the Dutch ones.
   let dutch: { title: string | null; summary: string | null } | null = null;
   if (lead.feed_item_id) {
-    const { data: items } = await supabase.rpc("feed_for_me");
+    const { data: items } = await supabase.rpc("feed_for_me").eq("id", lead.feed_item_id);
     const item = ((items ?? []) as FeedItem[]).find((i) => i.id === lead.feed_item_id);
     if (item && !item.locked) dutch = { title: item.title, summary: item.summary };
   }

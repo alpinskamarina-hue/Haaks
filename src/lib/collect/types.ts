@@ -19,10 +19,12 @@ export type CollectedItem = {
   budget: string | null;
   contact: string | null;
   published_at: string;
+  // Tenders: the day after the closing date; the feed hides the item then.
+  expires_at?: string | null;
   fingerprint: string;
 };
 
-export const COLLECT_LANGS: Lang[] = ["nl", "en", "ru", "uk", "pl", "ro"];
+export const COLLECT_LANGS: Lang[] = ["nl", "en", "ru", "uk", "pl", "ro", "tr"];
 
 export function daysAgo(n: number) {
   return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);

@@ -4,6 +4,7 @@ import { feedScore, feedText, sourceLabel, tradeLabel, workerMatch, type FeedIte
 import { fill, getFeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE } from "@/lib/feed-server";
 import { isLang, type Lang } from "@/lib/i18n";
+import { isPaid } from "@/lib/plans";
 import { pushEnabled, sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { sendTelegram } from "@/lib/telegram";
 
@@ -18,7 +19,8 @@ type Recipient = {
   home_lng: number | null;
   travel_km: number | null;
   extra_cities: string[] | null;
-  plan: "free" | "pro";
+  plan: string;
+  plan_until: string | null;
   feed_email: "daily" | "instant";
   notify_email: string;
 };
@@ -41,9 +43,22 @@ function intervalMs(value: string | null) {
 }
 
 async function loadRecentItems(supabase: SupabaseClient, now: number) {
-  const { data: rows, error } = await supabase.from("feed_items").select("*").returns<Row[]>();
-  if (error) throw new Error(error.message);
-  return (rows ?? [])
+  // The whole country is collected now: read only the last days, page by page (1000 rows a page).
+  const from = new Date(now - 4 * DAY).toISOString();
+  const rows: Row[] = [];
+  for (let page = 0; page < 20; page++) {
+    const { data, error } = await supabase
+      .from("feed_items")
+      .select("*")
+      .or(`published_at.gte.${from},published_at.is.null`)
+      .order("created_at", { ascending: false })
+      .range(page * 1000, page * 1000 + 999)
+      .returns<Row[]>();
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < 1000) break;
+  }
+  return rows
     .map((row) => ({ ...row, published: row.published_at ? Date.parse(row.published_at) : now - intervalMs(row.demo_age) }))
     .filter((row) => now - row.published < 3 * DAY)
     // Expired jobs (and the old example jobs, switched off by setting expires_at) are never sent.
@@ -65,7 +80,7 @@ type MatchKeys = "trade" | "trades" | "city" | "lead_regions" | "home_lat" | "ho
 const MATCH_COLUMNS = "trade, trades, city, lead_regions, home_lat, home_lng, travel_km, extra_cities";
 
 function fittingJobs(
-  person: Pick<Recipient, MatchKeys | "id" | "plan">,
+  person: Pick<Recipient, MatchKeys | "id" | "plan" | "plan_until">,
   items: RecentItem[],
   skip: Set<string>,
   now: number,
@@ -73,7 +88,7 @@ function fittingJobs(
   const match = workerMatch(person);
   return items
     .filter((item) => !skip.has(`${person.id}:${item.id}`))
-    .filter((item) => person.plan === "pro" || now - item.published >= DAY)
+    .filter((item) => isPaid(person) || now - item.published >= DAY)
     .map((item) => ({ item, score: feedScore(item, match) }))
     .filter((j) => j.score >= FIT_SCORE)
     .sort((a, b) => b.score - a.score)
@@ -91,7 +106,7 @@ export async function sendFeedEmails(supabase: SupabaseClient, mode: "daily" | "
   const [{ data: people, error: peopleError }, items] = await Promise.all([
     supabase
       .from("profiles")
-      .select(`id, language, ${MATCH_COLUMNS}, plan, feed_email, notify_email`)
+      .select(`id, language, ${MATCH_COLUMNS}, plan, plan_until, feed_email, notify_email`)
       .in("feed_email", modes)
       .not("notify_email", "is", null)
       .returns<Recipient[]>(),
@@ -99,14 +114,14 @@ export async function sendFeedEmails(supabase: SupabaseClient, mode: "daily" | "
   ]);
   if (peopleError) throw new Error(peopleError.message);
 
-  const recipients = (people ?? []).filter((p) => mode === "daily" || p.plan === "pro");
+  const recipients = (people ?? []).filter((p) => mode === "daily" || isPaid(p));
   if (!recipients.length || !items.length) return { recipients: recipients.length, sent: 0, failed: 0 };
   const skip = await alreadyHandled(supabase, "email", recipients.map((p) => p.id));
 
   let sent = 0;
   let failed = 0;
   for (const person of recipients) {
-    const pro = person.plan === "pro";
+    const pro = isPaid(person);
     const jobs = fittingJobs(person, items, skip, now);
     if (!jobs.length) continue;
 
@@ -167,7 +182,7 @@ ${b.contact ? `<p style="margin:6px 0 0;font-size:14px;color:#475569">${escapeHt
   .join("\n")}
 ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml(f.mailLocked)}</p>`}
 <p style="margin:18px 0"><a href="${feedUrl}" style="background:#ea580c;color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:10px;display:inline-block">${escapeHtml(f.mailOpen)}</a></p>
-<p style="font-size:12px;color:#94a3b8;margin-top:24px">${escapeHtml(f.mailFooter)} <a href="${feedUrl}#notify" style="color:#94a3b8">${feedUrl}#notify</a></p>
+<p style="font-size:12px;color:#94a3b8;margin-top:24px">${escapeHtml(f.mailFooter)} <a href="${siteUrl}/dashboard/settings#notify" style="color:#94a3b8">${siteUrl}/dashboard/settings#notify</a></p>
 </div></body></html>`;
 
   const text = [
@@ -177,13 +192,13 @@ ${pro ? "" : `<p style="font-size:14px;color:#9a3412;margin:14px 0">${escapeHtml
     ...(pro ? [] : [f.mailLocked, ""]),
     `${f.mailOpen}: ${feedUrl}`,
     "",
-    `${f.mailFooter} ${feedUrl}#notify`,
+    `${f.mailFooter} ${siteUrl}/dashboard/settings#notify`,
   ].join("\n");
 
   return { subject, html, text };
 }
 
-type TelegramRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan"> & {
+type TelegramRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan" | "plan_until"> & {
   telegram_chat_id: number;
 };
 
@@ -194,14 +209,14 @@ export async function sendFeedTelegram(supabase: SupabaseClient, siteUrl: string
   const [{ data: people, error }, items] = await Promise.all([
     supabase
       .from("profiles")
-      .select(`id, language, ${MATCH_COLUMNS}, plan, telegram_chat_id`)
-      .eq("plan", "pro")
+      .select(`id, language, ${MATCH_COLUMNS}, plan, plan_until, telegram_chat_id`)
+      .in("plan", ["pro", "ultra"])
       .not("telegram_chat_id", "is", null)
       .returns<TelegramRecipient[]>(),
     loadRecentItems(supabase, now),
   ]);
   if (error) throw new Error(error.message);
-  const recipients = people ?? [];
+  const recipients = (people ?? []).filter((p) => isPaid(p));
   if (!recipients.length || !items.length) return { recipients: recipients.length, sent: 0, failed: 0 };
   const skip = await alreadyHandled(supabase, "telegram", recipients.map((p) => p.id));
   const feedUrl = `${siteUrl}/dashboard/leads/feed`;
@@ -259,7 +274,7 @@ function telegramJob(job: FeedItem & { score: number }, lang: Lang) {
   ].join("\n");
 }
 
-type PushRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan"> & { feed_seen_at: string | null };
+type PushRecipient = Pick<Recipient, MatchKeys | "id" | "language" | "plan" | "plan_until"> & { feed_seen_at: string | null };
 
 // Push notifications on the phone: new fitting jobs, once each, as one notification per
 // worker ("4 new jobs for you"), with the number of unseen fitting jobs for the app icon.
@@ -275,7 +290,7 @@ export async function sendFeedPush(supabase: SupabaseClient, siteUrl: string) {
   const [{ data: people, error: peopleError }, items, { data: done }, { data: actions }] = await Promise.all([
     supabase
       .from("profiles")
-      .select(`id, language, ${MATCH_COLUMNS}, plan, feed_seen_at`)
+      .select(`id, language, ${MATCH_COLUMNS}, plan, plan_until, feed_seen_at`)
       .in("id", ids)
       .returns<PushRecipient[]>(),
     loadRecentItems(supabase, now),
