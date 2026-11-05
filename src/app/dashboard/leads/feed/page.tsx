@@ -25,6 +25,9 @@ import { HideMenu } from "@/components/HideMenu";
 import { ShareButton } from "@/components/ShareButton";
 import { Icon } from "@/components/icons";
 import { getShareDict } from "@/lib/share-i18n";
+import { getJobShareDict, type JobShareDict } from "@/lib/job-share-i18n";
+import { thankShare } from "@/app/share-actions";
+import { shortName } from "@/lib/company-jobs";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
 import { contactPhones, emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
@@ -59,12 +62,14 @@ function daysLeft(timing: string | null) {
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; starred?: string; section?: string; city?: string }>;
+  searchParams: Promise<{ all?: string; hidden?: string; saved?: string; starred?: string; section?: string; city?: string; received?: string }>;
 }) {
   const params = await searchParams;
   const showAll = params.all === "1";
   const showHidden = params.hidden === "1";
   const showSaved = params.starred === "1";
+  // «Мне прислали»: jobs colleagues sent to this builder.
+  const showReceived = params.received === "1";
   const section = SECTIONS.find((x) => x.key === params.section)?.key ?? null;
   const cityFilter = params.city?.trim() || null;
   const { supabase, user, profile, lang } = await loadWorkspace();
@@ -86,14 +91,23 @@ export default async function FeedPage({
   // Free plan: replies to company and helper jobs, 3 per 24 hours.
   const replyQuota = pro ? null : await freeLeft(supabase, "job_reply");
 
-  const [{ items, trades, regions, match, opensLeft, opensInHours, hides }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }] = await Promise.all([
+  const [{ items, sharesUnseen, trades, regions, match, opensLeft, opensInHours, hides }, lastVisit, { data: myReplyRows }, { data: myJobRows }, { data: myReports }, { data: targetRows }] = await Promise.all([
     loadFeed(supabase, user.id, profile),
     markFeedSeen(supabase, user.id, extra),
     supabase.rpc("my_job_replies"),
     // "Need a helper" jobs this builder posted: their own card links to the replies.
     supabase.from("company_jobs").select("id, feed_item_id").eq("company_id", user.id).not("feed_item_id", "is", null),
     supabase.from("reports").select("target_id").eq("target_kind", "job"),
+    supabase.rpc("my_share_targets"),
   ]);
+  // Opening «Мне прислали» marks the sent jobs as seen (the red number goes away next time).
+  if (showReceived && sharesUnseen > 0) await supabase.rpc("mark_shares_seen");
+  const js = getJobShareDict(lang);
+  const shareTargets = ((targetRows ?? []) as { username: string; full_name: string | null }[]).map((r) => ({
+    username: r.username,
+    name: r.full_name ? shortName(r.full_name) : `@${r.username}`,
+  }));
+  const myNick = (profile as typeof profile & { username?: string | null }).username ?? null;
   // «Фирмы рядом» (test): shown only once firms were collected.
   const { count: firmCount } = await supabase.from("nearby_firms").select("id", { count: "exact", head: true });
   const firmsT = getFirmsDict(lang);
@@ -111,7 +125,10 @@ export default async function FeedPage({
   // "New": came in since the visit before this one.
   const since = newSince(lastVisit);
 
-  const shown = showSaved
+  const receivedItems = items.filter((i) => i.sharedBy.length > 0);
+  const shown = showReceived
+    ? receivedItems
+    : showSaved
     ? items.filter((i) => i.saved)
     : items
         .filter((i) => (showHidden ? i.action === "hidden" : i.action !== "hidden"))
@@ -139,6 +156,7 @@ export default async function FeedPage({
     .filter((i) => !section || SECTION_OF[i.kind] === section)
     .sort(
       (a, b) =>
+        (showReceived ? b.sharedBy[0].created_at.localeCompare(a.sharedBy[0].created_at) : 0) ||
         sectionOrder.indexOf(SECTION_OF[a.kind]) - sectionOrder.indexOf(SECTION_OF[b.kind]) ||
         (a.distance ?? Infinity) - (b.distance ?? Infinity) ||
         b.published_at.localeCompare(a.published_at),
@@ -147,7 +165,8 @@ export default async function FeedPage({
   const sectionNew = (key: Section) => base.filter((i) => SECTION_OF[i.kind] === key && isNewJob(i, since)).length;
   const query = (next: Record<string, string | null>) => {
     const q = new URLSearchParams();
-    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, starred: showSaved ? "1" : null, section, city: cityFilter, ...next };
+    // «Мне прислали» is its own view: any other tab or filter leaves it.
+    const merged = { all: showAll ? "1" : null, hidden: showHidden ? "1" : null, starred: showSaved ? "1" : null, section, city: cityFilter, received: null, ...next };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     const str = q.toString();
     return `/dashboard/leads/feed${str ? `?${str}` : ""}`;
@@ -225,11 +244,20 @@ export default async function FeedPage({
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
             <Link
               href={query({ section: null })}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${!section ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"}`}
+              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${!section && !showReceived ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"}`}
             >
-              {f.secAll} <span className="opacity-70">{base.length}</span>
+              {f.secAll} <span className="opacity-70">{showReceived ? items.filter((i) => i.action !== "hidden" && i.score >= FIT_SCORE).length : base.length}</span>
             </Link>
-            {SECTIONS.filter((x) => sectionCount(x.key) > 0 || section === x.key).map((x) => (
+            {(receivedItems.length > 0 || showReceived) && (
+              <Link
+                href={query({ received: "1", section: null, all: null, hidden: null, starred: null, city: null })}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${showReceived ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-800 ring-1 ring-orange-200"}`}
+              >
+                📨 {js.tab} <span className="opacity-70">{receivedItems.length}</span>
+                {sharesUnseen > 0 && !showReceived && <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">+{sharesUnseen}</span>}
+              </Link>
+            )}
+            {SECTIONS.filter((x) => !showReceived && (sectionCount(x.key) > 0 || section === x.key)).map((x) => (
               <Link
                 key={x.key}
                 href={query({ section: x.key })}
@@ -330,7 +358,21 @@ export default async function FeedPage({
             </div>
           )}
 
-          {visible.length === 0 && <p className={`${card} text-slate-600`}>{f.empty}</p>}
+          {visible.length === 0 && showReceived && (
+            <div className={`${card} text-slate-600`}>
+              {myNick ? (
+                <p>{fill(js.emptyNick, { nick: myNick })}</p>
+              ) : (
+                <>
+                  <p>{js.emptyNoNick}</p>
+                  <Link href="/dashboard/settings#nick" className="mt-2 inline-block font-semibold text-orange-700 underline">
+                    {js.setNick} →
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+          {visible.length === 0 && !showReceived && <p className={`${card} text-slate-600`}>{f.empty}</p>}
           <ul className="space-y-3">
             {locked.map((item) => (
               <LockedCard key={item.id} item={item} f={f} lang={lang} opensLeft={opensLeft} />
@@ -355,6 +397,8 @@ export default async function FeedPage({
                 letterLabel={letterLabel}
                 share={share}
                 fp={fp}
+                js={js}
+                shareTargets={shareTargets}
               />
             ))}
           </ul>
@@ -439,6 +483,8 @@ function FeedCard({
   letterLabel,
   share,
   fp,
+  js,
+  shareTargets,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -457,6 +503,8 @@ function FeedCard({
   letterLabel: string;
   share: { base: string; t: ReturnType<typeof getShareDict> };
   fp: FeedPlusDict;
+  js: JobShareDict;
+  shareTargets: { username: string; name: string }[];
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -489,6 +537,30 @@ function FeedCard({
     : null;
   return (
     <li id={`job-${item.id}`} className={`scroll-mt-20 rounded-2xl border border-l-[6px] border-slate-200 ${info.stripe} bg-white p-4 shadow-sm ${old ? "opacity-70" : ""}`}>
+      {item.sharedBy.map((sh) => (
+        <div key={sh.id} className="mb-3 flex items-start gap-2.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-orange-600 text-sm font-bold text-white">
+            {(sh.from_name || sh.from_username || "?").trim()[0]?.toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1 text-sm">
+            <p>
+              <b>{fill(js.from, { name: shortName(sh.from_name) })}</b>
+              {sh.from_username && <span className="text-slate-500"> @{sh.from_username}</span>}
+              <span className="text-slate-500"> · {timeAgo(sh.created_at, lang)}</span>
+            </p>
+            {sh.note && <p className="mt-0.5 text-orange-900">«{sh.note}»</p>}
+          </div>
+          {sh.thanked_at ? (
+            <span className="shrink-0 text-xs text-slate-500">{js.thanked}</span>
+          ) : (
+            <form action={thankShare.bind(null, sh.id)} className="shrink-0">
+              <SubmitButton className="rounded-full border border-orange-300 bg-white px-2.5 py-1 text-xs font-semibold text-orange-800 disabled:opacity-60">
+                🙏 {js.thanks}
+              </SubmitButton>
+            </form>
+          )}
+        </div>
+      ))}
       <p className={`mb-1 text-xs font-bold uppercase tracking-wide ${info.text}`}>
         {info.icon} {info.label(f)}
         {left !== null && left >= 0 && (
@@ -610,7 +682,13 @@ function FeedCard({
         {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-2.5">
-        <ShareButton url={`${share.base}/job/${item.id}?lang=${lang}`} text={`${share.t.message} ${title}`} labels={share.t} compact />
+        <ShareButton
+          url={`${share.base}/job/${item.id}?lang=${lang}`}
+          text={`${share.t.message} ${title}`}
+          labels={share.t}
+          compact
+          haaks={pro ? { itemId: item.id, t: js, recent: shareTargets } : undefined}
+        />
         {pro && item.source_url && (
           <a href={item.source_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800">
             <Icon name="external" className="h-5 w-5" />
