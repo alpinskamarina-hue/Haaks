@@ -18,6 +18,9 @@ const ru = {
   today: "сегодня в {time}",
   yesterday: "вчера в {time}",
   offNote: "Паспорт выключен: по ссылке его сейчас не видно.",
+  pdfPack: "PDF со всеми документами",
+  pdfBusy: "Собираю PDF…",
+  pdfError: "Не получилось. Обновите страницу и попробуйте ещё раз.",
 };
 
 type Dict = typeof ru;
@@ -40,6 +43,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "сьогодні о {time}",
     yesterday: "вчора о {time}",
     offNote: "Паспорт вимкнено: за посиланням його зараз не видно.",
+    pdfPack: "PDF з усіма документами",
+    pdfBusy: "Збираю PDF…",
+    pdfError: "Не вдалося. Оновіть сторінку і спробуйте ще раз.",
   },
   pl: {
     upload: "Wgraj",
@@ -57,6 +63,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "dziś o {time}",
     yesterday: "wczoraj o {time}",
     offNote: "Paszport jest wyłączony: pod linkiem nie jest teraz widoczny.",
+    pdfPack: "PDF ze wszystkimi dokumentami",
+    pdfBusy: "Tworzę PDF…",
+    pdfError: "Nie udało się. Odśwież stronę i spróbuj ponownie.",
   },
   ro: {
     upload: "Încarcă",
@@ -74,6 +83,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "azi la {time}",
     yesterday: "ieri la {time}",
     offNote: "Pașaportul este oprit: acum nu se vede la link.",
+    pdfPack: "PDF cu toate documentele",
+    pdfBusy: "Creez PDF-ul…",
+    pdfError: "Nu a mers. Reîncarcă pagina și încearcă din nou.",
   },
   tr: {
     upload: "Yükle",
@@ -91,6 +103,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "bugün {time}",
     yesterday: "dün {time}",
     offNote: "Pasaport kapalı: şu an linkte görünmüyor.",
+    pdfPack: "Tüm belgeler tek PDF",
+    pdfBusy: "PDF hazırlanıyor…",
+    pdfError: "Olmadı. Sayfayı yenileyip tekrar deneyin.",
   },
   en: {
     upload: "Upload",
@@ -108,6 +123,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "today at {time}",
     yesterday: "yesterday at {time}",
     offNote: "Your passport is off: the link shows nothing right now.",
+    pdfPack: "PDF with all documents",
+    pdfBusy: "Making the PDF…",
+    pdfError: "That did not work. Refresh the page and try again.",
   },
   nl: {
     upload: "Uploaden",
@@ -125,6 +143,9 @@ const DICTS: Record<Lang, Dict> = {
     today: "vandaag om {time}",
     yesterday: "gisteren om {time}",
     offNote: "Je paspoort staat uit: via de link is nu niets te zien.",
+    pdfPack: "PDF met alle documenten",
+    pdfBusy: "PDF wordt gemaakt…",
+    pdfError: "Dat lukte niet. Vernieuw de pagina en probeer het opnieuw.",
   },
 };
 
@@ -163,3 +184,23 @@ export function passportMessage(opts: {
     `Met vriendelijke groet,\n${sign}`.trimEnd();
   return { subject, body };
 }
+
+// Cover page of the PDF pack a contractor downloads (Dutch, or English on the English passport page).
+export const PACK_TEXT = {
+  nl: {
+    button: "Alle documenten in één PDF",
+    pack: "Documentenpakket",
+    online: "Online controleren",
+    made: "Gemaakt op {d} via Haaks",
+    failed: "{doc} kon niet in de PDF worden gezet. Bekijk het online:",
+    none: "Nog geen documenten",
+  },
+  en: {
+    button: "All documents in one PDF",
+    pack: "Document pack",
+    online: "Check online",
+    made: "Made on {d} with Haaks",
+    failed: "{doc} could not be added to the PDF. View it online:",
+    none: "No documents yet",
+  },
+};
