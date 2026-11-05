@@ -40,7 +40,7 @@ export default async function Home() {
   if (!profile.full_name?.trim() || !profile.phone?.trim()) redirect("/dashboard/onboarding?step=0&edit=1&must=1");
 
   const extra = profile as typeof profile & { feed_seen_at?: string | null; telegram_chat_id?: number | null };
-  const [{ data: quoteRows }, { data: invoiceRows }, { data: docs }, { data: current }, feed, { count: pushCount }] =
+  const [{ data: quoteRows }, { data: invoiceRows }, { data: docs }, { data: current }, feed, { count: pushCount }, { count: worksCount }] =
     await Promise.all([
       supabase
         .from("quotes")
@@ -58,6 +58,7 @@ export default async function Home() {
         : Promise.resolve({ data: null }),
       loadFeed(supabase, user.id, profile).catch(() => null),
       supabase.from("push_subscriptions").select("endpoint", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("works").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     ]);
   const feedDict = getFeedDict(lang);
   const h = getHomeDict(lang);
@@ -71,7 +72,7 @@ export default async function Home() {
   const readyCount = REQUIREMENTS.filter((r) => ready[r]).length;
   const firstName = profile.full_name?.split(" ")[0];
   const w = getWorkerDict(lang);
-  const filled = completeness(worker, (docs ?? []).filter((d) => d.doc_type === "kvk_extract")).percent;
+  const filled = completeness(worker, (docs ?? []).filter((d) => d.doc_type === "kvk_extract"), worksCount ?? 0).percent;
 
   // Jobs for you: the two best fitting jobs the worker has not hidden or taken yet.
   const feedItems = feed?.items ?? [];

@@ -62,6 +62,9 @@ export type WorkerProfile = {
   availability: string | null;
   work_photos: string[];
   onboarded_at: string | null;
+  about: string | null;
+  experience_years: number | null;
+  strengths: string[];
 };
 
 // Arrays come back as null only if the migration has not run yet; keep the page working.
@@ -88,6 +91,9 @@ export function withDefaults(p: Partial<WorkerProfile>): WorkerProfile {
     availability: p.availability ?? null,
     work_photos: p.work_photos ?? [],
     onboarded_at: p.onboarded_at ?? null,
+    about: p.about ?? null,
+    experience_years: p.experience_years ?? null,
+    strengths: p.strengths ?? [],
   };
 }
 
@@ -176,12 +182,13 @@ export function cleanProfileInput(input: Record<string, unknown>) {
 }
 
 // How complete the profile is, and what to add next with how much it adds.
-export type CompletenessItem = "trades" | "region" | "languages" | "vehicle" | "tools" | "team" | "rate" | "availability" | "photos" | "kvk";
+export type CompletenessItem = "trades" | "region" | "languages" | "vehicle" | "tools" | "team" | "rate" | "availability" | "photos" | "kvk" | "about";
 const WEIGHTS: Record<CompletenessItem, number> = {
-  trades: 15, region: 15, languages: 10, vehicle: 10, tools: 10, team: 5, rate: 10, availability: 5, photos: 15, kvk: 5,
+  trades: 15, region: 15, languages: 10, vehicle: 5, tools: 5, team: 5, rate: 10, availability: 5, photos: 15, kvk: 5, about: 10,
 };
 
-export function completeness(p: WorkerProfile, docs: Pick<DocumentRow, "doc_type">[]) {
+// works = finished jobs in «Мои работы» (the old loose work photos still count until moved there).
+export function completeness(p: WorkerProfile, docs: Pick<DocumentRow, "doc_type">[], works = 0) {
   const done: Record<CompletenessItem, boolean> = {
     trades: p.trades.length > 0,
     region: !!p.city && p.travel_km !== null,
@@ -191,8 +198,9 @@ export function completeness(p: WorkerProfile, docs: Pick<DocumentRow, "doc_type
     team: !!p.works_with,
     rate: Number(p.hourly_rate) > 0,
     availability: p.available || !!p.available_from,
-    photos: p.work_photos.length >= 3,
+    photos: works > 0 || p.work_photos.length >= 3,
     kvk: docs.some((d) => d.doc_type === "kvk_extract"),
+    about: !!p.about?.trim(),
   };
   const items = Object.keys(WEIGHTS) as CompletenessItem[];
   const percent = items.reduce((sum, k) => sum + (done[k] ? WEIGHTS[k] : 0), 0);

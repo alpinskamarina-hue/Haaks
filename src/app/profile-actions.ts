@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cleanUsername } from "@/lib/username";
+import { cleanUsername, suggestUsername } from "@/lib/username";
+import { ABOUT_MAX, cleanStrengths, isExperience } from "@/lib/profile-about";
 import { requireUser } from "@/lib/auth";
 import { parseAmount } from "@/lib/quotes";
-import { AVAILABILITY, cleanProfileInput, MAX_WORK_PHOTOS, TRADES } from "@/lib/worker-profile";
+import { cleanProfileInput, TRADES } from "@/lib/worker-profile";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 
 // Saves one step of the profile wizard (or an edit of it). Only the fields
@@ -36,18 +37,51 @@ export async function skipOnboarding() {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function setAvailability(formData: FormData) {
+// «Сейчас»: free now, free from a date, or busy. One tap, saved at once.
+export async function setAvailabilityState(state: "free" | "from" | "busy", from?: string) {
   const { supabase, user } = await requireUser();
-  const from = formData.get("available_from");
-  const kind = formData.get("availability");
+  const date = state === "from" && from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null;
+  await supabase
+    .from("profiles")
+    .update({ available: state === "free", available_from: date })
+    .eq("id", user.id);
+  revalidatePath("/dashboard", "layout");
+}
+
+// «О себе»: experience, strengths and the Dutch text for clients.
+export async function saveAbout(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const exp = formData.get("experience_years");
+  const about = String(formData.get("about") ?? "").replace(/\r/g, "").trim().slice(0, ABOUT_MAX);
   await supabase
     .from("profiles")
     .update({
-      available: formData.get("available") === "on",
-      available_from: typeof from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null,
-      availability: (AVAILABILITY as readonly string[]).includes(String(kind)) ? kind : null,
+      experience_years: isExperience(exp) ? Number(exp) : null,
+      strengths: cleanStrengths(formData.get("strengths")),
+      about: about || null,
     })
     .eq("id", user.id);
+  revalidatePath("/dashboard", "layout");
+  redirect("/dashboard/profile?saved=about#about");
+}
+
+// «Вас не найти» → one tap: open the page for clients, give a nick if there is none, show in builder search.
+export async function enableVisibility() {
+  const { supabase, user } = await requireUser();
+  const { data } = await supabase.from("profiles").select("username, full_name").eq("id", user.id).single<{ username: string | null; full_name: string | null }>();
+  let username = data?.username ?? null;
+  if (!username) {
+    const base = suggestUsername(data?.full_name) || "zzp";
+    for (const candidate of [base, ...Array.from({ length: 5 }, () => `${base.slice(0, 26)}.${Math.floor(10 + Math.random() * 90)}`)]) {
+      const { error } = await supabase.from("profiles").update({ username: candidate }).eq("id", user.id);
+      if (!error) {
+        username = candidate;
+        break;
+      }
+      if (error.code !== "23505") break;
+    }
+  }
+  await supabase.from("profiles").update({ passport_enabled: true, ...(username ? { in_search: true } : {}) }).eq("id", user.id);
   revalidatePath("/dashboard", "layout");
 }
 
@@ -58,29 +92,6 @@ export async function saveRate(formData: FormData) {
     .from("profiles")
     .update({ hourly_rate: Number.isFinite(rate) && rate > 0 && rate < 1000 ? rate : null })
     .eq("id", user.id);
-  revalidatePath("/dashboard", "layout");
-}
-
-// Called after the browser has uploaded the photo to <uid>/work/.
-export async function addWorkPhoto(path: string) {
-  const { supabase, user } = await requireUser();
-  if (!path.startsWith(`${user.id}/work/`) || path.includes("..")) throw new Error("Invalid path");
-  const { data } = await supabase.from("profiles").select("work_photos").eq("id", user.id).single<{ work_photos: string[] }>();
-  const photos = data?.work_photos ?? [];
-  if (photos.length >= MAX_WORK_PHOTOS) throw new Error("Too many photos");
-  const { error } = await supabase.from("profiles").update({ work_photos: [...photos, path] }).eq("id", user.id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard", "layout");
-}
-
-export async function removeWorkPhoto(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const path = String(formData.get("path") ?? "");
-  const { data } = await supabase.from("profiles").select("work_photos").eq("id", user.id).single<{ work_photos: string[] }>();
-  const photos = data?.work_photos ?? [];
-  if (!photos.includes(path)) return;
-  await supabase.from("profiles").update({ work_photos: photos.filter((p) => p !== path) }).eq("id", user.id);
-  if (path.startsWith(`${user.id}/work/`)) await supabase.storage.from("documents").remove([path]);
   revalidatePath("/dashboard", "layout");
 }
 

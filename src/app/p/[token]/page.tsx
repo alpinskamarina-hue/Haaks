@@ -289,10 +289,18 @@ function WorkerBlock({ worker, lang, photoUrls }: { worker: WorkerProfile; lang:
     { label: pt.tools, value: d.tools },
     { label: pt.team, value: d.team },
   ].filter((x) => x.value);
-  if (!tiles.length && !d.trades.length && !d.languages.length && !photoUrls.length && !availability) return null;
+  if (!tiles.length && !d.trades.length && !d.languages.length && !photoUrls.length && !availability && !worker.about) return null;
 
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {worker.about && (
+        <div className="space-y-1.5 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{pt.about}</p>
+          <p lang="nl" className="whitespace-pre-line leading-snug">
+            {worker.about}
+          </p>
+        </div>
+      )}
       {availability && (
         <p className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-800">
           ● {availability}

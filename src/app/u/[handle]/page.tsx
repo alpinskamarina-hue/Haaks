@@ -169,6 +169,7 @@ export default async function SocialProfilePage({
           reviews: rating.published,
           criteria: rv.criteria,
           replyLabel: `💬 ${name.split(" ")[0]}`,
+          bio: worker.about,
           about: [
             { label: w.rowTrades, value: d.trades.map((x) => [x.name, x.detail].filter(Boolean).join(", ")).join("\n") },
             { label: w.rowRegion, value: d.region },
