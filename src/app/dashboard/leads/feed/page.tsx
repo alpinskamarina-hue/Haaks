@@ -26,7 +26,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { Icon } from "@/components/icons";
 import { getShareDict } from "@/lib/share-i18n";
 import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib/job-replies";
-import { emailLink, resumeMessage, scoreColor } from "@/lib/leads";
+import { contactPhones, emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
 import { loadWorkspace } from "@/lib/workspace";
 import { freeLeft, limitText, type FreeQuota } from "@/lib/free-limits";
@@ -601,6 +601,12 @@ function FeedCard({
             ✉️ {f.sendResume}
           </a>
         )}
+        {pro && item.contact && !item.leadId &&
+          contactPhones(item.contact).map((ph) => (
+            <a key={ph.href} href={ph.href} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center font-semibold text-slate-800">
+              📞 {ph.label}
+            </a>
+          ))}
         {pro && item.contact && !item.leadId && <span className="break-all text-slate-500">{item.contact}</span>}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-2.5">
