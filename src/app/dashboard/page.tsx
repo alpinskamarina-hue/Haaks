@@ -171,6 +171,7 @@ export default async function Home() {
   ];
 
   const more = [
+    { href: "/dashboard/cards", icon: "💳", label: h.cards },
     { href: "/dashboard/passport", icon: "🪪", label: h.passport, note: `${readyCount}/${REQUIREMENTS.length}` },
     { href: "/dashboard/materials", icon: "🧱", label: h.materials },
     { href: "/dashboard/helpers", icon: "👷", label: h.helpers },
@@ -319,7 +320,7 @@ export default async function Home() {
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">{h.more}</h2>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {more.map((x) => (
             <Link
               key={x.href}
