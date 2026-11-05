@@ -412,6 +412,7 @@ const EXTRA = {
   ru: {
     tabOverview: "Обзор",
     tabMoney: "Деньги",
+    tabDocs: "Документы",
     tabMaterials: "Материалы",
     tabPhotos: "Фото",
     tabNotes: "Заметки",
@@ -441,6 +442,7 @@ const EXTRA = {
   uk: {
     tabOverview: "Огляд",
     tabMoney: "Гроші",
+    tabDocs: "Документи",
     tabMaterials: "Матеріали",
     tabPhotos: "Фото",
     tabNotes: "Нотатки",
@@ -470,6 +472,7 @@ const EXTRA = {
   pl: {
     tabOverview: "Przegląd",
     tabMoney: "Pieniądze",
+    tabDocs: "Dokumenty",
     tabMaterials: "Materiały",
     tabPhotos: "Zdjęcia",
     tabNotes: "Notatki",
@@ -499,6 +502,7 @@ const EXTRA = {
   ro: {
     tabOverview: "Rezumat",
     tabMoney: "Bani",
+    tabDocs: "Documente",
     tabMaterials: "Materiale",
     tabPhotos: "Poze",
     tabNotes: "Notițe",
@@ -528,6 +532,7 @@ const EXTRA = {
   tr: {
     tabOverview: "Özet",
     tabMoney: "Para",
+    tabDocs: "Belgeler",
     tabMaterials: "Malzeme",
     tabPhotos: "Fotoğraf",
     tabNotes: "Notlar",
@@ -557,6 +562,7 @@ const EXTRA = {
   en: {
     tabOverview: "Overview",
     tabMoney: "Money",
+    tabDocs: "Documents",
     tabMaterials: "Materials",
     tabPhotos: "Photos",
     tabNotes: "Notes",
@@ -586,6 +592,7 @@ const EXTRA = {
   nl: {
     tabOverview: "Overzicht",
     tabMoney: "Geld",
+    tabDocs: "Documenten",
     tabMaterials: "Materiaal",
     tabPhotos: "Foto's",
     tabNotes: "Notities",
