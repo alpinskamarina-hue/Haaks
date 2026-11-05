@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { shareJob } from "@/app/share-actions";
 import { Icon } from "@/components/icons";
+import type { JobShareDict } from "@/lib/job-share-i18n";
 
 // Real logos (Simple Icons, CC0) in brand colours, so people recognise the app at once.
 const BRANDS = {
@@ -33,6 +35,85 @@ const MORE = "M6 12a1 1 0 1 0 0 .01M12 12a1 1 0 1 0 0 .01M18 12a1 1 0 1 0 0 .01"
 
 type Labels = { share: string; more: string; copy: string; copied: string; email: string };
 
+// «Отправить в Haaks»: send a feed job to a colleague by @nick.
+export type HaaksShare = { itemId: string; t: JobShareDict; recent: { username: string; name: string }[] };
+
+function SendInHaaks({ itemId, t, recent }: HaaksShare) {
+  const [nick, setNick] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const clean = nick.trim().replace(/^@+/, "").toLowerCase();
+  const picked = recent.find((r) => r.username === clean);
+  const errors = { no_user: t.errNoUser, self: t.errSelf, closed: t.errClosed, limit: t.errLimit, locked: t.errLocked, failed: t.errFailed };
+
+  async function send() {
+    if (clean.length < 3 || busy) return;
+    setBusy(true);
+    setMsg(null);
+    const res = await shareJob(itemId, clean, note).catch(() => ({ ok: false as const, error: "failed" as const }));
+    setBusy(false);
+    if (res.ok) {
+      setMsg({ ok: true, text: (res.already ? t.already : t.sent).replace("{name}", res.name) });
+      setNick("");
+      setNote("");
+    } else setMsg({ ok: false, text: errors[res.error] });
+  }
+
+  return (
+    <div className="m-2 rounded-xl border-2 border-orange-500 bg-orange-50 p-2.5">
+      <p className="mb-2 text-sm font-bold text-orange-900">👤 {t.sendTitle}</p>
+      <label className="flex items-center rounded-lg border border-slate-300 bg-white px-2.5 focus-within:ring-2 focus-within:ring-orange-400">
+        <span className="font-semibold text-slate-400">@</span>
+        <input
+          value={nick}
+          onChange={(e) => {
+            setNick(e.target.value.replace(/\s/g, ""));
+            setMsg(null);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && send()}
+          placeholder={t.nickPh}
+          maxLength={31}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 bg-transparent py-2 pl-0.5 text-base outline-none"
+        />
+      </label>
+      {recent.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {recent.map((r) => (
+            <button
+              key={r.username}
+              type="button"
+              onClick={() => setNick(r.username)}
+              className={`rounded-full border px-2.5 py-1 text-xs ${clean === r.username ? "border-orange-500 bg-orange-100 font-bold text-orange-900" : "border-slate-200 bg-white text-slate-700"}`}
+            >
+              {r.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder={t.notePh}
+        maxLength={200}
+        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm"
+      />
+      {msg && <p className={`mt-2 text-sm font-medium ${msg.ok ? "text-green-700" : "text-red-700"}`}>{msg.text}</p>}
+      <button
+        type="button"
+        onClick={send}
+        disabled={busy || clean.length < 3}
+        className="mt-2 w-full rounded-lg bg-orange-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+      >
+        {busy ? t.sending : picked ? t.sendTo.replace("{name}", picked.name) : t.send}
+      </button>
+    </div>
+  );
+}
+
 // «Share»: a small menu with WhatsApp, Telegram, Facebook, Viber, e-mail and copy link;
 // on a phone also «Other apps», which opens the phone's own share sheet.
 export function ShareButton({
@@ -41,6 +122,7 @@ export function ShareButton({
   labels,
   className,
   compact,
+  haaks,
 }: {
   url: string;
   text: string;
@@ -48,6 +130,7 @@ export function ShareButton({
   className?: string;
   // A quiet grey icon with a small caption, for the bottom row of a feed card.
   compact?: boolean;
+  haaks?: HaaksShare;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -94,7 +177,8 @@ export function ShareButton({
         {compact ? <Icon name="share" className="h-5 w-5" /> : "↗"} {labels.share}
       </button>
       {open && (
-        <div className="absolute left-0 z-30 mt-1 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className={`absolute left-0 z-30 mt-1 rounded-xl border border-slate-200 bg-white py-1 shadow-lg ${haaks ? "w-72" : "w-56"}`}>
+          {haaks && <SendInHaaks {...haaks} />}
           {links.map((l) => (
             <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className={item} onClick={() => setOpen(false)}>
               {l.icon}

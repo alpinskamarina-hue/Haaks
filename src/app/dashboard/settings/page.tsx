@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { setShareFrom } from "@/app/share-actions";
+import { getJobShareDict } from "@/lib/job-share-i18n";
 import { setPassportEnabled, signOut } from "@/app/actions";
 import { connectTelegram, disconnectTelegram, saveFeedNotifications } from "@/app/feed-actions";
 import { setInSearch, setUsername } from "@/app/profile-actions";
@@ -62,6 +64,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const username = extra.username ?? null;
   const profileUrl = username ? `${await siteUrl()}/@${username}` : null;
   const inSearch = Boolean(extra.in_search);
+  const shareOn = (extra as { share_from?: string }).share_from !== "nobody";
+  const js = getJobShareDict(lang);
   const d = describeProfile(withDefaults(profile as unknown as Partial<WorkerProfile>), w, lang);
   const jumps = [
     ["account", s.account],
@@ -255,6 +259,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <span className="block text-xs text-slate-500">{so.inSearchHint}</span>
               </span>
               <Switch on={inSearch} />
+            </button>
+          </form>
+        )}
+        {username && (
+          <form action={setShareFrom.bind(null, !shareOn)} className="border-t border-slate-100">
+            <button className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+              <span>
+                <span className="block">📨 {js.setting}</span>
+                <span className="block text-xs text-slate-500">{js.settingHint}</span>
+              </span>
+              <Switch on={shareOn} />
             </button>
           </form>
         )}

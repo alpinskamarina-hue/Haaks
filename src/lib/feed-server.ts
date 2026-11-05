@@ -18,6 +18,18 @@ export type ScoredFeedItem = FeedItem & {
   saved: boolean;
   // The quote the worker made from this job, if any.
   quote: { status: string; viewed: boolean } | null;
+  // Colleagues who sent this job to the worker («Отправить в Haaks»), newest first.
+  sharedBy: SharedFrom[];
+};
+
+export type SharedFrom = {
+  id: string;
+  note: string | null;
+  created_at: string;
+  seen_at: string | null;
+  thanked_at: string | null;
+  from_name: string | null;
+  from_username: string | null;
 };
 
 export type HideNote = { reason: string | null; at: string };
@@ -27,14 +39,18 @@ export const FREE_OPENS = 3;
 
 // The worker's feed: every job scored against their trade and cities, with what they did with it.
 export async function loadFeed(supabase: Supabase, userId: string, profile: Profile) {
-  const [{ data: items }, { data: places }, { data: actions }, { data: leads }, { data: unlocks }, { data: savedRows }] = await Promise.all([
+  const [{ data: items }, { data: places }, { data: actions }, { data: leads }, { data: unlocks }, { data: savedRows }, { data: shareRows }] = await Promise.all([
     supabase.rpc("feed_for_me"),
     supabase.rpc("feed_details"),
     supabase.from("feed_actions").select("item_id, action, reason, created_at").eq("user_id", userId),
     supabase.from("leads").select("id, feed_item_id, quote_id").eq("user_id", userId).not("feed_item_id", "is", null),
     supabase.from("feed_unlocks").select("item_id, created_at").eq("user_id", userId),
     supabase.from("feed_saved").select("item_id").eq("user_id", userId),
+    supabase.rpc("my_shared_jobs"),
   ]);
+  const shares = ((shareRows ?? []) as (SharedFrom & { item_id: string })[]);
+  const sharesOf = new Map<string, SharedFrom[]>();
+  for (const sh of shares) sharesOf.set(sh.item_id, [...(sharesOf.get(sh.item_id) ?? []), sh]);
   const quoteIds = (leads ?? []).map((l) => l.quote_id as string | null).filter((q): q is string => !!q);
   const { data: quoteRows } = quoteIds.length
     ? await supabase.from("quotes").select("id, status, viewed_at").in("id", quoteIds)
@@ -61,9 +77,10 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
       added_at: place?.added_at ?? item.published_at,
       action: actionOf.get(item.id) ?? null,
       leadId: leadOf.get(item.id) ?? null,
-      opened: opened.has(item.id),
+      opened: opened.has(item.id) || sharesOf.has(item.id),
       saved: savedSet.has(item.id),
       quote: quoteOf.get(item.id) ?? null,
+      sharedBy: sharesOf.get(item.id) ?? [],
     };
   });
   // Opens in the last 24 hours count; an opened card stays open for good.
@@ -78,7 +95,10 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
   const hides: HideNote[] = (actions ?? [])
     .filter((a) => a.action === "hidden")
     .map((a) => ({ reason: (a.reason as string | null) ?? null, at: a.created_at as string }));
-  return { items: scored, match, trades: match.trades, regions: match.regions, opensLeft, opensInHours, hides };
+  // Sent jobs not looked at yet (the red number on «Мне прислали»), only for jobs still in the feed.
+  const inFeed = new Set(scored.map((i) => i.id));
+  const sharesUnseen = shares.filter((sh) => !sh.seen_at && inFeed.has(sh.item_id)).length;
+  return { items: scored, sharesUnseen, match, trades: match.trades, regions: match.regions, opensLeft, opensInHours, hides };
 }
 
 // A job "fits" when it matches the trade (if one is set) and is within the travel radius
