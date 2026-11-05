@@ -41,3 +41,43 @@ self.addEventListener("notificationclick", (event) => {
     })(),
   );
 });
+
+// «Мои карты» must open at the till without internet: the cards page is fetched from the network
+// when possible and kept; without a connection the kept copy is shown. Next.js script files have
+// a hash in their name, so they are kept once and reused (cards page needs them offline).
+const CARDS_CACHE = "haaks-cards-v1";
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (req.mode === "navigate" && url.pathname === "/dashboard/cards") {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CARDS_CACHE);
+        try {
+          const res = await fetch(req);
+          if (res.ok && !res.redirected) await cache.put("/dashboard/cards", res.clone());
+          return res;
+        } catch {
+          return (await cache.match("/dashboard/cards")) || Response.error();
+        }
+      })(),
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CARDS_CACHE);
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok) await cache.put(req, res.clone());
+        return res;
+      })(),
+    );
+  }
+});
