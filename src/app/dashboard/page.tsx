@@ -184,7 +184,7 @@ export default async function Home() {
   const actions: { href: string; label: string; icon: IconName }[] = [
     { href: "/dashboard/quotes/new", label: h.actQuote, icon: "quote" },
     { href: "/dashboard/invoices", label: h.actInvoice, icon: "invoice" },
-    { href: current ? `/dashboard/orders/${current.id}#receipt` : "/dashboard/orders?receipt=1#receipt", label: h.actReceipt, icon: "camera" },
+    { href: current ? `/dashboard/orders/${current.id}?tab=docs#receipt` : "/dashboard/orders?receipt=1#receipt", label: h.actReceipt, icon: "camera" },
     { href: "/dashboard/orders", label: h.actOrder, icon: "orders" },
   ];
 

@@ -27,7 +27,7 @@ import { addOrderNote, deleteOrderNote } from "@/app/project-actions";
 const LOCALES = { pl: "pl-PL", ro: "ro-RO", uk: "uk-UA", ru: "ru-RU", tr: "tr-TR", en: "en-GB", nl: "nl-NL" } as const;
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
-const TABS = ["overview", "money", "materials", "photos", "notes"] as const;
+const TABS = ["overview", "money", "docs", "materials", "photos", "notes"] as const;
 type Tab = (typeof TABS)[number];
 type PhotoRow = { id: string; kind: OrderPhoto["kind"]; path: string; created_at: string };
 type NoteRow = { id: string; body: string; created_at: string };
@@ -110,17 +110,18 @@ export default async function OrderPage({
     new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short", timeZone: d.length > 10 ? "Europe/Amsterdam" : "UTC" }).format(
       new Date(d.length > 10 ? d : `${d}T00:00:00Z`),
     );
-  const urls = tab === "money" ? await signedUrls(supabase, receipts.map((r) => r.file_path)) : new Map<string, string>();
+  const urls = tab === "docs" ? await signedUrls(supabase, receipts.map((r) => r.file_path)) : new Map<string, string>();
   const photoUrls = tab === "photos" ? await signedUrls(supabase, photos.map((x) => x.path)) : new Map<string, string>();
   const trips = partsOf.trips;
   const sentInv = (invoiceRows ?? []).filter((i) => i.status !== "draft");
   const incl = (i: Invoice) => invoiceTotals(i.lines, i.vat_mode).incl;
   const paidIncl = sentInv.filter((i) => i.status === "paid").reduce((x, i) => x + incl(i), 0);
   const openIncl = sentInv.filter((i) => i.status === "sent").reduce((x, i) => x + incl(i), 0);
-  const tabLabel: Record<Tab, string> = { overview: p.tabOverview, money: p.tabMoney, materials: p.tabMaterials, photos: p.tabPhotos, notes: p.tabNotes };
+  const tabLabel: Record<Tab, string> = { overview: p.tabOverview, money: p.tabMoney, docs: p.tabDocs, materials: p.tabMaterials, photos: p.tabPhotos, notes: p.tabNotes };
   const tabCount: Record<Tab, number> = {
     overview: 0,
-    money: (quoteRows ?? []).length + (invoiceRows ?? []).length + receipts.length,
+    money: 0,
+    docs: (quoteRows ?? []).length + (invoiceRows ?? []).length + receipts.length,
     materials: (materialRows ?? []).length,
     photos: photos.length,
     notes: notes.length,
@@ -163,13 +164,13 @@ export default async function OrderPage({
         <StageLine stage={s.stage} p={p} />
       </section>
 
-      <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-slate-200/70 p-1 text-center text-xs font-semibold">
+      <nav className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-200/70 p-1 text-center text-xs font-semibold">
         {TABS.map((k) => (
           <Link
             key={k}
             href={`?tab=${k}`}
             scroll={false}
-            className={`flex-auto whitespace-nowrap rounded-xl px-1.5 py-2 ${k === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}
+            className={`whitespace-nowrap rounded-xl px-1 py-2 ${k === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}
           >
             {tabLabel[k]}
             {tabCount[k] > 0 && <span className="ml-0.5 text-[10px] text-orange-600">{tabCount[k]}</span>}
@@ -336,6 +337,11 @@ export default async function OrderPage({
               <p className="text-sm text-slate-600">{p.mNoPrice}</p>
             )}
           </section>
+        </>
+      )}
+
+      {tab === "docs" && (
+        <>
           <section className={card}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold">{t.quotesTitle}</h2>
@@ -527,7 +533,7 @@ export default async function OrderPage({
       )}
 
       <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-center text-xs font-semibold shadow-lg backdrop-blur lg:bottom-4">
-        <Link href="?tab=money#receipt" className="flex flex-col items-center rounded-xl py-1.5 active:bg-slate-100">
+        <Link href="?tab=docs#receipt" className="flex flex-col items-center rounded-xl py-1.5 active:bg-slate-100">
           <span className="text-lg">📷</span>
           {p.receipt}
         </Link>
