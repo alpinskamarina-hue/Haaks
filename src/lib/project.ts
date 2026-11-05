@@ -137,6 +137,9 @@ export function projectEvents(p: {
   receipts: Receipt[];
   trips: ProjectTrip[];
   euro: (n: number) => string;
+  photos?: { kind: string; created_at: string }[];
+  notes?: { body: string; created_at: string }[];
+  kindLabel?: (k: string) => string;
 }): ProjectEvent[] {
   const ev: ProjectEvent[] = [{ at: p.order.created_at, icon: "📁", key: "evCreated", vars: {} }];
   for (const q of p.quotes) {
@@ -160,6 +163,22 @@ export function projectEvents(p: {
       key: "evReceipt",
       vars: { shop: r.store_name ?? "", sum: r.total_incl_vat !== null ? p.euro(Number(r.total_incl_vat)) : "" },
     });
+  }
+  // Photos of one kind on one day become a single line.
+  const groups = new Map<string, { at: string; kind: string; n: number }>();
+  for (const ph of p.photos ?? []) {
+    const key = `${ph.created_at.slice(0, 10)}|${ph.kind}`;
+    const g = groups.get(key);
+    if (g) {
+      g.n += 1;
+      if (ph.created_at > g.at) g.at = ph.created_at;
+    } else groups.set(key, { at: ph.created_at, kind: ph.kind, n: 1 });
+  }
+  for (const g of groups.values())
+    ev.push({ at: g.at, icon: "📸", key: "evPhotos", vars: { kind: p.kindLabel?.(g.kind) ?? g.kind, n: String(g.n) }, href: "?tab=photos" });
+  for (const n of p.notes ?? []) {
+    const text = n.body.replace(/\s+/g, " ");
+    ev.push({ at: n.created_at, icon: "📝", key: "evNote", vars: { text: text.length > 60 ? `${text.slice(0, 57)}…` : text }, href: "?tab=notes" });
   }
   for (const t of p.trips) ev.push({ at: t.day, icon: "🚗", key: "evTrip", vars: { km: String(Math.round(Number(t.km))), to: t.to_label } });
   return ev.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
