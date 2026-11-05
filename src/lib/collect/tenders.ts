@@ -177,6 +177,7 @@ function toItem(d: Detail, place: Awaited<ReturnType<typeof tenderPlace>>): Coll
     budget: null,
     contact: null,
     published_at: new Date(`${d.publicatieDatum.slice(0, 19)}+01:00`).toISOString(),
+    expires_at: closes ? new Date(`${closes}T23:59:59+01:00`).toISOString() : null,
     fingerprint: `tenderned-${d.publicatieId}`,
   };
 }

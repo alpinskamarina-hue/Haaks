@@ -8,7 +8,7 @@ export const KEEP_DAYS = 30;
 export type CollectOptions = { since?: string; only?: "permits" | "tenders"; municipalities?: string[] };
 
 // One run of the daily collector: new permits and tenders into the shared feed,
-// jobs older than 30 days out of it. Jobs already in the feed are skipped by fingerprint.
+// jobs older than 30 days out of it (the feed itself shows permits for 7 days). Jobs already in the feed are skipped by fingerprint.
 export async function collectFeed(supabase: SupabaseClient, options: CollectOptions = {}) {
   // Jobs already in the feed, and publications read before that were no building work.
   const since = new Date(Date.now() - (KEEP_DAYS + 5) * 86400000).toISOString();
@@ -45,7 +45,9 @@ export async function collectFeed(supabase: SupabaseClient, options: CollectOpti
     .from("feed_items")
     .delete({ count: "exact" })
     .eq("is_demo", false)
-    .lt("published_at", cutoff);
+    .lt("published_at", cutoff)
+    // A tender stays until its closing date, even when published more than 30 days ago.
+    .or(`expires_at.is.null,expires_at.lt.${new Date().toISOString()}`);
   await supabase.from("feed_skipped").delete().lt("created_at", cutoff);
 
   return {
