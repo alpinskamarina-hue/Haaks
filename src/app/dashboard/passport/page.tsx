@@ -10,6 +10,7 @@ import {
 } from "@/app/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
+import { PassportPack } from "@/components/PassportPack";
 import { PassportTabs } from "@/components/PassportTabs";
 import { UploadForm } from "@/components/UploadForm";
 import {
@@ -22,6 +23,7 @@ import { getWorkerDict } from "@/lib/worker-profile-text";
 import { getDict, isLang, type Dict } from "@/lib/i18n";
 import { getPassportPlusDict, passportMessage, type PassportPlusDict } from "@/lib/passport-plus-i18n";
 import { siteUrl } from "@/lib/lang";
+import { packProps } from "@/lib/passport-pack";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile, signedUrls } from "@/lib/workspace";
 
@@ -78,46 +80,49 @@ export default async function Dashboard({
     ready,
   });
   const fileUrls = await signedUrls(supabase, documents.map((d) => d.file_path));
+  const pack = await packProps({ profile, documents, urlOf: (p) => fileUrls.get(p), passportUrl, lang: "nl" });
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
       <PassportTabs active="docs" lang={lang} userId={user.id} token={profile.passport_token} username={(profile as { username?: string | null }).username} />
 
-      <section className={card}>
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold">{t.readinessTitle}</h2>
-          <span className="whitespace-nowrap text-lg font-bold">
-            {doneCount} / {REQUIREMENTS.length}
-          </span>
-        </div>
-        <div className="mt-3 h-2 rounded-full bg-slate-100">
-          <div
-            className="h-2 rounded-full bg-green-600"
-            style={{ width: `${(doneCount / REQUIREMENTS.length) * 100}%` }}
-          />
-        </div>
-        <ul className="mt-4 space-y-3">
-          {REQUIREMENTS.map((req) => (
-            <li key={req} className="flex gap-3">
-              <span className={ready[req] ? "text-green-600" : "text-red-600"}>
-                {ready[req] ? "✓" : "✗"}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{t[`req_${req}`]}</p>
-                {!ready[req] && <p className="text-sm text-slate-600">{t[`hint_${req}`]}</p>}
-              </div>
-              {!ready[req] && (
-                <a
-                  href={req === "kvk_number" || req === "btw_number" ? "#profile" : `?upload=${req}#upload`}
-                  className="h-fit shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white"
-                >
-                  {req === "kvk_number" || req === "btw_number" ? tp.fill : tp.upload}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {doneCount < REQUIREMENTS.length && (
+        <section className={card}>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-xl font-semibold">{t.readinessTitle}</h2>
+            <span className="whitespace-nowrap text-lg font-bold">
+              {doneCount} / {REQUIREMENTS.length}
+            </span>
+          </div>
+          <div className="mt-3 h-2 rounded-full bg-slate-100">
+            <div
+              className="h-2 rounded-full bg-green-600"
+              style={{ width: `${(doneCount / REQUIREMENTS.length) * 100}%` }}
+            />
+          </div>
+          <ul className="mt-4 space-y-3">
+            {REQUIREMENTS.map((req) => (
+              <li key={req} className="flex gap-3">
+                <span className={ready[req] ? "text-green-600" : "text-red-600"}>
+                  {ready[req] ? "✓" : "✗"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{t[`req_${req}`]}</p>
+                  {!ready[req] && <p className="text-sm text-slate-600">{t[`hint_${req}`]}</p>}
+                </div>
+                {!ready[req] && (
+                  <a
+                    href={req === "kvk_number" || req === "btw_number" ? "#profile" : `?upload=${req}#upload`}
+                    className="h-fit shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white"
+                  >
+                    {req === "kvk_number" || req === "btw_number" ? tp.fill : tp.upload}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className={card}>
         <h2 className="text-xl font-semibold">{t.passportTitle}</h2>
@@ -162,6 +167,15 @@ export default async function Dashboard({
                 ✉ {tp.email}
               </a>
               <CopyButton value={message.body} label={tp.copyText} />
+              {documents.some((d) => d.show_in_passport) && (
+                <PassportPack
+                  {...pack}
+                  label={tp.pdfPack}
+                  busyLabel={tp.pdfBusy}
+                  errorLabel={tp.pdfError}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-medium disabled:opacity-60"
+                />
+              )}
             </div>
           ) : (
             <p className="mt-2 text-sm text-amber-800">{tp.offNote}</p>

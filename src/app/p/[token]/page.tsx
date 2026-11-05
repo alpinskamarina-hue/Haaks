@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HtmlLang } from "@/components/HtmlLang";
+import { PassportPack } from "@/components/PassportPack";
 import { PublicFooter } from "@/components/PublicFooter";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -13,6 +14,9 @@ import {
 } from "@/lib/documents";
 import { getPassportDict, type PassportDict } from "@/lib/i18n";
 import { createServerAccountClient } from "@/lib/supabase/server";
+import { siteUrl } from "@/lib/lang";
+import { packProps } from "@/lib/passport-pack";
+import { PACK_TEXT } from "@/lib/passport-plus-i18n";
 import { dutchToday } from "@/lib/quotes";
 import { withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { describeProfile, getWorkerDict, PUBLIC_PROFILE } from "@/lib/worker-profile-text";
@@ -112,6 +116,9 @@ export default async function PassportPage({
   });
 
   const hasVca = documents.some((d) => d.doc_type === "vca");
+  const pack = documents.length
+    ? await packProps({ profile, documents, urlOf: (p) => urlByPath.get(p), passportUrl: `${await siteUrl()}/p/${token}`, lang })
+    : null;
 
   return (
     <main lang={lang} className="mx-auto max-w-2xl space-y-5 px-4 py-6">
@@ -222,6 +229,17 @@ export default async function PassportPage({
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold">{t.documents}</h2>
+        {pack && (
+          <div className="mb-4">
+            <PassportPack
+              {...pack}
+              label={PACK_TEXT[lang].button}
+              busyLabel={lang === "nl" ? "PDF wordt gemaakt…" : "Making the PDF…"}
+              errorLabel={lang === "nl" ? "Dat lukte niet. Vernieuw de pagina en probeer het opnieuw." : "That did not work. Refresh the page and try again."}
+              className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            />
+          </div>
+        )}
         <ul className="space-y-3">
           {documents.map((doc) => (
             <PassportDocument key={doc.id} doc={doc} t={t} url={urlByPath.get(doc.file_path)} />
