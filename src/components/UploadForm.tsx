@@ -8,9 +8,11 @@ import type { Dict } from "@/lib/i18n";
 import { prepareUpload } from "@/lib/prepare-upload";
 import { createClient } from "@/lib/supabase/client";
 
-export function UploadForm({ t, userId }: { t: Dict; userId: string }) {
+export function UploadForm({ t, userId, initialType }: { t: Dict; userId: string; initialType?: string }) {
   const router = useRouter();
-  const [docType, setDocType] = useState<string>("kvk_extract");
+  const [docType, setDocType] = useState<string>(
+    initialType && (DOC_TYPES as readonly string[]).includes(initialType) ? initialType : "kvk_extract",
+  );
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "preparing" | "uploading" | "reading">("idle");
   const formRef = useRef<HTMLFormElement>(null);
