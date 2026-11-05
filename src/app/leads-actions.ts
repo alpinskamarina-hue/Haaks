@@ -9,6 +9,7 @@ import { siteUrl } from "@/lib/lang";
 import type { FeedItem } from "@/lib/feed";
 import { findContact, replyTemplate, type Lead } from "@/lib/leads";
 import { createQuoteDraft } from "@/lib/quote-draft";
+import { workTitleFromAd } from "@/lib/quotes-list-i18n";
 import { PHOTO_MIME, short } from "@/lib/quotes";
 import { aiAllowed } from "@/lib/free-limits";
 
@@ -145,7 +146,7 @@ export async function leadToQuote(id: string) {
   }
   const quoteId = await createQuoteDraft(supabase, user.id, lang, {
     orderId: lead.order_id,
-    title: short(dutch?.title ?? lead.title, 200) || null,
+    title: short(workTitleFromAd(dutch?.title ?? lead.title ?? "") ?? dutch?.title ?? lead.title, 200) || null,
     intro: dutch?.summary ?? null,
     clientName: lead.client_name,
     address: lead.city,

@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { cleanDate } from "@/lib/extract";
 import { isLang, type Lang } from "@/lib/i18n";
 import { createQuoteDraft } from "@/lib/quote-draft";
-import { cleanLines, dutchToday, MAX_QUOTE_PHOTOS, money, PHOTO_MIME, short, type Quote } from "@/lib/quotes";
+import { addDays, cleanLines, dutchToday, MAX_QUOTE_PHOTOS, money, PHOTO_MIME, short, type Quote } from "@/lib/quotes";
 import { createServerAccountClient } from "@/lib/supabase/server";
 
 function refresh() {
@@ -117,6 +117,23 @@ export async function setQuoteStatus(id: string, status: Quote["status"]) {
     .eq("id", id);
   refresh();
   revalidatePath("/dashboard/leads", "layout");
+}
+
+// An expired quote gets 30 more days from today, so the client can still say Akkoord.
+export async function extendQuote(id: string) {
+  const { supabase } = await requireUser();
+  await supabase.from("quotes").update({ valid_until: addDays(30), updated_at: new Date().toISOString() }).eq("id", id).in("status", ["sent", "draft"]);
+  refresh();
+}
+
+// Takes the suggested work name instead of the job ad's headline.
+export async function setQuoteTitle(id: string, title: string) {
+  const { supabase } = await requireUser();
+  const clean = short(title, 200);
+  if (!clean) return;
+  await supabase.from("quotes").update({ title: clean, updated_at: new Date().toISOString() }).eq("id", id);
+  refresh();
+  revalidatePath(`/dashboard/quotes/${id}`);
 }
 
 export async function deleteQuote(id: string) {
