@@ -17,6 +17,11 @@ import { redirect } from "next/navigation";
 import { completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
+import { cookies } from "next/headers";
+import { DailyQuote, QUOTE_COOKIE } from "@/components/DailyQuote";
+import { getQuoteLabels, quoteOfDay } from "@/lib/daily-quotes";
+
+const LOCALES: Record<Lang, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -192,12 +197,36 @@ export default async function Home() {
     { href: "/dashboard/reviews", icon: "⭐", label: h.reviews },
   ];
 
+  // «Фраза дня»: unless the builder closed it today.
+
+  const quoteHidden = (await cookies()).get(QUOTE_COOKIE)?.value === today;
+  const [{ data: myLike }, { data: likeCount }] = quoteHidden
+    ? [{ data: null }, { data: 0 }]
+    : await Promise.all([
+        supabase.from("quote_likes").select("day").eq("user_id", user.id).eq("day", today).maybeSingle(),
+        supabase.rpc("quote_like_count", { p_day: today }),
+      ]);
+  const quoteDayLabel = new Intl.DateTimeFormat(LOCALES[lang], { weekday: "short", day: "numeric", month: "long", timeZone: "UTC" }).format(
+    new Date(`${today}T12:00:00Z`),
+  );
+
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
       <div>
         <h1 className="text-2xl font-bold">{firstName ? t.homeHello.replace("{name}", firstName) : t.navHome}</h1>
         <p className="text-slate-600">{t.homeSubtitle}</p>
       </div>
+
+      {!quoteHidden && (
+        <DailyQuote
+          day={today}
+          dayLabel={quoteDayLabel}
+          text={quoteOfDay(today, lang).text}
+          labels={getQuoteLabels(lang)}
+          liked={!!myLike}
+          count={(likeCount as number | null) ?? 0}
+        />
+      )}
 
       {nextStep ? (
         <section className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
