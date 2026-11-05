@@ -13,7 +13,9 @@ import {
   type Profile,
 } from "@/lib/documents";
 import { getPassportDict, type PassportDict } from "@/lib/i18n";
-import { createServerAccountClient } from "@/lib/supabase/server";
+import { createClient, createServerAccountClient } from "@/lib/supabase/server";
+import { notifyPassportViewed, passportViewDue } from "@/lib/passport-notify";
+import { after } from "next/server";
 import { siteUrl } from "@/lib/lang";
 import { packProps } from "@/lib/passport-pack";
 import { PACK_TEXT } from "@/lib/passport-plus-i18n";
@@ -110,6 +112,12 @@ export default async function PassportPage({
     signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])),
   );
 
+  // Tell the builder someone opened the passport, unless it is the builder looking at it.
+  const viewer = (await (await createClient()).auth.getUser()).data.user;
+  if (viewer?.id !== profile.id && (await passportViewDue(admin, profile.id))) {
+    const site = await siteUrl();
+    after(() => notifyPassportViewed(admin, profile.id, site).catch((err) => console.error("passport view notify", err)));
+  }
   await admin.from("passport_views").insert({
     profile_id: profile.id,
     user_agent: (await headers()).get("user-agent")?.slice(0, 300) ?? null,
