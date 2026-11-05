@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hideFeedItem } from "@/app/feed-actions";
+import { getTripsDict } from "@/lib/trips-i18n";
 import { getHomeDict } from "@/lib/home-i18n";
 import { fill, getFeedDict } from "@/lib/feed-i18n";
 import { feedText, timeAgo, tradeLabel } from "@/lib/feed";
@@ -9,7 +10,7 @@ import { FIT_SCORE, loadFeed, newFittingCount, type ScoredFeedItem } from "@/lib
 import { docStatus, readiness, REQUIREMENTS, type DocumentRow } from "@/lib/documents";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { euro, type Order } from "@/lib/orders";
-import { dutchToday, quoteTotals, type Quote } from "@/lib/quotes";
+import { addDays, dutchToday, quoteTotals, type Quote } from "@/lib/quotes";
 import { daysSince } from "@/lib/quotes-i18n";
 import type { Lang } from "@/lib/i18n";
 import { redirect } from "next/navigation";
@@ -130,6 +131,18 @@ export default async function Home() {
     });
   }
 
+  // Trips: early in the month, ask for the odometer reading (only builders who log trips).
+  if (Number(today.slice(8)) <= 7) {
+    const monthStart = `${today.slice(0, 8)}01`;
+    const [{ count: tripCount }, { count: odoCount }] = await Promise.all([
+      supabase.from("trips").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("day", addDays(-60)),
+      supabase.from("odometer_readings").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("read_on", monthStart),
+    ]);
+    if (tripCount && !odoCount) {
+      todos.push({ key: "odometer", icon: "🚗", text: getTripsDict(lang).todoOdo, href: "/dashboard/trips", button: h.open });
+    }
+  }
+
   // First steps for newcomers: shown until all five are done.
   const hasDoc = (type: string) => (docs ?? []).some((d) => d.doc_type === type);
   const steps = [
@@ -172,6 +185,7 @@ export default async function Home() {
 
   const more = [
     { href: "/dashboard/cards", icon: "💳", label: h.cards },
+    { href: "/dashboard/trips", icon: "🚗", label: h.trips },
     { href: "/dashboard/passport", icon: "🪪", label: h.passport, note: `${readyCount}/${REQUIREMENTS.length}` },
     { href: "/dashboard/materials", icon: "🧱", label: h.materials },
     { href: "/dashboard/helpers", icon: "👷", label: h.helpers },
@@ -320,7 +334,7 @@ export default async function Home() {
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">{h.more}</h2>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           {more.map((x) => (
             <Link
               key={x.href}
