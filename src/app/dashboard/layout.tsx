@@ -11,7 +11,7 @@ import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getPricingDict } from "@/lib/pricing-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { createServerAccountClient } from "@/lib/supabase/server";
-import { loadWorkspace } from "@/lib/workspace";
+import { loadWorkspace, signedUrls } from "@/lib/workspace";
 
 // One cabinet for every service: sidebar on a computer, tab bar on a phone.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -51,6 +51,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
   const name = profile.company_name || profile.full_name || user.email;
   const so = getSocialDict(lang);
+  // The worker's own photo in the header: one tap to «Мой профиль».
+  const avatarPath = (profile as typeof profile & { avatar_path?: string | null }).avatar_path ?? null;
+  const avatarUrl = avatarPath ? ((await signedUrls(supabase, [avatarPath]).catch(() => new Map<string, string>())).get(avatarPath) ?? null) : null;
+  const initials =
+    (profile.full_name ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((x) => x[0]!.toUpperCase())
+      .join("") || "🙂";
 
   return (
     <div lang={lang} className="min-h-screen lg:flex">
@@ -89,13 +99,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
-          <Link href="/dashboard/settings" className="shrink-0 p-1 text-lg leading-none" aria-label={t.settingsTitle}>
-            ⚙️
+          <Link href="/dashboard/profile" className="shrink-0" aria-label={w.navProfile} title={w.navProfile}>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-orange-500 ring-offset-1" />
+            ) : (
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-orange-100 text-sm font-bold text-orange-800 ring-2 ring-orange-500 ring-offset-1">
+                {initials}
+              </span>
+            )}
           </Link>
-          {/* Profile menu: profile, settings, plan, sign out. */}
+          {/* Menu: profile, settings, plan, sign out. */}
           <details className="relative shrink-0">
-            <summary className="list-none p-1 text-slate-500 [&::-webkit-details-marker]:hidden" aria-label={w.navProfile}>
-              <Icon name="user" />
+            <summary className="list-none p-1 text-slate-500 [&::-webkit-details-marker]:hidden" aria-label={t.settingsTitle}>
+              <Icon name="menu" />
             </summary>
             <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-lg">
               <Link href="/dashboard/profile" className="block px-4 py-3">
