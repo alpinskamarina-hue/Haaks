@@ -113,6 +113,10 @@ export default async function OrderPage({
   const urls = tab === "money" ? await signedUrls(supabase, receipts.map((r) => r.file_path)) : new Map<string, string>();
   const photoUrls = tab === "photos" ? await signedUrls(supabase, photos.map((x) => x.path)) : new Map<string, string>();
   const trips = partsOf.trips;
+  const sentInv = (invoiceRows ?? []).filter((i) => i.status !== "draft");
+  const incl = (i: Invoice) => invoiceTotals(i.lines, i.vat_mode).incl;
+  const paidIncl = sentInv.filter((i) => i.status === "paid").reduce((x, i) => x + incl(i), 0);
+  const openIncl = sentInv.filter((i) => i.status === "sent").reduce((x, i) => x + incl(i), 0);
   const tabLabel: Record<Tab, string> = { overview: p.tabOverview, money: p.tabMoney, materials: p.tabMaterials, photos: p.tabPhotos, notes: p.tabNotes };
   const tabCount: Record<Tab, number> = {
     overview: 0,
@@ -176,35 +180,22 @@ export default async function OrderPage({
       {tab === "overview" && (
         <>
           <section className={card}>
-            {s.price !== null ? (
-              <dl className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-slate-600">{s.priceKind === "offered" ? p.mOffered : s.priceKind === "invoiced" ? p.mInvoiced : p.mPrice}</dt>
-                  <dd>{euro(s.price)}</dd>
-                </div>
-                {s.receiptCount > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-slate-600">{fillP(p.mMaterials, { n: s.receiptCount })}</dt>
-                    <dd>− {euro(s.materials)}</dd>
-                  </div>
-                )}
-                {s.km > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-slate-600">{fillP(p.mTrips, { km: s.km })}</dt>
-                    <dd>− {euro(s.tripsCost)}</dd>
-                  </div>
-                )}
-                {s.earned !== null && (
-                  <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 text-base font-bold">
-                    <dt>{p.mEarned}</dt>
-                    <dd className="text-green-700">{euro(s.earned)}</dd>
-                  </div>
-                )}
-                <p className="pt-1 text-xs text-slate-500">{p.mExVat}</p>
-              </dl>
-            ) : (
-              <p className="text-sm text-slate-600">{p.mNoPrice}</p>
-            )}
+            <Link href="?tab=money" scroll={false} className="flex items-center justify-between gap-3">
+              <span className="text-sm text-slate-600">
+                {s.earned !== null
+                  ? p.mEarned
+                  : s.price !== null
+                    ? s.priceKind === "offered"
+                      ? p.mOffered
+                      : s.priceKind === "invoiced"
+                        ? p.mInvoiced
+                        : p.mPrice
+                    : p.mAll}
+              </span>
+              <span className={`text-lg font-bold ${s.earned !== null ? "text-green-700" : ""}`}>
+                {s.earned !== null ? euro(s.earned) : s.price !== null ? euro(s.price) : ""} <span className="text-slate-400">›</span>
+              </span>
+            </Link>
             {s.next && <NextStepLink next={s.next} p={p} fmtDate={fmtDate} big />}
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
               {order.status === "open" && !isCurrent && (
@@ -298,6 +289,53 @@ export default async function OrderPage({
 
       {tab === "money" && (
         <>
+          <section className={card}>
+            {s.price !== null ? (
+              <dl className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-slate-600">{s.priceKind === "offered" ? p.mOffered : s.priceKind === "invoiced" ? p.mInvoiced : p.mPrice}</dt>
+                  <dd>{euro(s.price)}</dd>
+                </div>
+                {s.receiptCount > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-600">{fillP(p.mMaterials, { n: s.receiptCount })}</dt>
+                    <dd>− {euro(s.materials)}</dd>
+                  </div>
+                )}
+                {s.km > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-600">{fillP(p.mTrips, { km: s.km })}</dt>
+                    <dd>− {euro(s.tripsCost)}</dd>
+                  </div>
+                )}
+                {s.earned !== null && (
+                  <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 text-base font-bold">
+                    <dt>{p.mEarned}</dt>
+                    <dd className="text-green-700">{euro(s.earned)}</dd>
+                  </div>
+                )}
+                <p className="pt-1 text-xs text-slate-500">{p.mExVat}</p>
+                {(paidIncl > 0 || openIncl > 0) && (
+                  <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                    {paidIncl > 0 && (
+                      <div className="flex justify-between">
+                        <dt className="text-slate-600">{p.mPaidIn}</dt>
+                        <dd className="font-semibold text-green-700">{euro(paidIncl)}</dd>
+                      </div>
+                    )}
+                    {openIncl > 0 && (
+                      <div className="flex justify-between">
+                        <dt className="text-slate-600">{p.mAwaiting}</dt>
+                        <dd className="font-semibold text-amber-700">{euro(openIncl)}</dd>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-slate-600">{p.mNoPrice}</p>
+            )}
+          </section>
           <section className={card}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold">{t.quotesTitle}</h2>
