@@ -19,6 +19,8 @@ export type CollectedItem = {
   budget: string | null;
   contact: string | null;
   published_at: string;
+  // Tenders: the day after the closing date; the feed hides the item then.
+  expires_at?: string | null;
   fingerprint: string;
 };
 
