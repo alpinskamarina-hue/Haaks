@@ -17,6 +17,7 @@ import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
+import { getFirmsDict } from "@/lib/firms-i18n";
 import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
@@ -93,6 +94,9 @@ export default async function FeedPage({
     supabase.from("company_jobs").select("id, feed_item_id").eq("company_id", user.id).not("feed_item_id", "is", null),
     supabase.from("reports").select("target_id").eq("target_kind", "job"),
   ]);
+  // «Фирмы рядом» (test): shown only once firms were collected.
+  const { count: firmCount } = await supabase.from("nearby_firms").select("id", { count: "exact", head: true });
+  const firmsT = getFirmsDict(lang);
   const reportedJobs = new Set((myReports ?? []).map((r) => r.target_id as string));
   const reportT = getReportDict(lang);
   const letterLabel = getLetterDict(lang).button;
@@ -383,6 +387,13 @@ export default async function FeedPage({
                 {getPricingDict(lang).nav} →
               </Link>
             </section>
+          )}
+
+          {!!firmCount && (
+            <Link href="/dashboard/leads/firms" className="block rounded-2xl border border-l-4 border-slate-200 border-l-purple-600 bg-white p-5 shadow-sm">
+              <h2 className="font-semibold">{firmsT.card}</h2>
+              <p className="mt-1 text-sm text-slate-600">{fill(firmsT.cardText, { n: firmCount })} →</p>
+            </Link>
           )}
 
           <section className={card}>
