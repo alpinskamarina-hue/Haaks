@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { STORES, chooseFormat, cleanNumber } from "@/lib/store-cards";
 
-// Saves a store card. The photo (if any) was already uploaded by the browser to <uid>/cards/.
+// Saves a new store card, or changes one (id). The photo (if any) was already uploaded by the
+// browser to <uid>/cards/; a new photo replaces the old one, which is then deleted from storage.
 export async function saveStoreCard(input: {
+  id?: string | null;
   store: string;
   customName?: string | null;
   number: string;
@@ -19,6 +21,24 @@ export async function saveStoreCard(input: {
   if (!number || (store === "other" && !customName)) return { ok: false };
   const photoPath = input.photoPath && input.photoPath.startsWith(`${user.id}/cards/`) ? input.photoPath : null;
   const chosen = chooseFormat(number, input.detected);
+
+  if (input.id) {
+    const { data: old } = await supabase.from("store_cards").select("photo_path").eq("id", input.id).eq("user_id", user.id).maybeSingle<{ photo_path: string | null }>();
+    if (!old) return { ok: false };
+    const { error } = await supabase
+      .from("store_cards")
+      .update({ store, custom_name: customName, number: chosen.number, format: chosen.format, ...(photoPath ? { photo_path: photoPath } : {}) })
+      .eq("id", input.id);
+    if (error) {
+      console.error(error);
+      return { ok: false };
+    }
+    if (photoPath && old.photo_path && old.photo_path !== photoPath && old.photo_path.startsWith(`${user.id}/cards/`)) {
+      await supabase.storage.from("documents").remove([old.photo_path]);
+    }
+    revalidatePath("/dashboard", "layout");
+    return { ok: true, id: input.id };
+  }
 
   const { data, error } = await supabase
     .from("store_cards")

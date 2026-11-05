@@ -27,6 +27,8 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
           : barcodeSvg(c.format, c.number);
       return {
         id: c.id,
+        store: c.store,
+        customName: c.custom_name,
         name,
         color,
         number: c.number,

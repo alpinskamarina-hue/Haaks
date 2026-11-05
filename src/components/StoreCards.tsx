@@ -8,7 +8,7 @@ import { prepareUpload } from "@/lib/prepare-upload";
 import type { CardFormat } from "@/lib/store-cards";
 import { createClient } from "@/lib/supabase/client";
 
-export type ShownCard = { id: string; name: string; color: string; number: string; format: CardFormat; svg: string; photoUrl: string | null };
+export type ShownCard = { id: string; store: string; customName: string | null; name: string; color: string; number: string; format: CardFormat; svg: string; photoUrl: string | null };
 type Store = { key: string; name: string; color: string };
 
 const dark = (color: string) => `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 62%, black))`;
@@ -35,6 +35,7 @@ export function StoreCards({
     return i >= 0 ? i : null;
   });
   const [adding, setAdding] = useState(startAdding || false);
+  const [editing, setEditing] = useState<ShownCard | null>(null);
 
   // The page is kept by the service worker, so the cards open at the till without internet.
   useEffect(() => {
@@ -71,7 +72,9 @@ export function StoreCards({
         ))}
       </ul>
 
-      {adding ? (
+      {editing ? (
+        <AddCard key={editing.id} initial={editing} stores={stores} d={d} userId={userId} onDone={() => setEditing(null)} />
+      ) : adding ? (
         <AddCard stores={stores} d={d} userId={userId} onDone={() => setAdding(false)} />
       ) : (
         <button
@@ -84,13 +87,35 @@ export function StoreCards({
       )}
       <p className="text-sm text-slate-500">{d.note}</p>
 
-      {open !== null && cards.length > 0 && <Viewer cards={cards} start={Math.min(open, cards.length - 1)} d={d} onClose={() => setOpen(null)} />}
+      {open !== null && cards.length > 0 && <Viewer
+          cards={cards}
+          start={Math.min(open, cards.length - 1)}
+          d={d}
+          onClose={() => setOpen(null)}
+          onEdit={(c) => {
+            setAdding(false);
+            setEditing(c);
+            setTimeout(() => document.getElementById("card-form")?.scrollIntoView({ behavior: "smooth" }), 50);
+          }}
+        />}
     </>
   );
 }
 
 // Full screen: one card per slide, swipe for the next one. Keeps the screen awake while open.
-function Viewer({ cards, start, d, onClose }: { cards: ShownCard[]; start: number; d: CardsDict; onClose: () => void }) {
+function Viewer({
+  cards,
+  start,
+  d,
+  onClose,
+  onEdit,
+}: {
+  cards: ShownCard[];
+  start: number;
+  d: CardsDict;
+  onClose: () => void;
+  onEdit: (card: ShownCard) => void;
+}) {
   const router = useRouter();
   const strip = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(start);
@@ -184,9 +209,21 @@ function Viewer({ cards, start, d, onClose }: { cards: ShownCard[]; start: numbe
                   {d.cardPhoto}
                 </button>
               </div>
-              <button type="button" onClick={() => remove(c.id)} className="mt-8 text-sm text-slate-400 underline">
-                {d.del}
-              </button>
+              <div className="mt-8 flex items-center gap-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    onEdit(c);
+                  }}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                >
+                  {d.edit}
+                </button>
+                <button type="button" onClick={() => remove(c.id)} className="text-sm text-slate-400 underline">
+                  {d.del}
+                </button>
+              </div>
             </div>
           </section>
         ))}
@@ -206,15 +243,28 @@ function Viewer({ cards, start, d, onClose }: { cards: ShownCard[]; start: numbe
 type Detector = { detect: (img: ImageBitmap) => Promise<{ rawValue: string; format: string }[]> };
 
 // Add a card: photo -> the phone reads the barcode (Chrome on Android can) -> pick the store -> save.
-function AddCard({ stores, d, userId, onDone }: { stores: Store[]; d: CardsDict; userId: string; onDone: () => void }) {
+function AddCard({
+  initial,
+  stores,
+  d,
+  userId,
+  onDone,
+}: {
+  initial?: ShownCard;
+  stores: Store[];
+  d: CardsDict;
+  userId: string;
+  onDone: () => void;
+}) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initial?.photoUrl ?? null);
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
-  const [store, setStore] = useState(stores[0]?.key ?? "other");
-  const [customName, setCustomName] = useState("");
-  const [number, setNumber] = useState("");
-  const [detected, setDetected] = useState<string | null>(null);
+  const [store, setStore] = useState(initial?.store ?? stores[0]?.key ?? "other");
+  const [customName, setCustomName] = useState(initial?.customName ?? "");
+  const [number, setNumber] = useState(initial?.number ?? "");
+  // An unchanged QR card stays a QR code.
+  const [detected, setDetected] = useState<string | null>(initial?.format === "qr" ? "qr_code" : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -222,7 +272,7 @@ function AddCard({ stores, d, userId, onDone }: { stores: Store[]; d: CardsDict;
     if (!f) return;
     setFile(f);
     setPreview((old) => {
-      if (old) URL.revokeObjectURL(old);
+      if (old?.startsWith("blob:")) URL.revokeObjectURL(old);
       return URL.createObjectURL(f);
     });
     const Det = (window as unknown as { BarcodeDetector?: new () => Detector }).BarcodeDetector;
@@ -256,7 +306,7 @@ function AddCard({ stores, d, userId, onDone }: { stores: Store[]; d: CardsDict;
           if (!upErr) photoPath = path;
         }
       }
-      const res = await saveStoreCard({ store, customName, number, detected, photoPath });
+      const res = await saveStoreCard({ id: initial?.id ?? null, store, customName, number, detected, photoPath });
       if (!res.ok) throw new Error("save");
       router.refresh();
       onDone();
@@ -269,8 +319,8 @@ function AddCard({ stores, d, userId, onDone }: { stores: Store[]; d: CardsDict;
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-bold">{d.newTitle}</h2>
+    <section id="card-form" className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="text-xl font-bold">{initial ? d.editTitle : d.newTitle}</h2>
 
       <label className="block cursor-pointer">
         <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => pick(e.target.files?.[0])} />
