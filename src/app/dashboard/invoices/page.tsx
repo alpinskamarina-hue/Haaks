@@ -3,7 +3,7 @@ import { createInvoice } from "@/app/invoices-actions";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
-import { euro } from "@/lib/orders";
+import { euro, inQuarter, quarterOf, totals, type Receipt } from "@/lib/orders";
 import { loadWorkspace } from "@/lib/workspace";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -12,7 +12,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const { order } = await searchParams;
   const { supabase, user, profile, lang, t } = await loadWorkspace();
 
-  const [{ data: orderRows }, { data: invoiceRows }] = await Promise.all([
+  const [{ data: orderRows }, { data: invoiceRows }, { data: receiptRows }] = await Promise.all([
     supabase
       .from("orders")
       .select("id, title")
@@ -25,7 +25,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       .order("invoice_date", { ascending: false })
       .order("created_at", { ascending: false })
       .returns<Invoice[]>(),
+    supabase.from("receipts").select("*").eq("user_id", user.id).limit(2000).returns<Receipt[]>(),
   ]);
+  const quarter = quarterOf(new Date());
+  const quarterTotals = totals((receiptRows ?? []).filter((r) => inQuarter(r, quarter)));
   const orders = orderRows ?? [];
   const invoices = invoiceRows ?? [];
   const defaultOrderId = (order && orders.some((o) => o.id === order) ? order : null) ?? profile.current_order_id ?? "";
@@ -94,6 +97,16 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           ))}
         </ul>
       </section>
+      {quarterTotals.count > 0 && (
+        <section className={card}>
+          <p className="text-sm text-slate-600">{t.vatQuarter.replace("{q}", quarter.label)}</p>
+          <p className="text-3xl font-bold">{euro(quarterTotals.vat)}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {t.materials}: {euro(quarterTotals.incl)} · {t.receiptsCount}: {quarterTotals.count}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">{t.vatQuarterHint}</p>
+        </section>
+      )}
     </main>
   );
 }

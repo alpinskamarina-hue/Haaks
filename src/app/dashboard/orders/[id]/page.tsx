@@ -7,7 +7,7 @@ import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { ReceiptUpload } from "@/components/ReceiptUpload";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { claudeEnabled } from "@/lib/env";
-import { euro, totals, type Order, type Receipt } from "@/lib/orders";
+import { euro, type Order, type Receipt } from "@/lib/orders";
 import { quoteTotals, type Quote } from "@/lib/quotes";
 import { createMaterialList } from "@/app/materials-actions";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -17,6 +17,12 @@ import { loadWorkspace, signedUrls } from "@/lib/workspace";
 import { getWorksDict } from "@/lib/works-i18n";
 import { getReviewsDict } from "@/lib/reviews-i18n";
 import { requestReview } from "@/app/reviews-actions";
+import { NextStepLink, StageLine } from "@/components/ProjectBits";
+import { projectEvents, summarize } from "@/lib/project";
+import { fillP, getProjectDict } from "@/lib/project-i18n";
+import { loadProjectParts } from "@/lib/project-server";
+
+const LOCALES = { pl: "pl-PL", ro: "ro-RO", uk: "uk-UA", ru: "ru-RU", tr: "tr-TR", en: "en-GB", nl: "nl-NL" } as const;
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -72,7 +78,21 @@ export default async function OrderPage({
     .returns<MaterialList[]>();
 
   const receipts = receiptRows ?? [];
-  const sum = totals(receipts);
+  const p = getProjectDict(lang);
+  const parts = await loadProjectParts(supabase, user.id, order.id);
+  const partsOf = {
+    order,
+    quotes: parts.quotes.get(order.id) ?? [],
+    invoices: parts.invoices.get(order.id) ?? [],
+    receipts,
+    trips: parts.trips.get(order.id) ?? [],
+  };
+  const s = summarize({ ...partsOf, hasReview: Boolean(reviewRow), hasWork: Boolean(work) });
+  const events = projectEvents({ ...partsOf, euro });
+  const fmtDate = (d: string) =>
+    new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "short", timeZone: d.length > 10 ? "Europe/Amsterdam" : "UTC" }).format(
+      new Date(d.length > 10 ? d : `${d}T00:00:00Z`),
+    );
   const urls = await signedUrls(supabase, receipts.map((r) => r.file_path));
   const moveTargets = [...(openRows ?? [])];
   if (!moveTargets.some((o) => o.id === order.id)) moveTargets.unshift({ id: order.id, title: order.title });
@@ -86,45 +106,115 @@ export default async function OrderPage({
 
       <section className={card}>
         <h1 className="text-2xl font-bold">{order.title}</h1>
-        <p className="text-slate-600">
-          {[order.client_name, order.address].filter(Boolean).join(" · ") || "—"}
-        </p>
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-slate-50 p-2">
-            <dt className="text-xs text-slate-500">{t.total}</dt>
-            <dd className="font-bold">{euro(sum.incl)}</dd>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-2">
-            <dt className="text-xs text-slate-500">{t.exclVat}</dt>
-            <dd className="font-bold">{euro(sum.excl)}</dd>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-2">
-            <dt className="text-xs text-slate-500">{t.vat}</dt>
-            <dd className="font-bold">{euro(sum.vat)}</dd>
-          </div>
-        </dl>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+        <p className="text-slate-600">{[order.client_name, order.address].filter(Boolean).join(" · ") || "—"}</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm font-semibold">
+          {order.address ? (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.address)}`}
+              target="_blank"
+              rel="noopener"
+              className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2"
+            >
+              <span className="text-lg">🧭</span>{p.route}
+            </a>
+          ) : (
+            <span className="flex flex-col items-center rounded-lg border border-slate-200 px-1 py-2 text-slate-300"><span className="text-lg">🧭</span>{p.route}</span>
+          )}
+          <Link href={`/dashboard/quotes/new?order=${order.id}`} className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2">
+            <span className="text-lg">📝</span>{p.quote}
+          </Link>
+          <Link href={`/dashboard/invoices?order=${order.id}`} className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2">
+            <span className="text-lg">🧾</span>{p.invoice}
+          </Link>
+        </div>
+        <StageLine stage={s.stage} p={p} />
+      </section>
+
+      <section className={card}>
+        {s.price !== null ? (
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-slate-600">{s.priceKind === "offered" ? p.mOffered : s.priceKind === "invoiced" ? p.mInvoiced : p.mPrice}</dt>
+              <dd>{euro(s.price)}</dd>
+            </div>
+            {s.receiptCount > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-600">{fillP(p.mMaterials, { n: s.receiptCount })}</dt>
+                <dd>− {euro(s.materials)}</dd>
+              </div>
+            )}
+            {s.km > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-600">{fillP(p.mTrips, { km: s.km })}</dt>
+                <dd>− {euro(s.tripsCost)}</dd>
+              </div>
+            )}
+            {s.earned !== null && (
+              <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 text-base font-bold">
+                <dt>{p.mEarned}</dt>
+                <dd className="text-green-700">{euro(s.earned)}</dd>
+              </div>
+            )}
+            <p className="pt-1 text-xs text-slate-500">{p.mExVat}</p>
+          </dl>
+        ) : (
+          <p className="text-sm text-slate-600">{p.mNoPrice}</p>
+        )}
+        {s.next && <NextStepLink next={s.next} p={p} fmtDate={fmtDate} big />}
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
           {order.status === "open" && !isCurrent && (
             <form action={setCurrentOrder.bind(null, order.id)}>
-              <button className="rounded-lg border border-slate-300 px-3 py-2">{t.makeCurrent}</button>
+              <button className="rounded-lg border border-slate-300 px-3 py-1.5">{t.makeCurrent}</button>
             </form>
           )}
-          {isCurrent && (
-            <span className="rounded-full bg-green-100 px-3 py-2 font-medium text-green-800">{t.currentOrder}</span>
-          )}
+          {isCurrent && <span className="rounded-full bg-green-100 px-3 py-1.5 font-medium text-green-800">{t.currentOrder}</span>}
           <form action={setOrderStatus.bind(null, order.id, order.status === "open" ? "closed" : "open")}>
-            <button className="rounded-lg border border-slate-300 px-3 py-2">
-              {order.status === "open" ? t.closeOrder : t.reopenOrder}
-            </button>
+            <button className="rounded-lg border border-slate-300 px-3 py-1.5">{order.status === "open" ? p.close : p.reopen}</button>
           </form>
         </div>
+      </section>
+
+      <section className={card}>
+        <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">{p.history}</h2>
+        <ul className="space-y-1.5 text-sm">
+          {events.slice(0, 6).map((e, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="w-14 shrink-0 text-slate-400">{fmtDate(e.at)}</span>
+              <span>
+                {e.icon}{" "}
+                {e.href ? (
+                  <Link href={e.href} className="underline decoration-slate-300">
+                    {fillP(p.ev[e.key], e.vars)}
+                  </Link>
+                ) : (
+                  fillP(p.ev[e.key], e.vars)
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {events.length > 6 && (
+          <details className="mt-1.5 text-sm">
+            <summary className="cursor-pointer text-slate-500">{fillP(p.more, { n: events.length - 6 })}</summary>
+            <ul className="mt-1.5 space-y-1.5">
+              {events.slice(6).map((e, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="w-14 shrink-0 text-slate-400">{fmtDate(e.at)}</span>
+                  <span>
+                    {e.icon} {fillP(p.ev[e.key], e.vars)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
       {(reviewRow ||
         order.status === "closed" ||
         (invoiceRows ?? []).some((i) => i.status !== "draft") ||
         (quoteRows ?? []).some((q) => q.status === "accepted")) && (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <section id="review" className="scroll-mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           {reviewRow ? (
             <Link href={`/dashboard/reviews/${reviewRow.id}`} className="font-semibold text-amber-900 underline">
               ⭐ {reviewRow.status === "requested" ? rv.open : rv.nav}
@@ -246,7 +336,7 @@ export default async function OrderPage({
       </section>
 
       {order.status === "open" && (
-        <section className={card}>
+        <section id="receipt" className={`${card} scroll-mt-4`}>
           <h2 className="mb-3 text-xl font-semibold">{t.addReceipts}</h2>
           <ReceiptUpload
             aiEnabled={claudeEnabled()}
