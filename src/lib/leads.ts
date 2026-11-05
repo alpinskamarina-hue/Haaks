@@ -56,6 +56,15 @@ export function scoreColor(score: number | null) {
   return "bg-slate-100 text-slate-600";
 }
 
+// Phone numbers written in a contact text, as "tel:" links: "+31 6 21446672 · a@b.nl" -> [{ label, href }].
+export function contactPhones(contact: string | null) {
+  const found = contact?.match(/(?:\+31|0031|\b0)[\s-]?(?:6|[1-9]\d)(?:[\s-]?\d){7,8}/g) ?? [];
+  return found.map((label) => {
+    const digits = label.replace(/\D/g, "").replace(/^0031/, "31").replace(/^0/, "31");
+    return { label: label.trim(), href: `tel:+${digits}` };
+  });
+}
+
 // Without AI: pick a phone number or e-mail address out of the pasted post,
 // so the WhatsApp and e-mail buttons still work.
 export function findContact(text: string) {

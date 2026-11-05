@@ -188,7 +188,7 @@ async function toItem(pub: Publication): Promise<CollectedItem | null> {
   return {
     source: "bekendmakingen",
     source_name: `Gemeente ${pub.creator} · ${status === "verleend" ? "verleende" : "aanvraag"} omgevingsvergunning`,
-    source_url: `${TEXT}/${pub.id}`,
+    source_url: `${TEXT}/${pub.id}.html`,
     kind: "permit",
     title: translations.nl!.title,
     summary: translations.nl!.summary,
