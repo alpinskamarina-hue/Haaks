@@ -18,7 +18,9 @@ import {
   REQUIREMENTS,
   type DocumentRow,
 } from "@/lib/documents";
+import { getWorkerDict } from "@/lib/worker-profile-text";
 import { getDict, isLang, type Dict } from "@/lib/i18n";
+import { getPassportPlusDict, passportMessage, type PassportPlusDict } from "@/lib/passport-plus-i18n";
 import { siteUrl } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile, signedUrls } from "@/lib/workspace";
@@ -26,14 +28,19 @@ import { ensureProfile, signedUrls } from "@/lib/workspace";
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 const input = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base";
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ upload?: string }>;
+}) {
+  const { upload } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const [{ data: profile }, { data: docs }, { count: views }] = await Promise.all([
+  const [{ data: profile }, { data: docs }, { count: views }, { data: lastView }] = await Promise.all([
     ensureProfile(supabase, user.id).then((data) => ({ data })),
     supabase
       .from("documents")
@@ -45,6 +52,13 @@ export default async function Dashboard() {
       .from("passport_views")
       .select("id", { count: "exact", head: true })
       .eq("profile_id", user.id),
+    supabase
+      .from("passport_views")
+      .select("viewed_at")
+      .eq("profile_id", user.id)
+      .order("viewed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ viewed_at: string }>(),
   ]);
   if (!profile) throw new Error("Profile not found");
 
@@ -55,6 +69,14 @@ export default async function Dashboard() {
   const doneCount = REQUIREMENTS.filter((r) => ready[r]).length;
   const passportUrl = `${await siteUrl()}/p/${profile.passport_token}`;
   const qr = await QRCode.toDataURL(passportUrl, { margin: 1, width: 240 });
+  const tp = getPassportPlusDict(lang);
+  const trades = (profile as { trades?: string[] | null }).trades ?? [];
+  const message = passportMessage({
+    url: passportUrl,
+    name: profile.full_name ?? "",
+    trade: trades[0] ? (getWorkerDict("nl").trades as Record<string, string>)[trades[0]] ?? "" : (profile.trade ?? ""),
+    ready,
+  });
   const fileUrls = await signedUrls(supabase, documents.map((d) => d.file_path));
 
   return (
@@ -62,54 +84,9 @@ export default async function Dashboard() {
       <PassportTabs active="docs" lang={lang} userId={user.id} token={profile.passport_token} username={(profile as { username?: string | null }).username} />
 
       <section className={card}>
-        <h2 className="text-xl font-semibold">{t.passportTitle}</h2>
-        <p className="mt-1 text-sm text-slate-600">{t.passportHint}</p>
-        <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qr}
-            alt="QR"
-            width={160}
-            height={160}
-            className={profile.passport_enabled ? "" : "opacity-30"}
-          />
-          <div className="w-full min-w-0 space-y-3">
-            <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded bg-slate-100 px-2 py-2 text-xs">
-                {passportUrl}
-              </code>
-              <CopyButton value={passportUrl} />
-            </div>
-            <div className="flex flex-wrap gap-2 text-sm">
-              <a
-                href={passportUrl}
-                target="_blank"
-                className="rounded-lg bg-slate-900 px-3 py-2 font-medium text-white"
-              >
-                {t.openPassport}
-              </a>
-              <form action={setPassportEnabled.bind(null, !profile.passport_enabled)}>
-                <button className="rounded-lg border border-slate-300 px-3 py-2">
-                  {profile.passport_enabled ? t.turnOff : t.turnOn}
-                </button>
-              </form>
-              <form action={regeneratePassportLink}>
-                <ConfirmButton message={t.confirmNewLink} className="rounded-lg border border-slate-300 px-3 py-2">
-                  {t.newLink}
-                </ConfirmButton>
-              </form>
-            </div>
-            <p className="text-sm text-slate-600">
-              {profile.passport_enabled ? t.passportOn : t.passportOff} · {t.views}: {views ?? 0}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className={card}>
         <div className="flex items-baseline justify-between">
           <h2 className="text-xl font-semibold">{t.readinessTitle}</h2>
-          <span className="text-lg font-bold">
+          <span className="whitespace-nowrap text-lg font-bold">
             {doneCount} / {REQUIREMENTS.length}
           </span>
         </div>
@@ -125,19 +102,101 @@ export default async function Dashboard() {
               <span className={ready[req] ? "text-green-600" : "text-red-600"}>
                 {ready[req] ? "✓" : "✗"}
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">{t[`req_${req}`]}</p>
                 {!ready[req] && <p className="text-sm text-slate-600">{t[`hint_${req}`]}</p>}
               </div>
+              {!ready[req] && (
+                <a
+                  href={req === "kvk_number" || req === "btw_number" ? "#profile" : `?upload=${req}#upload`}
+                  className="h-fit shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white"
+                >
+                  {req === "kvk_number" || req === "btw_number" ? tp.fill : tp.upload}
+                </a>
+              )}
             </li>
           ))}
         </ul>
       </section>
 
       <section className={card}>
+        <h2 className="text-xl font-semibold">{t.passportTitle}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t.passportHint}</p>
+        <div className="mt-4 flex gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qr}
+            alt="QR"
+            width={104}
+            height={104}
+            className={`h-[104px] w-[104px] shrink-0 rounded-lg border border-slate-200 ${profile.passport_enabled ? "" : "opacity-30"}`}
+          />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded bg-slate-100 px-2 py-2 text-xs">
+                {passportUrl}
+              </code>
+              <CopyButton value={passportUrl} />
+            </div>
+            <p className="text-xs text-slate-500">{tp.qrHint}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-orange-50 p-4">
+          <p className="font-semibold">📤 {tp.sendTitle}</p>
+          <p className="mt-0.5 text-sm text-slate-600">{tp.sendHint}</p>
+          {profile.passport_enabled ? (
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(message.body)}`}
+                target="_blank"
+                rel="noopener"
+                className="rounded-lg bg-green-600 px-3 py-2 font-semibold text-white"
+              >
+                {tp.whatsapp}
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`}
+                className="rounded-lg bg-slate-900 px-3 py-2 font-semibold text-white"
+              >
+                ✉ {tp.email}
+              </a>
+              <CopyButton value={message.body} label={tp.copyText} />
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-amber-800">{tp.offNote}</p>
+          )}
+        </div>
+
+        <p className="mt-4 text-sm text-slate-700">
+          👁{" "}
+          {views
+            ? `${tp.opened.replace("{n}", String(views))} · ${tp.lastOpened.replace("{when}", openedWhen(lastView?.viewed_at, tp, lang))}`
+            : tp.never}
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm">
+          <a href={passportUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 font-medium">
+            {t.openPassport}
+          </a>
+          <form action={setPassportEnabled.bind(null, !profile.passport_enabled)}>
+            <button className="rounded-lg border border-slate-300 px-3 py-2">
+              {profile.passport_enabled ? t.turnOff : t.turnOn}
+            </button>
+          </form>
+          <form action={regeneratePassportLink}>
+            <ConfirmButton message={t.confirmNewLink} className="rounded-lg border border-slate-300 px-3 py-2">
+              {t.newLink}
+            </ConfirmButton>
+          </form>
+          <span className="text-slate-500">{profile.passport_enabled ? t.passportOn : t.passportOff}</span>
+        </div>
+      </section>
+
+      <section id="upload" className={`${card} scroll-mt-4`}>
         <h2 className="mb-1 text-xl font-semibold">{t.uploadTitle}</h2>
         <p className="mb-4 text-sm text-slate-600">{t.privacyNote}</p>
-        <UploadForm t={t} userId={user.id} />
+        <UploadForm key={upload ?? ""} t={t} userId={user.id} initialType={upload} />
       </section>
 
       <section className={card}>
@@ -150,7 +209,7 @@ export default async function Dashboard() {
         </ul>
       </section>
 
-      <section id="profile" className={card}>
+      <section id="profile" className={`${card} scroll-mt-4`}>
         <h2 className="mb-4 text-xl font-semibold">{t.profileTitle}</h2>
         <form action={saveProfile} className="grid gap-3 sm:grid-cols-2">
           {(
@@ -181,6 +240,22 @@ export default async function Dashboard() {
       </section>
     </main>
   );
+}
+
+const LOCALES: Record<string, string> = { pl: "pl-PL", ro: "ro-RO", uk: "uk-UA", ru: "ru-RU", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
+
+// "today at 14:05", "yesterday at 09:10" or "3 nov." in the worker's language, Dutch time.
+function openedWhen(at: string | undefined, tp: PassportPlusDict, lang: string) {
+  if (!at) return "—";
+  const tz = "Europe/Amsterdam";
+  const locale = LOCALES[lang] ?? "en-GB";
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
+  const when = new Date(at);
+  const now = new Date();
+  const time = when.toLocaleTimeString(locale, { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+  if (day(when) === day(now)) return tp.today.replace("{time}", time);
+  if (day(when) === day(new Date(now.getTime() - 86_400_000))) return tp.yesterday.replace("{time}", time);
+  return when.toLocaleDateString(locale, { timeZone: tz, day: "numeric", month: "short" });
 }
 
 function StatusBadge({ doc, t }: { doc: DocumentRow; t: Dict }) {
