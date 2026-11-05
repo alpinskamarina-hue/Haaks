@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createInvoice } from "@/app/invoices-actions";
 import { deleteQuote, setQuoteStatus } from "@/app/quotes-actions";
-import { SubmitButton } from "@/components/SubmitButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { QuoteEditor } from "@/components/QuoteEditor";
@@ -16,6 +14,10 @@ import { templateGroups, templatePrices } from "@/lib/quote-templates";
 import { daysSince, fill, getQuotesDict, reminderMessage } from "@/lib/quotes-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { QuoteSteps } from "@/components/QuoteSteps";
+import { setQuoteTitle } from "@/app/quotes-actions";
+import { getQuotesListDict, LOW_QUOTE_TOTAL, workTitleFromAd } from "@/lib/quotes-list-i18n";
+import { euro } from "@/lib/orders";
+import { quoteTotals } from "@/lib/quotes";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -30,6 +32,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
     .maybeSingle<Quote & { sent_at: string | null; viewed_at: string | null }>();
   if (!quote) notFound();
   const q = getQuotesDict(lang);
+  const l = getQuotesListDict(lang);
 
   const [{ data: order }, photos, { data: lead }, { data: recent }, { data: pastInvoices }, { data: invoice }] = await Promise.all([
     quote.order_id
@@ -91,6 +94,9 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
     emailLink(contact, reminderSubject, reminder) ??
     `mailto:?subject=${encodeURIComponent(reminderSubject)}&body=${encodeURIComponent(reminder)}`;
 
+  const total = quoteTotals(quote.lines).incl;
+  const betterTitle = quote.status === "draft" ? workTitleFromAd(quote.title) : null;
+
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
       <Link
@@ -130,7 +136,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           />
         )}
         {quote.status === "sent" && waitingDays >= 3 && (
-          <div className="mt-4 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm">
+          <div id="remind" className="mt-4 scroll-mt-4 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm">
             <p>
               ⏰ <b>{fill(q.remindTitle, { n: waitingDays })}</b> {q.remindText}
             </p>
@@ -146,6 +152,22 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
                 {q.remindEmail}
               </a>
             </div>
+          </div>
+        )}
+        {quote.status === "draft" && (betterTitle || !quote.client_name || total < LOW_QUOTE_TOTAL) && (
+          <div className="mt-4 space-y-2 text-sm">
+            {betterTitle && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900">
+                💡 {l.adTitle} <b>«{betterTitle}»</b>
+                <form action={setQuoteTitle.bind(null, quote.id, betterTitle)} className="mt-2">
+                  <button className="rounded-lg bg-blue-700 px-3 py-1.5 font-semibold text-white">{l.useTitle}</button>
+                </form>
+              </div>
+            )}
+            {!quote.client_name && <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-orange-900">👤 {l.needClient}</p>}
+            {total < LOW_QUOTE_TOTAL && (
+              <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-orange-900">⚠️ {fill(l.lowPrice, { sum: euro(total) })}</p>
+            )}
           </div>
         )}
         {quote.status !== "accepted" && (
@@ -176,6 +198,14 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
+        {quote.status === "accepted" && (
+          <Link
+            href={invoice ? `/dashboard/invoices/${invoice.id}` : "/dashboard/invoices#from-quotes"}
+            className="mt-4 block rounded-xl bg-green-50 p-3 text-sm font-semibold text-green-800 underline decoration-green-300"
+          >
+            {invoice ? l.invoiceDone : l.invoiceInInvoices}
+          </Link>
+        )}
         {quote.status === "accepted" && (
           <div className="mt-4">
             <p className="mb-1 text-sm font-medium">{t.clientLink}</p>
@@ -209,14 +239,6 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
               ) : (
                 <button className={button}>{t.backToDraft}</button>
               )}
-            </form>
-          )}
-          {quote.status === "accepted" && (
-            <form action={createInvoice}>
-              <input type="hidden" name="quote_id" value={quote.id} />
-              <SubmitButton className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                {t.makeInvoice}
-              </SubmitButton>
             </form>
           )}
           <form action={deleteQuote.bind(null, quote.id)}>

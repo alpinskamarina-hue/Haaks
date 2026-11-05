@@ -5,6 +5,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { euro, inQuarter, quarterOf, totals, type Receipt } from "@/lib/orders";
 import { loadWorkspace } from "@/lib/workspace";
+import { quoteTotals, type Quote } from "@/lib/quotes";
+import { getQuotesListDict } from "@/lib/quotes-list-i18n";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
@@ -12,7 +14,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const { order } = await searchParams;
   const { supabase, user, profile, lang, t } = await loadWorkspace();
 
-  const [{ data: orderRows }, { data: invoiceRows }, { data: receiptRows }] = await Promise.all([
+  const [{ data: orderRows }, { data: invoiceRows }, { data: receiptRows }, { data: acceptedRows }] = await Promise.all([
     supabase
       .from("orders")
       .select("id, title")
@@ -26,7 +28,15 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       .order("created_at", { ascending: false })
       .returns<Invoice[]>(),
     supabase.from("receipts").select("*").eq("user_id", user.id).limit(2000).returns<Receipt[]>(),
+    supabase
+      .from("quotes")
+      .select("id, number, title, client_name, lines, accepted_at")
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .order("accepted_at", { ascending: false })
+      .returns<Pick<Quote, "id" | "number" | "title" | "client_name" | "lines" | "accepted_at">[]>(),
   ]);
+  const l = getQuotesListDict(lang);
   const quarter = quarterOf(new Date());
   const quarterTotals = totals((receiptRows ?? []).filter((r) => inQuarter(r, quarter)));
   const orders = orderRows ?? [];
@@ -35,10 +45,42 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const unpaid = invoices
     .filter((i) => i.status === "sent")
     .reduce((sum, i) => sum + invoiceTotals(i.lines, i.vat_mode).incl, 0);
+  const withInvoice = new Set(invoices.map((i) => i.quote_id).filter(Boolean));
+  const toInvoice = (acceptedRows ?? []).filter((x) => !withInvoice.has(x.id));
   const field = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3";
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
+      {toInvoice.length > 0 && (
+        <section id="from-quotes" className="scroll-mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">
+          <h2 className="text-lg font-bold text-green-900">
+            {l.fromQuotesTitle} · {toInvoice.length}
+          </h2>
+          <p className="mb-3 text-sm text-green-900">{l.fromQuotesHint}</p>
+          <ul className="space-y-2">
+            {toInvoice.map((x) => (
+              <li key={x.id} className="rounded-xl bg-white p-3 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <Link href={`/dashboard/quotes/${x.id}`} className="min-w-0">
+                    <span className="block break-words font-semibold">{x.title}</span>
+                    <span className="text-sm text-slate-500">
+                      {x.number}
+                      {x.client_name ? ` · ${x.client_name}` : ""}
+                    </span>
+                  </Link>
+                  <span className="shrink-0 font-semibold">{euro(quoteTotals(x.lines).incl)}</span>
+                </div>
+                <form action={createInvoice} className="mt-2">
+                  <input type="hidden" name="quote_id" value={x.id} />
+                  <SubmitButton className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                    🧾 {l.makeFromQuote}
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className={card}>
         <h1 className="mb-3 text-2xl font-bold">{t.newInvoice}</h1>
