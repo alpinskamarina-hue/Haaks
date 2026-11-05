@@ -26,6 +26,7 @@ export type SocialProfileData = {
   reviews: Review[];
   criteria: Record<Criterion, string>;
   replyLabel: string;
+  bio: string | null; // «Over mij», written in Dutch by the builder
   about: { label: string; value: string }[];
   languages: string[];
 };
@@ -175,6 +176,11 @@ export function SocialProfile({
           ))}
         {tab === "about" && (
           <dl className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+            {p.bio && (
+              <div lang="nl" className="whitespace-pre-line pb-1 leading-snug">
+                {p.bio}
+              </div>
+            )}
             {p.about.map((x) => (
               <div key={x.label}>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{x.label}</dt>

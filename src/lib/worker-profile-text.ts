@@ -757,6 +757,7 @@ export function radiusText(w: WorkerDict, km: number) {
 // The profile block on the public passport (Dutch, or English with ?lang=en).
 export const PUBLIC_PROFILE = {
   nl: {
+    about: "Over mij",
     available: "Nu beschikbaar",
     availableFrom: "Beschikbaar vanaf {d}",
     region: "Regio",
@@ -771,6 +772,7 @@ export const PUBLIC_PROFILE = {
     footnote: "Opgegeven door de vakman. Documenten staan hieronder.",
   },
   en: {
+    about: "About me",
     available: "Available now",
     availableFrom: "Available from {d}",
     region: "Area",
