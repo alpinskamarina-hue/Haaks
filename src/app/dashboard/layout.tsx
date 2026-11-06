@@ -6,6 +6,7 @@ import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
 import { getHelperDict } from "@/lib/helper-i18n";
+import { getAccountantDict } from "@/lib/accountant-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getPricingDict } from "@/lib/pricing-i18n";
@@ -44,6 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/orders", label: t.navOrders, icon: "orders" },
     { href: "/dashboard/materials", label: getMaterialsDict(lang).nav, icon: "cart" },
     { href: "/dashboard/invoices", label: t.navInvoices, icon: "invoice" },
+    { href: "/dashboard/accountant", label: getAccountantDict(lang).nav, icon: "folder" },
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport", also: ["/dashboard/works", "/dashboard/reviews"] },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
     { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
@@ -121,6 +123,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/dashboard/settings" className="block border-t border-slate-100 px-4 py-3">
                 ⚙️ {t.settingsTitle}
               </Link>
+              <Link href="/dashboard/accountant" className="block border-t border-slate-100 px-4 py-3">
+                📁 {getAccountantDict(lang).title}
+              </Link>
               <Link href="/dashboard/plan" className="block border-t border-slate-100 px-4 py-3">
                 💳 {getPricingDict(lang).myTitle}
               </Link>
@@ -133,7 +138,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
+      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
     </div>
   );
 }

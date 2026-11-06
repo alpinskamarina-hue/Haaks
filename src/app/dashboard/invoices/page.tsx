@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getAccountantDict } from "@/lib/accountant-i18n";
 import { createInvoice } from "@/app/invoices-actions";
 import { InvoiceStatusBadge } from "@/components/InvoiceStatusBadge";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -139,6 +140,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           ))}
         </ul>
       </section>
+      <Link href="/dashboard/accountant" className={`${card} flex items-center justify-between font-semibold`}>
+        {getAccountantDict(lang).invoicesLink}
+        <span className="text-orange-700">→</span>
+      </Link>
       {quarterTotals.count > 0 && (
         <section className={card}>
           <p className="text-sm text-slate-600">{t.vatQuarter.replace("{q}", quarter.label)}</p>
