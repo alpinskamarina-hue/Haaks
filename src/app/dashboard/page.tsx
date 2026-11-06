@@ -17,6 +17,8 @@ import { redirect } from "next/navigation";
 import { completeness, withDefaults, type WorkerProfile } from "@/lib/worker-profile";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
+import { daysBetween, recentQuarters, vatDeadline } from "@/lib/accountant";
+import { getAccountantDict } from "@/lib/accountant-i18n";
 import { cookies } from "next/headers";
 import { DailyQuote, QUOTE_COOKIE } from "@/components/DailyQuote";
 import { getQuoteLabels, quoteOfDay } from "@/lib/daily-quotes";
@@ -146,6 +148,30 @@ export default async function Home() {
     ]);
     if (tripCount && !odoCount) {
       todos.push({ key: "odometer", icon: "🚗", text: getTripsDict(lang).todoOdo, href: "/dashboard/trips", button: h.open });
+    }
+  }
+
+  // Accountant: unanswered questions, and the btw deadline of the last quarter (3 weeks before).
+  {
+    const ac = getAccountantDict(lang);
+    const prev = recentQuarters(today)[2]!;
+    const deadline = vatDeadline(prev);
+    const left = daysBetween(today, deadline);
+    const [{ count: openQuestions }, due] = await Promise.all([
+      supabase.from("accountant_questions").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("answered_at", null),
+      left >= 0 && left <= 21
+        ? Promise.all([
+            supabase.from("accountant_shares").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("quarter", prev.key),
+            supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", user.id).neq("status", "draft").gte("invoice_date", prev.start).lt("invoice_date", prev.end),
+          ])
+        : Promise.resolve(null),
+    ]);
+    if (openQuestions) {
+      todos.unshift({ key: "acc-questions", icon: "❓", text: `${ac.questionsTitle.replace(/^❓\s*/, "")} · ${openQuestions}`, href: "/dashboard/accountant#vragen", button: ac.send, warn: true });
+    }
+    if (due && !due[0].count && due[1].count) {
+      const date = new Intl.DateTimeFormat(lang, { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${deadline}T00:00:00Z`));
+      todos.push({ key: "acc-deadline", icon: "📁", text: fill(ac.reminder, { q: `Q${prev.q} ${prev.year}`, date }), href: `/dashboard/accountant?q=${prev.key}`, button: ac.reminderButton, warn: left <= 7 });
     }
   }
 

@@ -8,6 +8,8 @@ import { dutchToday } from "@/lib/quotes";
 import { fill } from "@/lib/quotes-i18n";
 import type { CarType } from "@/lib/trips";
 import { loadWorkspace } from "@/lib/workspace";
+import { siteUrl } from "@/lib/lang";
+import { QuestionsCard, ShareCard, type QuestionRow, type ShareRow } from "./parts";
 
 const LOCALES = { pl: "pl-PL", ro: "ro-RO", uk: "uk-UA", ru: "ru-RU", tr: "tr-TR", en: "en-GB", nl: "nl-NL" } as const;
 const card = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
@@ -24,11 +26,22 @@ export default async function AccountantPage({ searchParams }: { searchParams: P
   const quarters = recentQuarters(today);
   const q = quarterFromKey(key, today);
   const car = (profile as typeof profile & { car_type?: CarType | null }).car_type ?? null;
-  const d = await loadQuarter(supabase, user.id, q, car);
+  const [d, { data: share }, { data: questionRows }] = await Promise.all([
+    loadQuarter(supabase, user.id, q, car),
+    supabase.from("accountant_shares").select("*").eq("user_id", user.id).eq("quarter", q.key).maybeSingle<ShareRow>(),
+    supabase
+      .from("accountant_questions")
+      .select("id, kind, body, answer_kind, answer, answered_at, created_at, receipts(store_name, purchased_on, total_incl_vat), invoices(number)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(40)
+      .returns<QuestionRow[]>(),
+  ]);
+  const shareUrl = share ? `${await siteUrl()}/a/${share.token}` : null;
   const deadline = vatDeadline(q);
   const left = daysBetween(today, deadline);
   const fmt = (iso: string) =>
-    new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+    new Intl.DateTimeFormat(LOCALES[lang], { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
   const receiptHref = (r: { order_id: string | null }) => (r.order_id ? `/dashboard/orders/${r.order_id}?tab=docs` : "/dashboard/orders");
 
   const c = d.checks;
@@ -57,6 +70,8 @@ export default async function AccountantPage({ searchParams }: { searchParams: P
         <h1 className="text-2xl font-bold">{a.title}</h1>
         <p className="mt-1 text-sm text-slate-600">{a.hint}</p>
       </div>
+
+      <QuestionsCard a={a} lang={lang} questions={questionRows ?? []} fmt={fmt} />
 
       <nav className="flex gap-1.5">
         {quarters.map((x) => (
@@ -145,9 +160,17 @@ export default async function AccountantPage({ searchParams }: { searchParams: P
 
           <AccountantZip pack={pack} urls={urls} label={a.download} busyLabel={a.busy} errorLabel={a.failed} />
           <p className="text-center text-sm text-slate-600">{a.downloadHint}</p>
+          <ShareCard
+            a={a}
+            share={share ?? null}
+            quarterKey={q.key}
+            quarterLabel={`Q${q.q} ${q.year}`}
+            url={shareUrl}
+            name={profile.company_name || profile.full_name || ""}
+            fmt={fmt}
+          />
         </>
       )}
-      <p className="text-center text-xs text-slate-400">{a.soon}</p>
     </main>
   );
 }
