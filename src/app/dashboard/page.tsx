@@ -269,13 +269,13 @@ export default async function Home() {
           </div>
           {/* The helper builder: says hello, then where the builder is, and leads to the next step. */}
           <div className="mt-3 flex items-start gap-3">
-            <Mascot size={72} className="shrink-0" />
+            <Mascot size={84} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="relative rounded-2xl rounded-tl-sm bg-white p-3 text-sm text-slate-800 shadow-sm">
                 {stepsDone <= 1 ? help.mascotHello : fill(help.mascotNext, { n: stepsDone, total: steps.length, step: nextStep.label })}
               </p>
               <Link href={nextStep.href} className="mt-2 block rounded-lg bg-orange-600 px-3 py-2.5 text-center font-bold text-white">
-                👷 {help.together}
+                {help.together}
               </Link>
             </div>
           </div>
