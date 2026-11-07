@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { likeQuote } from "@/app/quote-actions";
+import { QUOTE_COOKIE } from "@/lib/daily-quotes";
 
 type Labels = { title: string; share: string; hide: string; saved: string; brand: string };
 
-export const QUOTE_COOKIE = "haaks_quote_hidden";
 // The 👍 number is shown once a few builders liked the phrase, so it never looks empty.
 const SHOW_COUNT_FROM = 5;
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import { Mascot } from "@/components/Mascot";
-import { WHATS_NEW_COOKIE, WHATS_NEW_VERSION, WhatsNew } from "@/components/WhatsNew";
+import { WhatsNew } from "@/components/WhatsNew";
+import { WHATS_NEW_COOKIE, WHATS_NEW_VERSION } from "@/lib/whats-new";
 import { getHelp, type GuideId } from "@/lib/help";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hideFeedItem } from "@/app/feed-actions";
@@ -23,8 +24,8 @@ import { loadWorkspace } from "@/lib/workspace";
 import { daysBetween, recentQuarters, vatDeadline } from "@/lib/accountant";
 import { getAccountantDict } from "@/lib/accountant-i18n";
 import { cookies } from "next/headers";
-import { DailyQuote, QUOTE_COOKIE } from "@/components/DailyQuote";
-import { getQuoteLabels, quoteOfDay } from "@/lib/daily-quotes";
+import { DailyQuote } from "@/components/DailyQuote";
+import { getQuoteLabels, QUOTE_COOKIE, quoteOfDay } from "@/lib/daily-quotes";
 
 const LOCALES: Record<Lang, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
 
