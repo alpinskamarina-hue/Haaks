@@ -28,6 +28,9 @@ export type Invoice = {
   viewed_at: string | null;
   reminder_count: number;
   reminded_at: string | null;
+  credit_for: string | null;
+  credited_by: string | null;
+  replaces: string | null;
   created_at: string;
   updated_at: string;
 };
