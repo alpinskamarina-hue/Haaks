@@ -17,6 +17,10 @@ export const ro: HelpTexts = {
     askButton: "Scrie la Haaks",
     startTitle: "Abia ați început?",
     startText: "Începeți cu profilul, lista de lucrări și notificările: așa Haaks vă poate trimite lucrări potrivite.",
+    mascotHello: "Salut! Sunt ajutorul tău în Haaks. Hai să setăm totul în 5 pași, ca să-ți vină lucrări.",
+    mascotNext: "Deja {n} din {total}, super! Pasul următor: {step}.",
+    together: "Hai să construim împreună",
+    stepHow: "Cum?",
   },
   guides: {
     profile: {

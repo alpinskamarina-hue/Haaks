@@ -17,6 +17,10 @@ export const nl: HelpTexts = {
     askButton: "Mail Haaks",
     startTitle: "Net begonnen?",
     startText: "Begin met je profiel, de feed en meldingen, dan kan Haaks je passende klussen sturen.",
+    mascotHello: "Hoi! Ik ben je hulp in Haaks. Laten we alles in 5 stappen instellen, zodat er klussen naar je toe komen.",
+    mascotNext: "Al {n} van {total}, top! Volgende stap: {step}.",
+    together: "Laten we samen bouwen",
+    stepHow: "Hoe?",
   },
   guides: {
     profile: {

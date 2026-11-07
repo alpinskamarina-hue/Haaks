@@ -17,6 +17,10 @@ export const tr: HelpTexts = {
     askButton: "Haaks'a yaz",
     startTitle: "Yeni mi başladınız?",
     startText: "Profil, iş akışı ve bildirimlerle başlayın: böylece Haaks size uygun işleri gönderebilir.",
+    mascotHello: "Merhaba! Haaks'taki yardımcınım. Sana iş gelmesi için her şeyi 5 adımda birlikte ayarlayalım.",
+    mascotNext: "Şimdiden {n}/{total}, harika! Sıradaki adım: {step}.",
+    together: "Hadi birlikte inşa edelim",
+    stepHow: "Nasıl?",
   },
   guides: {
     profile: {

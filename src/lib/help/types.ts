@@ -35,6 +35,10 @@ export type HelpTexts = {
     askButton: string;
     startTitle: string;
     startText: string;
+    mascotHello: string;
+    mascotNext: string;
+    together: string;
+    stepHow: string;
   };
   guides: Record<GuideId, Guide>;
 };

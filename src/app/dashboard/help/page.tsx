@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Mascot } from "@/components/Mascot";
 import { COMPANY } from "@/lib/company";
 import { GUIDE_IDS, GUIDE_META, getHelp } from "@/lib/help";
 import { loadWorkspace } from "@/lib/workspace";
@@ -18,8 +19,13 @@ export default async function HelpPage() {
       </div>
 
       <section className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-        <h2 className="font-bold">{h.ui.startTitle}</h2>
-        <p className="mt-1 text-sm text-slate-700">{h.ui.startText}</p>
+        <div className="flex items-start gap-3">
+          <Mascot size={64} className="shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-bold">{h.ui.startTitle}</h2>
+            <p className="mt-1 text-sm text-slate-700">{h.ui.startText}</p>
+          </div>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {(["profile", "feed", "notify"] as const).map((id) => (
             <Link key={id} href={`/dashboard/help/${id}`} className="rounded-full border border-orange-300 bg-white px-3 py-1.5 text-sm font-semibold text-orange-800">
