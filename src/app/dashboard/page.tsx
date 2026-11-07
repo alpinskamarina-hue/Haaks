@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
+import { Mascot } from "@/components/Mascot";
+import { getHelp, type GuideId } from "@/lib/help";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hideFeedItem } from "@/app/feed-actions";
 import { getTripsDict } from "@/lib/trips-i18n";
@@ -177,13 +179,14 @@ export default async function Home() {
 
   // First steps for newcomers: shown until all five are done.
   const hasDoc = (type: string) => (docs ?? []).some((d) => d.doc_type === type);
-  const steps = [
-    { label: h.stepName, done: true, href: "/dashboard/onboarding?step=0&edit=1&back=settings" },
-    { label: h.stepTrades, done: worker.trades.length > 0 && !!(worker.city || profile.city), href: "/dashboard/settings#feed" },
-    { label: h.stepNotify, done: (pushCount ?? 0) > 0 || !!extra.telegram_chat_id, href: "/dashboard/settings#notify" },
-    { label: h.stepDocs, done: hasDoc("kvk_extract") && hasDoc("vca"), href: "/dashboard/passport" },
-    { label: h.stepQuote, done: quotes.length > 0, href: "/dashboard/quotes/new" },
+  const steps: { label: string; done: boolean; href: string; guide: GuideId }[] = [
+    { label: h.stepName, done: true, href: "/dashboard/onboarding?step=0&edit=1&back=settings", guide: "profile" },
+    { label: h.stepTrades, done: worker.trades.length > 0 && !!(worker.city || profile.city), href: "/dashboard/settings#feed", guide: "feed" },
+    { label: h.stepNotify, done: (pushCount ?? 0) > 0 || !!extra.telegram_chat_id, href: "/dashboard/settings#notify", guide: "notify" },
+    { label: h.stepDocs, done: hasDoc("kvk_extract") && hasDoc("vca"), href: "/dashboard/passport", guide: "passport" },
+    { label: h.stepQuote, done: quotes.length > 0, href: "/dashboard/quotes/new", guide: "quotes" },
   ];
+  const help = getHelp(lang).ui;
   const stepsDone = steps.filter((s) => s.done).length;
   const nextStep = steps.find((s) => !s.done);
 
@@ -264,10 +267,22 @@ export default async function Home() {
           <div className="mt-2 h-2 rounded-full bg-white">
             <div className="h-2 rounded-full bg-orange-500" style={{ width: `${(stepsDone / steps.length) * 100}%` }} />
           </div>
+          {/* The helper builder: says hello, then where the builder is, and leads to the next step. */}
+          <div className="mt-3 flex items-start gap-3">
+            <Mascot size={72} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="relative rounded-2xl rounded-tl-sm bg-white p-3 text-sm text-slate-800 shadow-sm">
+                {stepsDone <= 1 ? help.mascotHello : fill(help.mascotNext, { n: stepsDone, total: steps.length, step: nextStep.label })}
+              </p>
+              <Link href={nextStep.href} className="mt-2 block rounded-lg bg-orange-600 px-3 py-2.5 text-center font-bold text-white">
+                👷 {help.together}
+              </Link>
+            </div>
+          </div>
           <ol className="mt-3 space-y-1.5">
             {steps.map((s) => (
-              <li key={s.label}>
-                <Link href={s.href} className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-white/70">
+              <li key={s.label} className="flex items-center gap-1">
+                <Link href={s.href} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 hover:bg-white/70">
                   <span
                     className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
                       s.done ? "bg-green-600 text-white" : "border-2 border-orange-400 bg-white text-orange-600"
@@ -280,6 +295,11 @@ export default async function Home() {
                     <span className="shrink-0 rounded-lg bg-orange-600 px-3 py-1 text-sm font-semibold text-white">{h.stepDo}</span>
                   )}
                 </Link>
+                {!s.done && (
+                  <Link href={`/dashboard/help/${s.guide}`} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-orange-800 underline">
+                    {help.stepHow}
+                  </Link>
+                )}
               </li>
             ))}
           </ol>

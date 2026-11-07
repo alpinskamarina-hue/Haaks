@@ -17,6 +17,10 @@ export const en: HelpTexts = {
     askButton: "Write to Haaks",
     startTitle: "Just started?",
     startText: "Start with your profile, the feed and notifications, so Haaks can send you jobs that fit.",
+    mascotHello: "Hi! I'm your helper in Haaks. Let's set everything up in 5 steps so jobs start coming to you.",
+    mascotNext: "Already {n} of {total}, great! Next step: {step}.",
+    together: "Let's build together",
+    stepHow: "How?",
   },
   guides: {
     profile: {

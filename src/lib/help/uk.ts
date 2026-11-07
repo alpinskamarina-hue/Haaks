@@ -17,6 +17,10 @@ export const uk: HelpTexts = {
     askButton: "Написати в Haaks",
     startTitle: "Тільки почали?",
     startText: "Почніть з профілю, стрічки та сповіщень: так Haaks зможе надсилати вам відповідні замовлення.",
+    mascotHello: "Привіт! Я твій помічник у Haaks. Давай за 5 кроків налаштуємо все, щоб до тебе йшли замовлення.",
+    mascotNext: "Вже {n} з {total}, чудово! Наступний крок: {step}.",
+    together: "Давай будувати разом",
+    stepHow: "Як?",
   },
   guides: {
     profile: {
