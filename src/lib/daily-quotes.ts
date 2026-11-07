@@ -1,5 +1,8 @@
 import type { Lang } from "@/lib/i18n";
 
+// Cookie set by «закрыть» on the phrase of the day (plain module: the server page reads it too).
+export const QUOTE_COOKIE = "haaks_quote_hidden";
+
 // «Фраза дня» on the home screen: one short phrase a day, the same for everyone, each in their
 // own language. Every weekday has its own theme. Written for builders (no celebrity quotes).
 export type Theme = "start" | "craft" | "safety" | "patience" | "rest" | "family";

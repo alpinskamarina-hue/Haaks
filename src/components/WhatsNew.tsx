@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Mascot } from "@/components/Mascot";
+import { WHATS_NEW_COOKIE, WHATS_NEW_VERSION } from "@/lib/whats-new";
 
 // «Что нового»: shown once to builders who used Haaks before the update, until «Понятно».
-export const WHATS_NEW_COOKIE = "haaks_whats_new";
-export const WHATS_NEW_VERSION = "2026-11-07";
 
 export function WhatsNew({
   items,
