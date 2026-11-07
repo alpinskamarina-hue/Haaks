@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
+import { HelpButton } from "@/components/HelpButton";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
+import { getHelp } from "@/lib/help";
 import { getHelperDict } from "@/lib/helper-i18n";
 import { getAccountantDict } from "@/lib/accountant-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
@@ -53,6 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
   const name = profile.company_name || profile.full_name || user.email;
   const so = getSocialDict(lang);
+  const help = getHelp(lang).ui;
   // The worker's own photo in the header: one tap to «Мой профиль».
   const avatarPath = (profile as typeof profile & { avatar_path?: string | null }).avatar_path ?? null;
   const avatarUrl = avatarPath ? ((await signedUrls(supabase, [avatarPath]).catch(() => new Map<string, string>())).get(avatarPath) ?? null) : null;
@@ -86,6 +89,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/plan" className="flex items-center gap-2 text-sm text-slate-600">
             💳 {getPricingDict(lang).myTitle}
           </Link>
+          <HelpButton label={help.help} variant="line" />
           <nav className="flex flex-wrap gap-x-3 text-xs text-slate-400">
             <Link href="/privacy">{legalSummary(lang).links.privacy}</Link>
             <Link href="/terms">{legalSummary(lang).links.terms}</Link>
@@ -101,6 +105,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
+          <HelpButton label={help.helpHere} variant="round" />
           <Link href="/dashboard/profile" className="shrink-0" aria-label={w.navProfile} title={w.navProfile}>
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -128,6 +133,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </Link>
               <Link href="/dashboard/plan" className="block border-t border-slate-100 px-4 py-3">
                 💳 {getPricingDict(lang).myTitle}
+              </Link>
+              <Link href="/dashboard/help" className="block border-t border-slate-100 px-4 py-3">
+                ❓ {help.help}
               </Link>
               <form action={signOut} className="border-t border-slate-100">
                 <button className="block w-full px-4 py-3 text-left">🚪 {t.signOut}</button>
