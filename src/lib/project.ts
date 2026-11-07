@@ -106,7 +106,7 @@ export function summarize(p: {
   else if (!accepted && !quotes.length && !sentInvoices.length && order.status === "open")
     next = { kind: "makeQuote", href: `/dashboard/quotes/new?order=${order.id}`, tone: "info" };
   else if (accepted && order.status === "open" && !sentInvoices.length)
-    next = { kind: "invoice", href: `/dashboard/invoices?order=${order.id}`, tone: "info" };
+    next = { kind: "invoice", href: `/dashboard/invoices/new?order=${order.id}`, tone: "info" };
   else if (stage === "paid" || order.status === "closed") {
     if (!p.hasReview) next = { kind: "review", href: `/dashboard/orders/${order.id}#review`, tone: "info" };
     else if (!p.hasWork) next = { kind: "work", href: `/dashboard/works/new?order=${order.id}`, tone: "info" };
