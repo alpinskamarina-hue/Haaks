@@ -157,7 +157,7 @@ export default async function OrderPage({
           <Link href={`/dashboard/quotes/new?order=${order.id}`} className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2">
             <span className="text-lg">📝</span>{p.quote}
           </Link>
-          <Link href={`/dashboard/invoices?order=${order.id}`} className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2">
+          <Link href={`/dashboard/invoices/new?order=${order.id}`} className="flex flex-col items-center rounded-lg border border-slate-300 px-1 py-2">
             <span className="text-lg">🧾</span>{p.invoice}
           </Link>
         </div>
@@ -375,7 +375,7 @@ export default async function OrderPage({
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold">{t.invoicesTitle}</h2>
               <Link
-                href={`/dashboard/invoices?order=${order.id}`}
+                href={`/dashboard/invoices/new?order=${order.id}`}
                 className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
               >
                 + {t.newInvoice}

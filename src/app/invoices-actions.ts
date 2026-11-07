@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { cleanDate } from "@/lib/extract";
+import type { SendKind } from "@/lib/invoice-messages";
 import { nextInvoiceNumber, VAT_MODES, type Invoice, type VatMode } from "@/lib/invoices";
 import type { Receipt } from "@/lib/orders";
 import { addDays, cleanLines, roundCents, short, type Quote, type QuoteLine } from "@/lib/quotes";
@@ -86,7 +87,7 @@ export async function createInvoice(formData: FormData) {
   const { data: previous } = clientName
     ? await supabase
         .from("invoices")
-        .select("client_address, client_kvk, client_btw, vat_mode")
+        .select("client_address, client_kvk, client_btw, client_email, vat_mode")
         .eq("user_id", user.id)
         .eq("client_name", clientName)
         .order("created_at", { ascending: false })
@@ -109,6 +110,7 @@ export async function createInvoice(formData: FormData) {
       client_address: previous?.client_address ?? quote?.client_address ?? null,
       client_kvk: previous?.client_kvk ?? null,
       client_btw: previous?.client_btw ?? null,
+      client_email: previous?.client_email ?? null,
       lines,
     })
     .select("id")
@@ -174,10 +176,31 @@ export async function setInvoiceStatus(id: string, status: Invoice["status"]) {
     .update({
       status,
       paid_at: status === "paid" ? new Date().toISOString() : null,
+      ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
   refresh();
+}
+
+// The builder pressed «Send» or «Remind»: remember the client's e-mail and what was sent.
+// Sending a draft makes it «sent»; a reminder counts up so the next one is firmer.
+export async function markInvoiceSent(id: string, kind: SendKind, email: string) {
+  const { supabase, user } = await requireUser();
+  const { data: invoice } = await supabase.from("invoices").select("status, reminder_count").eq("id", id).eq("user_id", user.id).maybeSingle();
+  if (!invoice) return;
+  const now = new Date().toISOString();
+  const clean = short(email, 200).trim();
+  const patch: Record<string, unknown> = { updated_at: now };
+  if (clean && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) patch.client_email = clean;
+  if (kind === "send") {
+    if (invoice.status === "draft") Object.assign(patch, { status: "sent", sent_at: now });
+  } else if (invoice.status === "sent") {
+    Object.assign(patch, { reminder_count: (invoice.reminder_count ?? 0) + 1, reminded_at: now });
+  }
+  await supabase.from("invoices").update(patch).eq("id", id).eq("user_id", user.id);
+  refresh();
+  revalidatePath("/dashboard", "layout");
 }
 
 // Only drafts: a sent or paid invoice must be kept (and its number stays used).

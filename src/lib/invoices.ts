@@ -23,6 +23,11 @@ export type Invoice = {
   notes: string | null;
   public_token: string;
   paid_at: string | null;
+  client_email: string | null;
+  sent_at: string | null;
+  viewed_at: string | null;
+  reminder_count: number;
+  reminded_at: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -6,7 +6,10 @@ import type { Profile } from "@/lib/documents";
 import { invoiceTotals, vatNote, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
 import { lineTotal } from "@/lib/quotes";
-import { createServerAccountClient } from "@/lib/supabase/server";
+import { after } from "next/server";
+import { notifyInvoiceViewed } from "@/lib/invoice-notify";
+import { siteUrl } from "@/lib/lang";
+import { createClient, createServerAccountClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +22,15 @@ const date = (value: string) => new Date(value).toLocaleDateString("nl-NL");
 const qty = (n: number) => Number(n).toLocaleString("nl-NL");
 
 // The invoice as the client receives it: Dutch, A4-friendly, saved as PDF through the print dialog.
-export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function PublicInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ b?: string }>;
+}) {
   const { token } = await params;
+  const { b: fromAccountant } = await searchParams;
   const admin = await createServerAccountClient();
   const { data: invoice } = await admin
     .from("invoices")
@@ -34,6 +44,21 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
         Deze factuur bestaat niet of is verwijderd.
       </main>
     );
+  }
+
+  // First time the client opens a sent invoice: mark it and tell the builder.
+  // The builder's own look and the accountant's link (?b=1) do not count.
+  if (invoice.status === "sent" && !invoice.viewed_at && !fromAccountant) {
+    const {
+      data: { user },
+    } = await (await createClient()).auth.getUser();
+    if (user?.id !== invoice.user_id) {
+      const { data: firstView } = await admin.rpc("invoice_viewed", { p_token: token });
+      if (firstView) {
+        const site = await siteUrl();
+        after(() => notifyInvoiceViewed(admin, firstView as string, site).catch((err) => console.error("Invoice view notify failed", err)));
+      }
+    }
   }
 
   const { data: worker } = await admin.from("profiles").select("*").eq("id", invoice.user_id).single<Profile>();

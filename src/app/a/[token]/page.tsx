@@ -190,7 +190,7 @@ export default async function AccountantSharePage({
                       <b>{i.number}</b> · {nlDate(i.invoice_date)} · {i.client_name || "—"}
                       <span className="block text-xs text-slate-500">
                         {{ normal: "Btw", reverse: "Btw verlegd", kor: "KOR" }[i.vat_mode]} · {i.status === "paid" ? `Betaald ${nlDate(i.paid_at)}` : "Open"} ·{" "}
-                        <a href={`/f/${i.public_token}`} target="_blank" rel="noopener" className="underline">
+                        <a href={`/f/${i.public_token}?b=1`} target="_blank" rel="noopener" className="underline">
                           Bekijk
                         </a>
                       </span>
