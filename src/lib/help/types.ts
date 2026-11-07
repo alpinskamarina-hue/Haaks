@@ -39,6 +39,14 @@ export type HelpTexts = {
     mascotNext: string;
     together: string;
     stepHow: string;
+    wnTitle: string;
+    wnIntro: string;
+    wnInvoices: string;
+    wnAccountant: string;
+    wnTrips: string;
+    wnHelp: string;
+    wnOk: string;
+    wnAll: string;
   };
   guides: Record<GuideId, Guide>;
 };

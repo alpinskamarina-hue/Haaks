@@ -21,6 +21,14 @@ export const tr: HelpTexts = {
     mascotNext: "Şimdiden {n}/{total}, harika! Sıradaki adım: {step}.",
     together: "Hadi birlikte inşa edelim",
     stepHow: "Nasıl?",
+    wnTitle: "Haaks'ta yenilikler",
+    wnIntro: "Çok şey ekledik. Kısaca:",
+    wnInvoices: "Faturalar: müşterinin faturayı açıp açmadığını görürsünüz, tek dokunuşla ödeme hatırlatması, ödeme için QR kod.",
+    wnAccountant: "Muhasebeci için: tüm çeyrek tek klasörde ve muhasebeci için bir bağlantı.",
+    wnTrips: "Yolculuklar ve mağaza kartları: vergi için km ve telefonda indirim kartları.",
+    wnHelp: "Yardım: üstteki «?» düğmesi her sayfayı açıklar.",
+    wnOk: "Anladım",
+    wnAll: "Tüm rehberler",
   },
   guides: {
     profile: {
