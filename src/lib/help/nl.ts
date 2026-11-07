@@ -21,6 +21,14 @@ export const nl: HelpTexts = {
     mascotNext: "Al {n} van {total}, top! Volgende stap: {step}.",
     together: "Laten we samen bouwen",
     stepHow: "Hoe?",
+    wnTitle: "Nieuw in Haaks",
+    wnIntro: "We hebben veel toegevoegd. Het belangrijkste:",
+    wnInvoices: "Facturen: zie of de klant de factuur heeft geopend, een betalingsherinnering met één tik, een QR-code om te betalen.",
+    wnAccountant: "Voor de boekhouder: het hele kwartaal in één map, plus een link voor je boekhouder.",
+    wnTrips: "Ritten en winkelkaarten: kilometers voor de Belastingdienst en kortingskaarten op je telefoon.",
+    wnHelp: "Hulp: de knop «?» bovenaan legt elke pagina uit.",
+    wnOk: "Begrepen",
+    wnAll: "Alle uitleg",
   },
   guides: {
     profile: {

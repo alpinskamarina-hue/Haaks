@@ -21,6 +21,14 @@ export const ro: HelpTexts = {
     mascotNext: "Deja {n} din {total}, super! Pasul următor: {step}.",
     together: "Hai să construim împreună",
     stepHow: "Cum?",
+    wnTitle: "Ce e nou în Haaks",
+    wnIntro: "Am adăugat multe. Pe scurt:",
+    wnInvoices: "Facturi: vedeți dacă clientul a deschis factura, amintire de plată dintr-o apăsare, cod QR pentru plată.",
+    wnAccountant: "Pentru contabil: tot trimestrul într-un dosar și un link pentru contabil.",
+    wnTrips: "Drumuri și carduri de magazin: km pentru fisc și cardurile de reducere în telefon.",
+    wnHelp: "Ajutor: butonul «?» de sus explică orice pagină.",
+    wnOk: "Am înțeles",
+    wnAll: "Toate instrucțiunile",
   },
   guides: {
     profile: {

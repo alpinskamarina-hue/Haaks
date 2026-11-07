@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import { Mascot } from "@/components/Mascot";
+import { WHATS_NEW_COOKIE, WHATS_NEW_VERSION, WhatsNew } from "@/components/WhatsNew";
 import { getHelp, type GuideId } from "@/lib/help";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hideFeedItem } from "@/app/feed-actions";
@@ -230,6 +231,11 @@ export default async function Home() {
   // «Фраза дня»: unless the builder closed it today.
 
   const quoteHidden = (await cookies()).get(QUOTE_COOKIE)?.value === today;
+  // «Что нового»: for accounts made before the update, for 14 days, until «Понятно».
+  const showWhatsNew =
+    (user.created_at ?? "") < WHATS_NEW_VERSION &&
+    today < addDays(14, new Date(`${WHATS_NEW_VERSION}T12:00:00Z`)) &&
+    (await cookies()).get(WHATS_NEW_COOKIE)?.value !== WHATS_NEW_VERSION;
   const [{ data: myLike }, { data: likeCount }] = quoteHidden
     ? [{ data: null }, { data: 0 }]
     : await Promise.all([
@@ -255,6 +261,18 @@ export default async function Home() {
           labels={getQuoteLabels(lang)}
           liked={!!myLike}
           count={(likeCount as number | null) ?? 0}
+        />
+      )}
+
+      {showWhatsNew && (
+        <WhatsNew
+          items={[
+            { icon: "🧾", text: help.wnInvoices, href: "/dashboard/invoices" },
+            { icon: "📁", text: help.wnAccountant, href: "/dashboard/accountant" },
+            { icon: "🚗", text: help.wnTrips, href: "/dashboard/trips" },
+            { icon: "❓", text: help.wnHelp, href: "/dashboard/help" },
+          ]}
+          t={{ title: help.wnTitle, intro: help.wnIntro, ok: help.wnOk, all: help.wnAll }}
         />
       )}
 

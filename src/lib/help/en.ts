@@ -21,6 +21,14 @@ export const en: HelpTexts = {
     mascotNext: "Already {n} of {total}, great! Next step: {step}.",
     together: "Let's build together",
     stepHow: "How?",
+    wnTitle: "What's new in Haaks",
+    wnIntro: "We added a lot. The main things:",
+    wnInvoices: "Invoices: see whether the client opened the invoice, a payment reminder in one tap, a QR code for paying.",
+    wnAccountant: "For the accountant: the whole quarter in one folder, plus a link for your accountant.",
+    wnTrips: "Trips and shop cards: kilometres for the tax office and discount cards on your phone.",
+    wnHelp: "Help: the «?» button at the top explains any page.",
+    wnOk: "Got it",
+    wnAll: "All guides",
   },
   guides: {
     profile: {
