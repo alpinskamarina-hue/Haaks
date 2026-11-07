@@ -14,6 +14,8 @@ type Input = {
   iban: string | null;
   company: string;
   worker: string | null;
+  // On a corrected invoice: the Dutch line about the credit note that cancels the old one.
+  credit?: string | null;
 };
 
 const nl = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
@@ -40,6 +42,7 @@ export function invoiceEmail(i: Input) {
       ? [
           `Hierbij stuur ik u factuur ${i.number} van ${sum}.`,
           `U kunt de factuur hier bekijken en als PDF opslaan: ${i.link}`,
+          ...(i.credit ? ["", i.credit] : []),
           "",
           `Graag ontvang ik het bedrag${i.dueDate ? ` vóór ${nl(i.dueDate)}` : ""} ${pay}.`,
           "",

@@ -158,7 +158,8 @@ export async function saveInvoice(
       notes: short(data.notes, 2000) || null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "draft");
   if (error) {
     console.error("Invoice save failed", error);
     // 23505: this number is already used by another invoice.
@@ -170,16 +171,22 @@ export async function saveInvoice(
 
 export async function setInvoiceStatus(id: string, status: Invoice["status"]) {
   const { supabase } = await requireUser();
-  if (!["draft", "sent", "paid"].includes(status)) return;
+  if (!["sent", "paid"].includes(status)) return;
+  const { data: current } = await supabase.from("invoices").select("status, sent_at").eq("id", id).maybeSingle();
+  if (!current) return;
+  const now = new Date().toISOString();
+  // Credit notes and credited invoices are closed for good.
   await supabase
     .from("invoices")
     .update({
       status,
-      paid_at: status === "paid" ? new Date().toISOString() : null,
-      ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}),
-      updated_at: new Date().toISOString(),
+      paid_at: status === "paid" ? now : null,
+      ...(status === "sent" && !current.sent_at ? { sent_at: now } : {}),
+      updated_at: now,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("credit_for", null)
+    .is("credited_by", null);
   refresh();
 }
 
@@ -201,6 +208,74 @@ export async function markInvoiceSent(id: string, kind: SendKind, email: string)
   await supabase.from("invoices").update(patch).eq("id", id).eq("user_id", user.id);
   refresh();
   revalidatePath("/dashboard", "layout");
+}
+
+// Fixing a sent invoice the Dutch way: a credit note cancels it (same lines, minus), and a new
+// draft copy is opened for the builder to correct and send. The old invoice and the credit note
+// are both closed and stay in the number sequence and in the accountant's folder.
+export async function correctInvoice(id: string) {
+  const { supabase, user } = await requireUser();
+  const { data: original } = await supabase.from("invoices").select("*").eq("id", id).eq("user_id", user.id).maybeSingle<Invoice>();
+  if (!original || original.status === "draft" || original.credit_for || original.credited_by) redirect(`/dashboard/invoices/${id}`);
+  const { data: numbers } = await supabase.from("invoices").select("number").eq("user_id", user.id);
+  const used = (numbers ?? []).map((n) => n.number);
+  const creditNumber = nextInvoiceNumber(used);
+  const newNumber = nextInvoiceNumber([...used, creditNumber]);
+  const now = new Date().toISOString();
+  const client = {
+    vat_mode: original.vat_mode,
+    order_id: original.order_id,
+    project_address: original.project_address,
+    work_period: original.work_period,
+    client_name: original.client_name,
+    client_address: original.client_address,
+    client_kvk: original.client_kvk,
+    client_btw: original.client_btw,
+    client_email: original.client_email,
+  };
+  const day = new Date(`${original.invoice_date}T12:00:00`).toLocaleDateString("nl-NL");
+
+  const { data: credit, error: creditError } = await supabase
+    .from("invoices")
+    .insert({
+      ...client,
+      user_id: user.id,
+      number: creditNumber,
+      status: "paid",
+      invoice_date: addDays(0),
+      due_date: null,
+      lines: original.lines.map((l) => ({ ...l, quantity: -Number(l.quantity) })),
+      notes: `Creditering van factuur ${original.number} d.d. ${day}.`,
+      credit_for: original.id,
+      sent_at: now,
+    })
+    .select("id")
+    .single();
+  if (creditError || !credit) throw new Error(creditError?.message ?? "Credit note failed");
+
+  const { data: copy, error: copyError } = await supabase
+    .from("invoices")
+    .insert({
+      ...client,
+      user_id: user.id,
+      number: newNumber,
+      invoice_date: addDays(0),
+      due_date: addDays(PAYMENT_DAYS),
+      lines: original.lines,
+      notes: original.notes,
+      replaces: original.id,
+    })
+    .select("id")
+    .single();
+  if (copyError || !copy) throw new Error(copyError?.message ?? "Copy failed");
+
+  await supabase
+    .from("invoices")
+    .update({ credited_by: credit.id, status: "paid", updated_at: now })
+    .eq("id", original.id)
+    .eq("user_id", user.id);
+  refresh();
+  redirect(`/dashboard/invoices/${copy.id}`);
 }
 
 // Only drafts: a sent or paid invoice must be kept (and its number stays used).

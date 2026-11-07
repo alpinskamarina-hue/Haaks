@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { HtmlLang } from "@/components/HtmlLang";
 import { PublicFooter } from "@/components/PublicFooter";
+import { CopyButton } from "@/components/CopyButton";
 import { PrintButton } from "@/components/PrintButton";
+import QRCode from "qrcode";
 import type { Profile } from "@/lib/documents";
 import { invoiceTotals, vatNote, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
@@ -65,6 +67,32 @@ export default async function PublicInvoicePage({
   const sum = invoiceTotals(invoice.lines, invoice.vat_mode);
   const company = worker?.company_name || worker?.full_name || "";
   const note = vatNote(invoice);
+  const isCredit = !!invoice.credit_for;
+  const isCredited = !!invoice.credited_by;
+  // The invoice a credit note cancels, or the credit note and new invoice that replaced this one.
+  const [{ data: cancelled }, { data: credit }, { data: replacement }] = await Promise.all([
+    isCredit
+      ? admin.from("invoices").select("number, public_token").eq("id", invoice.credit_for!).maybeSingle<{ number: string; public_token: string }>()
+      : Promise.resolve({ data: null }),
+    isCredited
+      ? admin.from("invoices").select("number, public_token").eq("id", invoice.credited_by!).maybeSingle<{ number: string; public_token: string }>()
+      : Promise.resolve({ data: null }),
+    isCredited
+      ? admin.from("invoices").select("number, public_token, status").eq("replaces", invoice.id).neq("status", "draft").limit(1).maybeSingle<{ number: string; public_token: string; status: string }>()
+      : Promise.resolve({ data: null }),
+  ]);
+  const iban = (worker?.iban ?? "").replace(/\s/g, "").toUpperCase();
+  const payable = !isCredit && !isCredited && invoice.status !== "paid" && sum.incl > 0;
+  const overdue = invoice.status === "sent" && !!invoice.due_date && invoice.due_date < new Date().toISOString().slice(0, 10);
+  // SEPA payment QR (EPC "BCD"): bank apps that support it fill in name, IBAN, amount and reference.
+  const qr =
+    payable && iban
+      ? await QRCode.toString(["BCD", "002", "1", "SCT", "", company.slice(0, 70), iban, `EUR${sum.incl.toFixed(2)}`, "", "", invoice.number].join("\n"), {
+          type: "svg",
+          margin: 1,
+          errorCorrectionLevel: "M",
+        })
+      : null;
 
   return (
     <main lang="nl" className="mx-auto max-w-3xl space-y-8 bg-white px-4 py-6 text-[15px] print:max-w-none print:px-0 print:py-0">
@@ -75,8 +103,70 @@ export default async function PublicInvoicePage({
         </p>
       )}
 
+      {isCredited && (
+        <p className="rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-900 print:hidden">
+          Deze factuur is gecrediteerd
+          {credit && (
+            <>
+              {" "}met{" "}
+              <a href={`/f/${credit.public_token}`} className="underline">
+                creditfactuur {credit.number}
+              </a>
+            </>
+          )}
+          {replacement && (
+            <>
+              {" "}en vervangen door{" "}
+              <a href={`/f/${replacement.public_token}`} className="font-semibold underline">
+                factuur {replacement.number}
+              </a>
+            </>
+          )}
+          . U hoeft deze factuur niet te betalen.
+        </p>
+      )}
+
+      {payable && (
+        <section className="rounded-2xl border border-slate-200 p-4 text-center shadow-sm print:hidden">
+          <p className="text-sm text-slate-600">
+            Factuur {invoice.number}
+            {invoice.client_name ? ` · ${invoice.client_name}` : ""}
+          </p>
+          <p className="mt-1 text-3xl font-bold">{euro(sum.incl)}</p>
+          {invoice.due_date && (
+            <p className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-sm font-semibold ${overdue ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"}`}>
+              {overdue ? "Vervallen op" : "Te betalen vóór"} {date(invoice.due_date)}
+            </p>
+          )}
+          {qr && (
+            <>
+              <div className="mx-auto mt-3 w-44" dangerouslySetInnerHTML={{ __html: qr }} />
+              <p className="text-xs text-slate-500">Scan met uw bank-app</p>
+            </>
+          )}
+          <dl className="mt-3 space-y-2 text-left text-sm">
+            {[
+              iban ? ["IBAN", worker?.iban ?? iban, iban] : null,
+              ["Ten name van", company, company],
+              ["Omschrijving", invoice.number, invoice.number],
+              ["Bedrag", euro(sum.incl), sum.incl.toFixed(2).replace(".", ",")],
+            ]
+              .filter((x): x is string[] => !!x)
+              .map(([k, shown, copy]) => (
+                <div key={k} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                  <span className="min-w-0">
+                    <span className="block text-xs text-slate-500">{k}</span>
+                    <b className="break-all">{shown}</b>
+                  </span>
+                  <CopyButton value={copy!} label="kopieer" />
+                </div>
+              ))}
+          </dl>
+        </section>
+      )}
+
       <header className="flex items-start justify-between gap-4 border-b border-slate-300 pb-6">
-        <h1 className="text-3xl font-bold tracking-wide text-slate-900">FACTUUR</h1>
+        <h1 className="text-3xl font-bold tracking-wide text-slate-900">{isCredit ? "CREDITFACTUUR" : "FACTUUR"}</h1>
         <PrintButton label="Afdrukken / PDF" />
       </header>
 
@@ -179,14 +269,20 @@ export default async function PublicInvoicePage({
             </div>
           )}
           <div className="flex justify-between border-t border-slate-800 pt-2 text-base font-bold">
-            <dt>Te betalen</dt>
+            <dt>{isCredit ? "Totaal creditering" : "Te betalen"}</dt>
             <dd>{euro(sum.incl)}</dd>
           </div>
         </dl>
       </section>
 
       <footer className="space-y-1 border-t border-slate-300 pt-4 text-xs text-slate-700">
-        {invoice.status === "paid" ? (
+        {isCredit ? (
+          <p className="font-semibold">
+            Creditering van factuur {cancelled?.number ?? ""}. Dit bedrag wordt verrekend; u hoeft niets te betalen.
+          </p>
+        ) : isCredited ? (
+          <p className="font-semibold">Deze factuur is gecrediteerd{credit ? ` met creditfactuur ${credit.number}` : ""}.</p>
+        ) : invoice.status === "paid" ? (
           <p className="font-semibold text-green-800">Deze factuur is betaald. Dank u wel.</p>
         ) : (
           <p>
@@ -197,7 +293,7 @@ export default async function PublicInvoicePage({
           </p>
         )}
         {note && <p>{note}</p>}
-        {invoice.notes && <p className="whitespace-pre-line">{invoice.notes}</p>}
+        {invoice.notes && !isCredit && <p className="whitespace-pre-line">{invoice.notes}</p>}
         <p className="pt-2">{company}</p>
       </footer>
       <PublicFooter />

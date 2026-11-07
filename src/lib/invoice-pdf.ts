@@ -72,7 +72,7 @@ async function newDoc(fonts: Fonts) {
 export async function invoicePdf(invoice: Invoice, worker: Profile, fonts: Fonts) {
   const { pdf, w } = await newDoc(fonts);
   const R = A4[0] - M;
-  w.text("FACTUUR", M, 24, w.bold);
+  w.text(invoice.credit_for ? "CREDITFACTUUR" : "FACTUUR", M, 24, w.bold);
   w.y -= 40;
   const left = [invoice.client_name || "—", ...(invoice.client_address ?? "").split("\n"), invoice.client_kvk && `KvK: ${invoice.client_kvk}`, invoice.client_btw && `Btw-id: ${invoice.client_btw}`].filter(Boolean) as string[];
   const right = [worker.company_name || worker.full_name || "", worker.business_address, worker.kvk_number && `KvK: ${worker.kvk_number}`, worker.btw_number && `Btw-id: ${worker.btw_number}`, worker.iban && `IBAN: ${worker.iban}`, worker.phone && `Tel: ${worker.phone}`, worker.business_email && `E-mail: ${worker.business_email}`].filter(Boolean) as string[];
@@ -128,8 +128,9 @@ export async function invoicePdf(invoice: Invoice, worker: Profile, fonts: Fonts
   sumRow("Subtotaal excl. btw", t.excl);
   for (const v of t.vatLines) sumRow(`Btw ${v.rate}% over ${eur(v.base)}`, v.vat);
   sumRow("Totaal", t.incl, true);
-  const note = vatNote(invoice);
-  if (note) {
+  // A credit note says which invoice it cancels ("Creditering van factuur …" in the notes).
+  for (const note of [vatNote(invoice), invoice.credit_for ? invoice.notes : null]) {
+    if (!note) continue;
     w.y -= 10;
     w.need(14);
     w.text(note, M, 9, w.font, grey);

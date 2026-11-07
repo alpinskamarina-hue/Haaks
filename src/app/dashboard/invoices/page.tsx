@@ -53,7 +53,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     open: invoices
       .filter((i) => i.status === "sent")
       .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999")),
-    paid: invoices.filter((i) => i.status === "paid").sort((a, b) => (b.paid_at ?? "").localeCompare(a.paid_at ?? "")),
+    paid: invoices.filter((i) => i.status === "paid").sort((a, b) => (b.paid_at ?? b.updated_at).localeCompare(a.paid_at ?? a.updated_at)),
   };
   const isOverdue = (i: Invoice) => i.status === "sent" && !!i.due_date && i.due_date < today;
   const waiting = groups.open.reduce((s, i) => s + sum(i), 0);
@@ -70,6 +70,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const tabLabel = { draft: iv.tabDraft, open: iv.tabOpen, paid: iv.tabPaid };
   const empty = { draft: iv.emptyDraft, open: iv.emptyOpen, paid: iv.emptyPaid };
 
+  const numberOf = new Map(invoices.map((i) => [i.id, i.number]));
   const withInvoice = new Set(invoices.map((i) => i.quote_id).filter(Boolean));
   const toInvoice = (acceptedRows ?? []).filter((x) => !withInvoice.has(x.id));
   const tag = "inline-block rounded-full px-2 py-0.5 text-xs font-semibold";
@@ -164,7 +165,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
               </Link>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {i.status === "draft" && <span className={`${tag} bg-slate-100 text-slate-600`}>{iv.draftHint}</span>}
-                {i.status === "paid" && i.paid_at && <span className={`${tag} bg-green-100 text-green-800`}>{fill(iv.paidOn, { date: fmt(i.paid_at) })}</span>}
+                {i.credit_for && <span className={`${tag} bg-slate-100 text-slate-600`}>{fill(iv.creditTag, { number: numberOf.get(i.credit_for) ?? "—" })}</span>}
+                {i.credited_by && <span className={`${tag} bg-slate-100 text-slate-600`}>{fill(iv.cancelledTag, { number: numberOf.get(i.credited_by) ?? "—" })}</span>}
+                {i.status === "paid" && i.paid_at && !i.credit_for && !i.credited_by && <span className={`${tag} bg-green-100 text-green-800`}>{fill(iv.paidOn, { date: fmt(i.paid_at) })}</span>}
                 {i.status === "sent" && left !== null && (
                   <span className={`${tag} ${late ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"}`}>
                     {late ? fill(iv.overdue, { n: -left }) : left === 0 ? iv.dueToday : fill(iv.dueIn, { n: left })}

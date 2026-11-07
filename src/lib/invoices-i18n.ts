@@ -29,19 +29,25 @@ const ru = {
   finish: "Доделать и отправить",
   newTitle: "Новый счёт",
   sendTitle: "📨 Отправить клиенту",
-  sendHint: "Клиент получит письмо на нидерландском со ссылкой на счёт. Статус «Отправлен» поставится сам.",
+  sendHint:
+    "Клиент получит письмо на нидерландском со ссылкой на счёт. Статус «Отправлен» поставится сам.",
   rem1Title: "🔔 Напоминание об оплате",
   rem1Hint: "Вежливое первое напоминание.",
   rem2Title: "🔔 2-е напоминание",
-  rem2Hint: "Строже: просим оплатить за 7 дней и связаться, если есть проблема.",
+  rem2Hint:
+    "Строже: просим оплатить за 7 дней и связаться, если есть проблема.",
   to: "E-mail клиента",
-  toPlaceholder: "клиент@пример.nl",
+  toPlaceholder: "klant@voorbeeld.nl",
   text: "Текст письма (можно изменить)",
-  trSend: "Перевод: «Отправляю счёт, вот ссылка, прошу оплатить до срока на мой счёт».",
-  trRem1: "Перевод: «Возможно, вы пропустили: счёт ещё не оплачен. Прошу оплатить за 7 дней. Если уже оплатили — не обращайте внимания».",
-  trRem2: "Перевод: «Я уже напоминал, оплаты нет. Прошу оплатить за 7 дней. Если есть проблема — свяжитесь со мной сегодня».",
+  trSend:
+    "Перевод: «Отправляю счёт, вот ссылка, прошу оплатить до срока на мой счёт».",
+  trRem1:
+    "Перевод: «Возможно, вы пропустили: счёт ещё не оплачен. Прошу оплатить за 7 дней. Если уже оплатили — не обращайте внимания».",
+  trRem2:
+    "Перевод: «Я уже напоминал, оплаты нет. Прошу оплатить за 7 дней. Если есть проблема — свяжитесь со мной сегодня».",
   sendEmail: "✉ Отправить по e-mail",
-  emailNote: "Откроется почта на телефоне с готовым письмом. Нажмите в ней «Отправить».",
+  emailNote:
+    "Откроется почта на телефоне с готовым письмом. Нажмите в ней «Отправить».",
   copy: "⧉ Скопировать текст",
   copied: "✓ Скопировано",
   alreadySent: "Уже отправил сам",
@@ -52,6 +58,25 @@ const ru = {
   pushTitle: "👁 Клиент открыл счёт",
   pushBody: "{client} открыл счёт {number} на {sum}",
   client: "Клиент",
+  fix: "Исправить счёт",
+  fixTitle: "Исправить отправленный счёт",
+  fixText:
+    "В Нидерландах отправленный счёт нельзя менять. Сделаем так, как требует налоговая:",
+  fixCredit: "Кредит-счёт {number} на {sum} отменит этот счёт",
+  fixCopy: "Новый счёт {number}: копия, которую вы исправите и отправите",
+  fixNote:
+    "Оба попадут в папку для бухгалтера. В письме с новым счётом будет ссылка и на кредит-счёт.",
+  fixGo: "Исправить",
+  badgeCancelled: "Отменён",
+  badgeCredit: "Кредит-счёт",
+  notPaid: "Ещё не оплачен",
+  creditTag: "кредит-счёт к {number}",
+  cancelledTag: "отменён кредит-счётом {number}",
+  creditInfo: "Это кредит-счёт: он отменяет счёт {number}. Менять его нельзя.",
+  cancelledInfo:
+    "Этот счёт отменён кредит-счётом {credit}. Исправленный счёт:",
+  replacesInfo:
+    "Исправленный счёт вместо {number}. Проверьте строки и отправьте клиенту.",
 };
 type Dict = typeof ru;
 
@@ -85,19 +110,25 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Доробити й надіслати",
     newTitle: "Новий рахунок",
     sendTitle: "📨 Надіслати клієнту",
-    sendHint: "Клієнт отримає лист нідерландською з посиланням на рахунок. Статус «Надіслано» стане сам.",
+    sendHint:
+      "Клієнт отримає лист нідерландською з посиланням на рахунок. Статус «Надіслано» стане сам.",
     rem1Title: "🔔 Нагадування про оплату",
     rem1Hint: "Ввічливе перше нагадування.",
     rem2Title: "🔔 2-е нагадування",
-    rem2Hint: "Суворіше: просимо оплатити за 7 днів і зв'язатися, якщо є проблема.",
+    rem2Hint:
+      "Суворіше: просимо оплатити за 7 днів і зв'язатися, якщо є проблема.",
     to: "E-mail клієнта",
     toPlaceholder: "klient@voorbeeld.nl",
     text: "Текст листа (можна змінити)",
-    trSend: "Переклад: «Надсилаю рахунок, ось посилання, прошу оплатити до строку на мій рахунок».",
-    trRem1: "Переклад: «Можливо, ви пропустили: рахунок ще не оплачено. Прошу оплатити за 7 днів. Якщо вже оплатили — не зважайте».",
-    trRem2: "Переклад: «Я вже нагадував, оплати немає. Прошу оплатити за 7 днів. Якщо є проблема — зв'яжіться зі мною сьогодні».",
+    trSend:
+      "Переклад: «Надсилаю рахунок, ось посилання, прошу оплатити до строку на мій рахунок».",
+    trRem1:
+      "Переклад: «Можливо, ви пропустили: рахунок ще не оплачено. Прошу оплатити за 7 днів. Якщо вже оплатили — не зважайте».",
+    trRem2:
+      "Переклад: «Я вже нагадував, оплати немає. Прошу оплатити за 7 днів. Якщо є проблема — зв'яжіться зі мною сьогодні».",
     sendEmail: "✉ Надіслати e-mail",
-    emailNote: "Відкриється пошта на телефоні з готовим листом. Натисніть у ній «Надіслати».",
+    emailNote:
+      "Відкриється пошта на телефоні з готовим листом. Натисніть у ній «Надіслати».",
     copy: "⧉ Скопіювати текст",
     copied: "✓ Скопійовано",
     alreadySent: "Уже надіслав сам",
@@ -108,6 +139,26 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Клієнт відкрив рахунок",
     pushBody: "{client} відкрив рахунок {number} на {sum}",
     client: "Клієнт",
+    fix: "Виправити рахунок",
+    fixTitle: "Виправити надісланий рахунок",
+    fixText:
+      "У Нідерландах надісланий рахунок не можна змінювати. Зробимо так, як вимагає податкова:",
+    fixCredit: "Кредит-рахунок {number} на {sum} скасує цей рахунок",
+    fixCopy: "Новий рахунок {number}: копія, яку ви виправите й надішлете",
+    fixNote:
+      "Обидва потраплять у папку для бухгалтера. У листі з новим рахунком буде посилання й на кредит-рахунок.",
+    fixGo: "Виправити",
+    badgeCancelled: "Скасовано",
+    badgeCredit: "Кредит-рахунок",
+    notPaid: "Ще не оплачено",
+    creditTag: "кредит-рахунок до {number}",
+    cancelledTag: "скасовано кредит-рахунком {number}",
+    creditInfo:
+      "Це кредит-рахунок: він скасовує рахунок {number}. Змінювати його не можна.",
+    cancelledInfo:
+      "Цей рахунок скасовано кредит-рахунком {credit}. Виправлений рахунок:",
+    replacesInfo:
+      "Виправлений рахунок замість {number}. Перевірте рядки й надішліть клієнту.",
   },
   pl: {
     title: "Faktury",
@@ -137,19 +188,25 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Dokończ i wyślij",
     newTitle: "Nowa faktura",
     sendTitle: "📨 Wyślij klientowi",
-    sendHint: "Klient dostanie e-mail po niderlandzku z linkiem do faktury. Status „Wysłana” ustawi się sam.",
+    sendHint:
+      "Klient dostanie e-mail po niderlandzku z linkiem do faktury. Status „Wysłana” ustawi się sam.",
     rem1Title: "🔔 Przypomnienie o zapłacie",
     rem1Hint: "Uprzejme pierwsze przypomnienie.",
     rem2Title: "🔔 2. przypomnienie",
-    rem2Hint: "Stanowczo: prosimy o zapłatę w 7 dni i kontakt, jeśli jest problem.",
+    rem2Hint:
+      "Stanowczo: prosimy o zapłatę w 7 dni i kontakt, jeśli jest problem.",
     to: "E-mail klienta",
     toPlaceholder: "klant@voorbeeld.nl",
     text: "Treść e-maila (można zmienić)",
-    trSend: "Tłumaczenie: „Przesyłam fakturę, oto link, proszę o zapłatę w terminie na moje konto”.",
-    trRem1: "Tłumaczenie: „Może Państwo przeoczyli: faktura nie jest zapłacona. Proszę o zapłatę w 7 dni. Jeśli już zapłacono — proszę zignorować”.",
-    trRem2: "Tłumaczenie: „Już przypominałem, zapłaty nie ma. Proszę zapłacić w 7 dni. Jeśli jest problem — proszę o kontakt dziś”.",
+    trSend:
+      "Tłumaczenie: „Przesyłam fakturę, oto link, proszę o zapłatę w terminie na moje konto”.",
+    trRem1:
+      "Tłumaczenie: „Może Państwo przeoczyli: faktura nie jest zapłacona. Proszę o zapłatę w 7 dni. Jeśli już zapłacono — proszę zignorować”.",
+    trRem2:
+      "Tłumaczenie: „Już przypominałem, zapłaty nie ma. Proszę zapłacić w 7 dni. Jeśli jest problem — proszę o kontakt dziś”.",
     sendEmail: "✉ Wyślij e-mailem",
-    emailNote: "Otworzy się poczta w telefonie z gotowym e-mailem. Naciśnij w niej „Wyślij”.",
+    emailNote:
+      "Otworzy się poczta w telefonie z gotowym e-mailem. Naciśnij w niej „Wyślij”.",
     copy: "⧉ Kopiuj tekst",
     copied: "✓ Skopiowano",
     alreadySent: "Już wysłałem sam",
@@ -160,6 +217,26 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Klient otworzył fakturę",
     pushBody: "{client} otworzył fakturę {number} na {sum}",
     client: "Klient",
+    fix: "Popraw fakturę",
+    fixTitle: "Popraw wysłaną fakturę",
+    fixText:
+      "W Holandii wysłanej faktury nie wolno zmieniać. Zrobimy to tak, jak wymaga urząd skarbowy:",
+    fixCredit: "Faktura korygująca {number} na {sum} anuluje tę fakturę",
+    fixCopy: "Nowa faktura {number}: kopia, którą poprawisz i wyślesz",
+    fixNote:
+      "Obie trafią do folderu dla księgowego. W e-mailu z nową fakturą będzie też link do korekty.",
+    fixGo: "Popraw",
+    badgeCancelled: "Anulowana",
+    badgeCredit: "Korekta",
+    notPaid: "Jeszcze nie zapłacona",
+    creditTag: "korekta do {number}",
+    cancelledTag: "anulowana korektą {number}",
+    creditInfo:
+      "To faktura korygująca: anuluje fakturę {number}. Nie można jej zmieniać.",
+    cancelledInfo:
+      "Ta faktura jest anulowana korektą {credit}. Poprawiona faktura:",
+    replacesInfo:
+      "Poprawiona faktura zamiast {number}. Sprawdź pozycje i wyślij klientowi.",
   },
   ro: {
     title: "Facturi",
@@ -189,7 +266,8 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Termină și trimite",
     newTitle: "Factură nouă",
     sendTitle: "📨 Trimite clientului",
-    sendHint: "Clientul primește un e-mail în neerlandeză cu linkul facturii. Statusul „Trimisă” se pune singur.",
+    sendHint:
+      "Clientul primește un e-mail în neerlandeză cu linkul facturii. Statusul „Trimisă” se pune singur.",
     rem1Title: "🔔 Reamintire de plată",
     rem1Hint: "Prima reamintire, politicoasă.",
     rem2Title: "🔔 A 2-a reamintire",
@@ -197,11 +275,15 @@ const DICTS: Record<Lang, Dict> = {
     to: "E-mailul clientului",
     toPlaceholder: "klant@voorbeeld.nl",
     text: "Textul e-mailului (se poate modifica)",
-    trSend: "Traducere: „Vă trimit factura, iată linkul, vă rog plătiți până la scadență în contul meu”.",
-    trRem1: "Traducere: „Poate v-a scăpat: factura nu e plătită. Vă rog plătiți în 7 zile. Dacă ați plătit deja — ignorați”.",
-    trRem2: "Traducere: „V-am mai reamintit, plata lipsește. Vă rog plătiți în 7 zile. Dacă e o problemă — contactați-mă azi”.",
+    trSend:
+      "Traducere: „Vă trimit factura, iată linkul, vă rog plătiți până la scadență în contul meu”.",
+    trRem1:
+      "Traducere: „Poate v-a scăpat: factura nu e plătită. Vă rog plătiți în 7 zile. Dacă ați plătit deja — ignorați”.",
+    trRem2:
+      "Traducere: „V-am mai reamintit, plata lipsește. Vă rog plătiți în 7 zile. Dacă e o problemă — contactați-mă azi”.",
     sendEmail: "✉ Trimite pe e-mail",
-    emailNote: "Se deschide e-mailul din telefon cu mesajul gata. Apăsați acolo „Trimite”.",
+    emailNote:
+      "Se deschide e-mailul din telefon cu mesajul gata. Apăsați acolo „Trimite”.",
     copy: "⧉ Copiază textul",
     copied: "✓ Copiat",
     alreadySent: "Am trimis deja singur",
@@ -212,6 +294,27 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Clientul a deschis factura",
     pushBody: "{client} a deschis factura {number} de {sum}",
     client: "Clientul",
+    fix: "Corectează factura",
+    fixTitle: "Corectează factura trimisă",
+    fixText:
+      "În Olanda o factură trimisă nu se poate modifica. Facem cum cere fiscul:",
+    fixCredit: "Factura de credit {number} de {sum} anulează această factură",
+    fixCopy:
+      "Factură nouă {number}: o copie pe care o corectați și o trimiteți",
+    fixNote:
+      "Ambele ajung în dosarul pentru contabil. E-mailul cu factura nouă va avea și linkul facturii de credit.",
+    fixGo: "Corectează",
+    badgeCancelled: "Anulată",
+    badgeCredit: "Factură de credit",
+    notPaid: "Încă neplătită",
+    creditTag: "factură de credit la {number}",
+    cancelledTag: "anulată prin factura de credit {number}",
+    creditInfo:
+      "Aceasta e o factură de credit: anulează factura {number}. Nu se poate modifica.",
+    cancelledInfo:
+      "Această factură e anulată prin factura de credit {credit}. Factura corectată:",
+    replacesInfo:
+      "Factură corectată în locul {number}. Verificați rândurile și trimiteți clientului.",
   },
   tr: {
     title: "Faturalar",
@@ -241,7 +344,8 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Tamamla ve gönder",
     newTitle: "Yeni fatura",
     sendTitle: "📨 Müşteriye gönder",
-    sendHint: "Müşteri fatura linkiyle Felemenkçe bir e-posta alır. «Gönderildi» durumu kendiliğinden konur.",
+    sendHint:
+      "Müşteri fatura linkiyle Felemenkçe bir e-posta alır. «Gönderildi» durumu kendiliğinden konur.",
     rem1Title: "🔔 Ödeme hatırlatması",
     rem1Hint: "Kibar ilk hatırlatma.",
     rem2Title: "🔔 2. hatırlatma",
@@ -249,9 +353,12 @@ const DICTS: Record<Lang, Dict> = {
     to: "Müşterinin e-postası",
     toPlaceholder: "klant@voorbeeld.nl",
     text: "E-posta metni (değiştirilebilir)",
-    trSend: "Çeviri: «Faturayı gönderiyorum, link burada, vadeye kadar hesabıma ödemenizi rica ederim».",
-    trRem1: "Çeviri: «Gözden kaçmış olabilir: fatura ödenmedi. 7 gün içinde ödemenizi rica ederim. Ödediyseniz dikkate almayın».",
-    trRem2: "Çeviri: «Daha önce hatırlattım, ödeme yok. 7 gün içinde ödeyin. Sorun varsa bugün benimle iletişime geçin».",
+    trSend:
+      "Çeviri: «Faturayı gönderiyorum, link burada, vadeye kadar hesabıma ödemenizi rica ederim».",
+    trRem1:
+      "Çeviri: «Gözden kaçmış olabilir: fatura ödenmedi. 7 gün içinde ödemenizi rica ederim. Ödediyseniz dikkate almayın».",
+    trRem2:
+      "Çeviri: «Daha önce hatırlattım, ödeme yok. 7 gün içinde ödeyin. Sorun varsa bugün benimle iletişime geçin».",
     sendEmail: "✉ E-posta ile gönder",
     emailNote: "Telefonda hazır e-posta açılır. Orada «Gönder»e basın.",
     copy: "⧉ Metni kopyala",
@@ -264,6 +371,26 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Müşteri faturayı açtı",
     pushBody: "{client}, {sum} tutarlı {number} faturasını açtı",
     client: "Müşteri",
+    fix: "Faturayı düzelt",
+    fixTitle: "Gönderilmiş faturayı düzelt",
+    fixText:
+      "Hollanda'da gönderilmiş fatura değiştirilemez. Vergi dairesinin istediği gibi yaparız:",
+    fixCredit: "{sum} tutarlı {number} iade faturası bu faturayı iptal eder",
+    fixCopy: "Yeni fatura {number}: düzeltip göndereceğiniz bir kopya",
+    fixNote:
+      "İkisi de muhasebeci klasörüne girer. Yeni faturanın e-postasında iade faturasının linki de olur.",
+    fixGo: "Düzelt",
+    badgeCancelled: "İptal",
+    badgeCredit: "İade faturası",
+    notPaid: "Henüz ödenmedi",
+    creditTag: "{number} için iade faturası",
+    cancelledTag: "{number} iade faturasıyla iptal",
+    creditInfo:
+      "Bu bir iade faturası: {number} faturasını iptal eder. Değiştirilemez.",
+    cancelledInfo:
+      "Bu fatura {credit} iade faturasıyla iptal edildi. Düzeltilmiş fatura:",
+    replacesInfo:
+      "{number} yerine düzeltilmiş fatura. Satırları kontrol edip müşteriye gönderin.",
   },
   en: {
     title: "Invoices",
@@ -293,19 +420,25 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Finish and send",
     newTitle: "New invoice",
     sendTitle: "📨 Send to client",
-    sendHint: "The client gets a Dutch e-mail with the invoice link. The status becomes «Sent» by itself.",
+    sendHint:
+      "The client gets a Dutch e-mail with the invoice link. The status becomes «Sent» by itself.",
     rem1Title: "🔔 Payment reminder",
     rem1Hint: "A polite first reminder.",
     rem2Title: "🔔 2nd reminder",
-    rem2Hint: "Firmer: pay within 7 days and get in touch if there is a problem.",
+    rem2Hint:
+      "Firmer: pay within 7 days and get in touch if there is a problem.",
     to: "Client's e-mail",
     toPlaceholder: "client@example.nl",
     text: "E-mail text (you can change it)",
-    trSend: "Translation: «Here is my invoice and the link, please pay to my account before the due date».",
-    trRem1: "Translation: «You may have missed it: the invoice is unpaid. Please pay within 7 days. Ignore this if you already paid».",
-    trRem2: "Translation: «I reminded you before and have no payment. Please pay within 7 days. If there is a problem, contact me today».",
+    trSend:
+      "Translation: «Here is my invoice and the link, please pay to my account before the due date».",
+    trRem1:
+      "Translation: «You may have missed it: the invoice is unpaid. Please pay within 7 days. Ignore this if you already paid».",
+    trRem2:
+      "Translation: «I reminded you before and have no payment. Please pay within 7 days. If there is a problem, contact me today».",
     sendEmail: "✉ Send by e-mail",
-    emailNote: "Your phone's mail app opens with the e-mail ready. Press «Send» there.",
+    emailNote:
+      "Your phone's mail app opens with the e-mail ready. Press «Send» there.",
     copy: "⧉ Copy text",
     copied: "✓ Copied",
     alreadySent: "I sent it myself",
@@ -316,6 +449,26 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Client opened the invoice",
     pushBody: "{client} opened invoice {number} for {sum}",
     client: "Client",
+    fix: "Correct invoice",
+    fixTitle: "Correct a sent invoice",
+    fixText:
+      "In the Netherlands a sent invoice may not be changed. We do it the way the tax office requires:",
+    fixCredit: "Credit note {number} for {sum} cancels this invoice",
+    fixCopy: "New invoice {number}: a copy you correct and send",
+    fixNote:
+      "Both go into the accountant's folder. The e-mail with the new invoice also links the credit note.",
+    fixGo: "Correct",
+    badgeCancelled: "Cancelled",
+    badgeCredit: "Credit note",
+    notPaid: "Not paid yet",
+    creditTag: "credit note for {number}",
+    cancelledTag: "cancelled by credit note {number}",
+    creditInfo:
+      "This is a credit note: it cancels invoice {number}. It cannot be changed.",
+    cancelledInfo:
+      "This invoice is cancelled by credit note {credit}. Corrected invoice:",
+    replacesInfo:
+      "Corrected invoice replacing {number}. Check the lines and send it to the client.",
   },
   nl: {
     title: "Facturen",
@@ -345,11 +498,13 @@ const DICTS: Record<Lang, Dict> = {
     finish: "Afmaken en versturen",
     newTitle: "Nieuwe factuur",
     sendTitle: "📨 Naar de klant sturen",
-    sendHint: "De klant krijgt een e-mail met de link naar de factuur. De status wordt vanzelf «Verstuurd».",
+    sendHint:
+      "De klant krijgt een e-mail met de link naar de factuur. De status wordt vanzelf «Verstuurd».",
     rem1Title: "🔔 Betalingsherinnering",
     rem1Hint: "Een vriendelijke eerste herinnering.",
     rem2Title: "🔔 2e herinnering",
-    rem2Hint: "Strenger: betalen binnen 7 dagen en contact opnemen bij een probleem.",
+    rem2Hint:
+      "Strenger: betalen binnen 7 dagen en contact opnemen bij een probleem.",
     to: "E-mail van de klant",
     toPlaceholder: "klant@voorbeeld.nl",
     text: "Tekst van de e-mail (aan te passen)",
@@ -357,7 +512,8 @@ const DICTS: Record<Lang, Dict> = {
     trRem1: "",
     trRem2: "",
     sendEmail: "✉ Per e-mail versturen",
-    emailNote: "De mail-app op je telefoon opent met de e-mail klaar. Druk daar op «Versturen».",
+    emailNote:
+      "De mail-app op je telefoon opent met de e-mail klaar. Druk daar op «Versturen».",
     copy: "⧉ Tekst kopiëren",
     copied: "✓ Gekopieerd",
     alreadySent: "Zelf al verstuurd",
@@ -368,6 +524,26 @@ const DICTS: Record<Lang, Dict> = {
     pushTitle: "👁 Klant opende de factuur",
     pushBody: "{client} opende factuur {number} van {sum}",
     client: "Klant",
+    fix: "Factuur corrigeren",
+    fixTitle: "Verstuurde factuur corrigeren",
+    fixText:
+      "Een verstuurde factuur mag je niet wijzigen. We doen het zoals de Belastingdienst wil:",
+    fixCredit: "Creditfactuur {number} van {sum} vervalt deze factuur",
+    fixCopy: "Nieuwe factuur {number}: een kopie die je aanpast en verstuurt",
+    fixNote:
+      "Beide komen in de map voor de boekhouder. De e-mail met de nieuwe factuur linkt ook naar de creditfactuur.",
+    fixGo: "Corrigeren",
+    badgeCancelled: "Gecrediteerd",
+    badgeCredit: "Creditfactuur",
+    notPaid: "Nog niet betaald",
+    creditTag: "creditfactuur bij {number}",
+    cancelledTag: "gecrediteerd met {number}",
+    creditInfo:
+      "Dit is een creditfactuur: die vervalt factuur {number}. Niet te wijzigen.",
+    cancelledInfo:
+      "Deze factuur is gecrediteerd met {credit}. Gecorrigeerde factuur:",
+    replacesInfo:
+      "Gecorrigeerde factuur in plaats van {number}. Controleer de regels en stuur naar de klant.",
   },
 };
 
