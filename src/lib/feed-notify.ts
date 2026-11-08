@@ -42,7 +42,7 @@ function intervalMs(value: string | null) {
   return ((days * 24 + Number(h)) * 60 + Number(m)) * 60000 + Number(s) * 1000;
 }
 
-async function loadRecentItems(supabase: SupabaseClient, now: number) {
+export async function loadRecentItems(supabase: SupabaseClient, now: number) {
   // The whole country is collected now: read only the last days, page by page (1000 rows a page).
   const from = new Date(now - 4 * DAY).toISOString();
   const rows: Row[] = [];
@@ -68,7 +68,7 @@ async function loadRecentItems(supabase: SupabaseClient, now: number) {
 type RecentItem = Awaited<ReturnType<typeof loadRecentItems>>[number];
 
 // Jobs already sent on this channel, or hidden/taken by the worker: "user:item" keys.
-async function alreadyHandled(supabase: SupabaseClient, channel: "email" | "telegram", ids: string[]) {
+export async function alreadyHandled(supabase: SupabaseClient, channel: "email" | "telegram" | "staff", ids: string[]) {
   const [{ data: done }, { data: actions }] = await Promise.all([
     supabase.from("feed_notifications").select("user_id, item_id").eq("channel", channel).in("user_id", ids),
     supabase.from("feed_actions").select("user_id, item_id").in("user_id", ids),
@@ -77,9 +77,9 @@ async function alreadyHandled(supabase: SupabaseClient, channel: "email" | "tele
 }
 
 type MatchKeys = "trade" | "trades" | "city" | "lead_regions" | "home_lat" | "home_lng" | "travel_km" | "extra_cities";
-const MATCH_COLUMNS = "trade, trades, city, lead_regions, home_lat, home_lng, travel_km, extra_cities";
+export const MATCH_COLUMNS = "trade, trades, city, lead_regions, home_lat, home_lng, travel_km, extra_cities";
 
-function fittingJobs(
+export function fittingJobs(
   person: Pick<Recipient, MatchKeys | "id" | "plan" | "plan_until">,
   items: RecentItem[],
   skip: Set<string>,

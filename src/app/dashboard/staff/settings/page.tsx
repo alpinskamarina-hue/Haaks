@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { SubmitButton } from "@/components/SubmitButton";
 import { LANG_NAMES, LANGS } from "@/lib/i18n";
 import { DEFAULT_NAMES, STAFF_FACES, STAFF_STYLES, faceUrl, staffOf } from "@/lib/staff";
-import { getStaffDict } from "@/lib/staff-i18n";
+import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
 import { loadWorkspace } from "@/lib/workspace";
-import { saveStaffSettings } from "../../../staff-actions";
+import { saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
 
 // Face, name and manner of the worker's digital employee.
 export default async function StaffSettingsPage() {
@@ -14,10 +14,16 @@ export default async function StaffSettingsPage() {
   const d = getStaffDict(lang);
   const s = staffOf(profile as Parameters<typeof staffOf>[0]);
   const ownName = (profile as { staff_name?: string | null }).staff_name ?? "";
+  const f = getStaffFeedDict(lang);
+  const rules = profile as { staff_feed?: boolean | null; staff_feed_max?: number | null; staff_feed_kinds?: string[] | null };
+  const feedOn = rules.staff_feed ?? true;
+  const feedMax = rules.staff_feed_max ?? 5;
+  const feedKinds = rules.staff_feed_kinds ?? ["private", "business", "permit", "tender"];
 
   async function save(formData: FormData) {
     "use server";
     await saveStaffSettings(formData);
+    await saveStaffFeedRules(formData);
     redirect("/dashboard/staff");
   }
 
@@ -88,6 +94,35 @@ export default async function StaffSettingsPage() {
             ))}
           </select>
         </label>
+        <fieldset id="feed" className="space-y-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+          <legend className="px-1 font-semibold">📋 {f.rulesTitle}</legend>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="feed_on" value="1" defaultChecked={feedOn} className="h-5 w-5 accent-orange-600" />
+            {f.rulesOn}
+          </label>
+          <label className="block">
+            {f.rulesMax}
+            <select name="feed_max" defaultValue={String(feedMax)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+              {[3, 5, 10, 20].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div>
+            <p>{f.rulesKinds}</p>
+            <div className="mt-1 space-y-1.5">
+              {(["private", "business", "permit", "tender"] as const).map((k) => (
+                <label key={k} className="flex items-center gap-2">
+                  <input type="checkbox" name="feed_kind" value={k} defaultChecked={feedKinds.includes(k)} className="h-4 w-4 accent-orange-600" />
+                  {f.kinds[k]}
+                </label>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-slate-500">🔒 {f.rulesNote}</p>
+        </fieldset>
         <SubmitButton className="w-full rounded-xl bg-orange-600 py-3 font-semibold text-white">{d.save}</SubmitButton>
       </form>
     </main>

@@ -4,12 +4,125 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { sendStaffMessage } from "@/app/staff-actions";
+import { sendStaffMessage, staffCheckFeed, staffSendJob, staffSkipJob } from "@/app/staff-actions";
 import { createClient } from "@/lib/supabase/client";
 import { prepareUpload } from "@/lib/prepare-upload";
-import type { StaffDict } from "@/lib/staff-i18n";
+import type { StaffJob } from "@/lib/staff-feed";
+import type { StaffDict, StaffFeedDict } from "@/lib/staff-i18n";
 
-export type ShownStaffMessage = { id: string; role: "user" | "staff"; body: string; imageUrl: string | null };
+export type ShownStaffMessage = {
+  id: string;
+  role: "user" | "staff";
+  body: string;
+  imageUrl: string | null;
+  job?: StaffJob | null;
+  draft?: string | null;
+  jobStatus?: "new" | "sent" | "skipped" | null;
+  feedItemId?: string | null;
+};
+
+const KIND_STYLE: Record<StaffJob["kind"], string> = {
+  private: "bg-orange-100 text-orange-800",
+  business: "bg-sky-100 text-sky-800",
+  permit: "bg-emerald-100 text-emerald-800",
+  tender: "bg-violet-100 text-violet-800",
+};
+
+// A job the employee brought from the feed: why it fits, the Dutch draft, and one main button.
+function JobCard({ m, d, f, onDone }: { m: ShownStaffMessage; d: StaffDict; f: StaffFeedDict; onDone: () => void }) {
+  const job = m.job!;
+  const [draft, setDraft] = useState(m.draft ?? "");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const canSend = job.source === "client" || (job.source === "haaks" && job.kind === "business");
+  const status = m.jobStatus ?? "new";
+  const feedHref = m.feedItemId ? `/dashboard/leads/feed#job-${m.feedItemId}` : "/dashboard/leads/feed";
+
+  async function send() {
+    setBusy(true);
+    setError(null);
+    const res = await staffSendJob(m.id, draft);
+    setBusy(false);
+    if ("error" in res) return setError(f.errors[res.error]);
+    onDone();
+  }
+  async function skip() {
+    setBusy(true);
+    await staffSkipJob(m.id);
+    onDone();
+  }
+  async function copy() {
+    await navigator.clipboard?.writeText(draft).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className={`w-[88%] rounded-2xl rounded-bl-sm bg-white p-3 text-sm shadow-sm ${status === "skipped" ? "opacity-60" : ""}`}>
+      <p className="text-xs font-semibold text-slate-500">{f.found}</p>
+      <div className="mt-2 rounded-xl border border-slate-200 p-3">
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${KIND_STYLE[job.kind]}`}>{f.kinds[job.kind]}</span>
+        <p className="mt-1.5 font-semibold leading-snug">{job.title}</p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {[job.city && `📍 ${job.city}`, job.budget && `💶 ${job.budget}`].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      {m.body && <p className="mt-2 whitespace-pre-wrap">{m.body}</p>}
+      {draft ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-slate-500">🇳🇱 {f.draftTitle}</p>
+          {editing && status === "new" ? (
+            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={7} maxLength={1000} className="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm" />
+          ) : (
+            <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[13px] text-slate-700">{draft}</p>
+          )}
+          <div className="mt-1 flex gap-3 text-xs font-medium text-orange-700">
+            <button type="button" onClick={copy}>
+              📋 {copied ? d.copied : d.copy}
+            </button>
+            {status === "new" && !editing && (
+              <button type="button" onClick={() => setEditing(true)}>
+                {f.edit}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        status === "new" && <p className="mt-2 text-xs text-slate-500">{f.noAI}</p>
+      )}
+      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+      {status === "sent" ? (
+        <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-center font-semibold text-emerald-700">{f.sent}</p>
+      ) : status === "skipped" ? (
+        <p className="mt-3 text-center text-xs text-slate-500">{f.skipped}</p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {canSend && draft ? (
+            <button type="button" onClick={send} disabled={busy} className="w-full rounded-xl bg-orange-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60">
+              {busy ? "…" : job.source === "client" ? f.sendClient : f.sendCompany}
+            </button>
+          ) : (
+            <Link href={feedHref} className="block w-full rounded-xl bg-orange-600 px-4 py-2.5 text-center font-semibold text-white">
+              {f.openFeed}
+            </Link>
+          )}
+          <div className="flex gap-2">
+            {canSend && draft && (
+              <Link href={feedHref} className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-center text-xs">
+                {f.openFeed}
+              </Link>
+            )}
+            <button type="button" onClick={skip} disabled={busy} className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-600">
+              {f.skip}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SPEECH: Record<string, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
 
@@ -17,7 +130,23 @@ type Recognition = { lang: string; interimResults: boolean; onresult: (e: { resu
 
 const fillName = (text: string, name: string) => text.replace("{name}", name);
 
-export function StaffChat({ d, name, face, userId, lang, messages }: { d: StaffDict; name: string; face: string; userId: string; lang: string; messages: ShownStaffMessage[] }) {
+export function StaffChat({
+  d,
+  f,
+  name,
+  face,
+  userId,
+  lang,
+  messages,
+}: {
+  d: StaffDict;
+  f: StaffFeedDict;
+  name: string;
+  face: string;
+  userId: string;
+  lang: string;
+  messages: ShownStaffMessage[];
+}) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
@@ -25,6 +154,8 @@ export function StaffChat({ d, name, face, userId, lang, messages }: { d: StaffD
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkNote, setCheckNote] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -85,6 +216,20 @@ export function StaffChat({ d, name, face, userId, lang, messages }: { d: StaffD
     });
   }
 
+  async function checkFeed() {
+    if (checking) return;
+    setChecking(true);
+    setCheckNote(null);
+    const res = await staffCheckFeed();
+    setCheckNote("error" in res ? d.errors[res.error] : res.cards ? f.foundN.replace("{n}", String(res.cards)) : f.none);
+    startTransition(() => {
+      router.refresh();
+      setChecking(false);
+    });
+  }
+
+  const refresh = () => startTransition(() => router.refresh());
+
   async function copy(m: ShownStaffMessage) {
     await navigator.clipboard?.writeText(m.body).catch(() => {});
     setCopied(m.id);
@@ -118,7 +263,12 @@ export function StaffChat({ d, name, face, userId, lang, messages }: { d: StaffD
           <div className={bubbleStaff}>{fillName(d.hello, name)}</div>
         </div>
         {messages.map((m) =>
-          m.role === "user" ? (
+          m.job ? (
+            <div key={m.id} className="flex items-end gap-2">
+              <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
+              <JobCard m={m} d={d} f={f} onDone={refresh} />
+            </div>
+          ) : m.role === "user" ? (
             <div key={m.id} className={bubbleUser}>
               {m.imageUrl && <img src={m.imageUrl} alt="" className="mb-2 max-h-48 rounded-xl" />}
               {m.body}
@@ -147,11 +297,26 @@ export function StaffChat({ d, name, face, userId, lang, messages }: { d: StaffD
             </div>
           </>
         )}
+        {checking && (
+          <div className="flex items-end gap-2">
+            <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
+            <div className="rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-sm text-slate-500 shadow-sm">{fillName(f.checking, name)}</div>
+          </div>
+        )}
+        {checkNote && !checking && <p className="text-center text-xs text-slate-500">{checkNote}</p>}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div ref={endRef} />
       </div>
 
       <div className="sticky bottom-[calc(58px+env(safe-area-inset-bottom))] z-10 border-t bg-white p-3 lg:bottom-0">
+        <button
+          type="button"
+          onClick={checkFeed}
+          disabled={checking}
+          className="mb-2 w-full rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-800 disabled:opacity-60"
+        >
+          {f.checkNow}
+        </button>
         {!messages.length && !sending && (
           <div className="mb-2 flex flex-wrap gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} className="rounded-full border border-orange-200 px-3 py-1 text-xs font-medium text-orange-700">

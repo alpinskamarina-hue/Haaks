@@ -54,3 +54,27 @@ begin
   return ends;
 end;
 $$;
+
+-- Step 1 of «Сотрудник работает с лентой»: the employee brings fitting jobs into the chat with a
+-- ready Dutch reply. The worker's rules: on/off, how many a day, which kinds of jobs.
+alter table public.profiles
+  add column if not exists staff_feed boolean not null default true,
+  add column if not exists staff_feed_max smallint not null default 5 check (staff_feed_max between 1 and 20),
+  add column if not exists staff_feed_kinds text[] not null default '{private,business,permit,tender}';
+
+alter table public.staff_messages
+  add column if not exists feed_item_id uuid references public.feed_items (id) on delete set null,
+  add column if not exists draft text check (char_length(draft) <= 2000),
+  -- What the card shows of the job (workers cannot read feed_items directly): title, kind, source, city, budget.
+  add column if not exists job jsonb,
+  add column if not exists job_status text check (job_status in ('new', 'sent', 'skipped'));
+
+-- The worker marks a job card sent or skipped.
+create policy "staff messages: own update" on public.staff_messages for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- The Haaks server account writes the job cards (cron).
+create policy "staff messages: server insert" on public.staff_messages for insert with check (public.is_haaks_server());
+
+-- Jobs the employee already brought, so none comes twice.
+alter table public.feed_notifications drop constraint if exists feed_notifications_channel_check;
+alter table public.feed_notifications add constraint feed_notifications_channel_check
+  check (channel in ('email', 'telegram', 'whatsapp', 'staff'));
