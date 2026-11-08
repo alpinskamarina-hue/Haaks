@@ -6,6 +6,7 @@ import { WHATS_NEW_COOKIE, WHATS_NEW_VERSION } from "@/lib/whats-new";
 import { getHelp, type GuideId } from "@/lib/help";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hideFeedItem } from "@/app/feed-actions";
+import { addHours } from "@/app/hours-actions";
 import { getTripsDict } from "@/lib/trips-i18n";
 import { getHomeDict } from "@/lib/home-i18n";
 import { fill, getFeedDict } from "@/lib/feed-i18n";
@@ -152,6 +153,27 @@ export default async function Home() {
     ]);
     if (tripCount && !odoCount) {
       todos.push({ key: "odometer", icon: "🚗", text: getTripsDict(lang).todoOdo, href: "/dashboard/trips", button: h.open });
+    }
+  }
+
+  // Hours (Nasim 2026-11-08): log today's hours from home. Open orders, the current one first, then
+  // the ones with hours lately; at the end of the week a to-do if a job with recent hours has none yet.
+  const monday = addDays(-((new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7));
+  const [{ data: openOrders }, { data: recentHours }] = await Promise.all([
+    supabase.from("orders").select("id, title").eq("user_id", user.id).eq("status", "open").order("created_at", { ascending: false }).limit(30),
+    supabase.from("order_hours").select("order_id, work_date, hours").eq("user_id", user.id).gte("work_date", addDays(-28, new Date(`${monday}T12:00:00Z`))),
+  ]);
+  const lastWorked = new Map<string, string>();
+  for (const r of recentHours ?? []) if ((lastWorked.get(r.order_id) ?? "") < r.work_date) lastWorked.set(r.order_id, r.work_date);
+  const hourOrders = (openOrders ?? [])
+    .map((o) => ({ ...o, rank: o.id === current?.id ? "9" : (lastWorked.get(o.id) ?? "") }))
+    .sort((a, b) => b.rank.localeCompare(a.rank))
+    .slice(0, 12);
+  const weekHours = Math.round((recentHours ?? []).filter((r) => r.work_date >= monday).reduce((s, r) => s + Number(r.hours), 0) * 100) / 100;
+  if (new Date(`${today}T12:00:00Z`).getUTCDay() % 6 === 0 || new Date(`${today}T12:00:00Z`).getUTCDay() === 5) {
+    const missing = hourOrders.find((o) => lastWorked.has(o.id) && lastWorked.get(o.id)! < monday);
+    if (missing) {
+      todos.push({ key: `hours-${missing.id}`, icon: "⏱", text: fill(h.todoHours, { title: missing.title }), href: `/dashboard/orders/${missing.id}?tab=hours`, button: h.todoHoursBtn });
     }
   }
 
@@ -404,6 +426,47 @@ export default async function Home() {
           </Link>
         ))}
       </section>
+
+      {hourOrders.length > 0 && (
+        <section className={card}>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold">⏱ {h.hoursTitle}</h2>
+            <span className="text-sm text-slate-500">{fill(h.hoursWeek, { h: weekHours.toLocaleString(LOCALES[lang]) })}</span>
+          </div>
+          <form action={addHours} className="mt-3 grid grid-cols-[5rem_1fr] gap-2 sm:grid-cols-[minmax(0,14rem)_5rem_1fr_auto]">
+            <input type="hidden" name="work_date" value={today} />
+            {hourOrders.length > 1 ? (
+              <select name="order_id" defaultValue={hourOrders[0].id} aria-label={t.currentOrder} className="col-span-2 min-w-0 rounded-lg border border-slate-300 px-3 py-2 sm:col-span-1">
+                {hourOrders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <input type="hidden" name="order_id" value={hourOrders[0].id} />
+                <p className="col-span-2 truncate py-2 font-medium sm:col-span-1">{hourOrders[0].title}</p>
+              </>
+            )}
+            <input
+              name="hours"
+              inputMode="decimal"
+              required
+              placeholder="8"
+              aria-label={h.hoursLabel}
+              className="min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-center"
+            />
+            <input name="note" maxLength={200} placeholder={h.hoursNotePh} className="min-w-0 rounded-lg border border-slate-300 px-3 py-2" />
+            <SubmitButton className="col-span-2 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white hover:bg-orange-700 disabled:opacity-60 sm:col-span-1">
+              {h.hoursSave}
+            </SubmitButton>
+          </form>
+          <Link href={`/dashboard/orders/${hourOrders[0].id}?tab=hours`} className="mt-2 inline-block text-sm text-orange-700 underline">
+            {h.hoursAll} →
+          </Link>
+        </section>
+      )}
 
       <section className="grid grid-cols-3 gap-2 sm:gap-3">
         {stats.map((s) => (
