@@ -238,6 +238,7 @@ export default async function Dashboard({
               ["business_address", t.businessAddress],
               ["business_email", t.businessEmail],
               ["iban", t.iban],
+              ["pay_link", t.payLink],
             ] as const
           ).map(([name, label]) => (
             <label key={name} className="block text-sm font-medium">

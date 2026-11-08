@@ -82,6 +82,7 @@ export default async function PublicInvoicePage({
       : Promise.resolve({ data: null }),
   ]);
   const iban = (worker?.iban ?? "").replace(/\s/g, "").toUpperCase();
+  const payLink = worker?.pay_link && /^https:\/\//.test(worker.pay_link) ? worker.pay_link : null;
   const payable = !isCredit && !isCredited && invoice.status !== "paid" && sum.incl > 0;
   const overdue = invoice.status === "sent" && !!invoice.due_date && invoice.due_date < new Date().toISOString().slice(0, 10);
   // SEPA payment QR (EPC "BCD"): bank apps that support it fill in name, IBAN, amount and reference.
@@ -137,6 +138,16 @@ export default async function PublicInvoicePage({
             <p className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-sm font-semibold ${overdue ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"}`}>
               {overdue ? "Vervallen op" : "Te betalen vóór"} {date(invoice.due_date)}
             </p>
+          )}
+          {payLink && (
+            <a
+              href={payLink}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="mt-3 block rounded-xl bg-orange-500 px-4 py-3 text-lg font-semibold text-white hover:bg-orange-600"
+            >
+              Nu betalen
+            </a>
           )}
           {qr && (
             <>
