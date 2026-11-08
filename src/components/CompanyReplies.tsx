@@ -7,6 +7,8 @@ import { kvkSearchUrl } from "@/lib/documents";
 import { tradeLabel } from "@/lib/feed";
 import { LANG_NAMES, isLang } from "@/lib/i18n";
 import type { CompanyReply } from "@/lib/job-replies";
+import { OndernemerBox } from "@/components/OndernemerBox";
+import type { SignResult } from "@/lib/ondernemer";
 
 const card = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5";
 const badge = { sent: "bg-orange-100 text-orange-800", accepted: "bg-green-100 text-green-800", declined: "bg-slate-100 text-slate-500" };
@@ -20,6 +22,8 @@ export function CompanyReplies({
   ok,
   decideAction,
   base = "/company",
+  ondernemer,
+  ondernemerText,
 }: {
   job: Pick<CompanyJob, "id" | "title" | "city" | "trades">;
   replies: CompanyReply[];
@@ -28,6 +32,8 @@ export function CompanyReplies({
   ok?: string;
   decideAction: (formData: FormData) => Promise<void>;
   base?: string;
+  ondernemer?: Map<string, SignResult[]>;
+  ondernemerText?: { title: string; lines: Record<string, string> };
 }) {
   return (
     <div className="space-y-5">
@@ -100,6 +106,9 @@ export function CompanyReplies({
                 <a href={`/p/${r.passport_token}`} target="_blank" rel="noopener" className="mt-3 inline-block text-sm font-medium text-orange-700 underline">
                   🪪 {t.passport}
                 </a>
+              )}
+              {r.passport_token && ondernemer?.get(r.passport_token) && ondernemerText && (
+                <OndernemerBox signs={ondernemer.get(r.passport_token)!} title={ondernemerText.title} lines={ondernemerText.lines} />
               )}
               {r.status === "accepted" && (r.phone || r.email) && (
                 <div className="mt-3 rounded-lg bg-green-50 p-3 text-sm">

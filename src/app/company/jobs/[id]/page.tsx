@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth";
 import { companyLang, getCompanyDict } from "@/lib/company-i18n";
 import type { CompanyJob } from "@/lib/company-jobs";
 import type { CompanyReply } from "@/lib/job-replies";
+import { ondernemerByPassport, PUBLIC_ONDERNEMER } from "@/lib/ondernemer";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 export default async function CompanyJobRepliesPage({
   params,
@@ -23,5 +25,18 @@ export default async function CompanyJobRepliesPage({
   ]);
   if (!job) notFound();
   const lang = companyLang(profile?.language);
-  return <CompanyReplies job={job} replies={(replies ?? []) as CompanyReply[]} t={getCompanyDict(lang)} lang={lang} ok={ok} decideAction={decideJobReply} />;
+  const list = (replies ?? []) as CompanyReply[];
+  const ondernemer = await ondernemerByPassport(await createServerAccountClient(), list.map((r) => r.passport_token)).catch(() => new Map());
+  return (
+    <CompanyReplies
+      job={job}
+      replies={list}
+      t={getCompanyDict(lang)}
+      lang={lang}
+      ok={ok}
+      decideAction={decideJobReply}
+      ondernemer={ondernemer}
+      ondernemerText={{ title: PUBLIC_ONDERNEMER[lang].title, lines: PUBLIC_ONDERNEMER[lang].signs }}
+    />
+  );
 }

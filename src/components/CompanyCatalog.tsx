@@ -10,6 +10,8 @@ import { isLang, LANG_NAMES } from "@/lib/i18n";
 import { PUBLIC_WORKS } from "@/lib/works-i18n";
 import { MIN_REVIEWS_FOR_AVERAGE, ratingText } from "@/lib/reviews";
 import { PUBLIC_REVIEWS } from "@/lib/reviews-i18n";
+import { OndernemerBox } from "@/components/OndernemerBox";
+import { PUBLIC_ONDERNEMER, type SignResult } from "@/lib/ondernemer";
 
 export type CatalogWorker = {
   id: string;
@@ -28,6 +30,7 @@ export type CatalogWorker = {
   invite_status: "sent" | "accepted" | "declined" | null;
   works?: number;
   rating?: { avg: number; n: number } | null;
+  ondernemer?: SignResult[];
 };
 
 export type SentInvite = {
@@ -160,6 +163,9 @@ export function CompanyCatalog({
                     <span>🧱 {w.works === 1 ? PUBLIC_WORKS[lang].one : PUBLIC_WORKS[lang].count.replace("{n}", String(w.works))}</span>
                   )}
                 </a>
+              )}
+              {w.ondernemer && (
+                <OndernemerBox signs={w.ondernemer} title={PUBLIC_ONDERNEMER[lang].title} lines={PUBLIC_ONDERNEMER[lang].signs} />
               )}
               {w.invite_status ? (
                 <p
