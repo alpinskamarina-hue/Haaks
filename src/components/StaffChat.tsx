@@ -161,7 +161,9 @@ export function StaffChat({
   const endRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<Recognition | null>(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [messages.length, sending]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length, sending]);
 
   function pickPhoto(file: File | undefined) {
     if (!file) return;
