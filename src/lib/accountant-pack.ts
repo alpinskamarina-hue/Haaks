@@ -6,6 +6,7 @@ import type { Profile } from "./documents";
 import { invoiceTotals, type Invoice } from "./invoices";
 import { eur, nlDate, type OverviewInput } from "./invoice-pdf";
 import { KM_RATE, toNum } from "./trips";
+import { invoiceUbl } from "./ubl";
 
 export type AccountantPack = {
   fileName: string;
@@ -38,6 +39,14 @@ export function buildPack(
     name: `Verkoopfacturen/Factuur ${safe(i.number)}.pdf`,
     invoice: i,
   }));
+  // The same invoices as UBL e-invoices: accounting software reads them without typing.
+  const byId = new Map(d.invoices.map((i) => [i.id, i]));
+  for (const i of d.invoices) {
+    const original = i.credit_for ? byId.get(i.credit_for) : null;
+    texts[`Verkoopfacturen/Factuur ${safe(i.number)}.xml`] = invoiceUbl(i, profile, {
+      creditFor: original ? { number: original.number, date: original.invoice_date } : null,
+    });
+  }
   texts["verkoopfacturen.csv"] = csv([
     [
       "Factuurnummer",

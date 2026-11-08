@@ -186,7 +186,14 @@ export default async function PublicInvoicePage({
 
       <header className="flex items-start justify-between gap-4 border-b border-slate-300 pb-6">
         <h1 className="text-3xl font-bold tracking-wide text-slate-900">{isCredit ? "CREDITFACTUUR" : "FACTUUR"}</h1>
-        <PrintButton label="Afdrukken / PDF" />
+        <div className="flex flex-col items-end gap-1 print:hidden">
+          <PrintButton label="Afdrukken / PDF" />
+          {invoice.status !== "draft" && (
+            <a href={`/f/${token}/ubl`} download className="text-xs text-slate-500 underline">
+              Download e-factuur (UBL)
+            </a>
+          )}
+        </div>
       </header>
 
       <section className="grid gap-6 sm:grid-cols-2">
