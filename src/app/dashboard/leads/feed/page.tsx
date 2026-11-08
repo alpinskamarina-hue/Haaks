@@ -13,6 +13,7 @@ import {
 } from "@/app/feed-actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
+import { KVK_BADGE } from "@/lib/kvk-check";
 import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
@@ -575,6 +576,11 @@ function FeedCard({
         >
           {item.source === "bekendmakingen" ? sourceLabel(item).split(" · ")[0] : sourceLabel(item)}
         </span>
+        {item.kvk_ok && (
+          <span title={KVK_BADGE[lang].hint} className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800">
+            ✓ {KVK_BADGE[lang].badge}
+          </span>
+        )}
         <span>{timeAgo(item.published_at, lang)}</span>
         {item.distance !== null && (
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">

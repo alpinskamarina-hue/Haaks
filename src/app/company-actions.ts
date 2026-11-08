@@ -227,6 +227,23 @@ export async function approveCompanyJob(formData: FormData) {
   redirect("/dashboard/moderation?ok=published");
 }
 
+// KvK check by hand (research item 5): the admin looked the number up on kvk.nl and the name matches.
+// Builders then see «KvK gecontroleerd» on this company's jobs. «uncheck» takes it back.
+export async function checkCompanyKvk(formData: FormData) {
+  const server = await requireAdmin();
+  const id = String(formData.get("company") ?? "");
+  const ok = formData.get("ok") === "1";
+  const name = text(formData, "name", 200);
+  if (!id || (ok && !name)) redirect("/dashboard/moderation?ok=kvk_name");
+  await server
+    .from("profiles")
+    .update(ok ? { kvk_checked_at: new Date().toISOString(), kvk_checked_name: name } : { kvk_checked_at: null, kvk_checked_name: null })
+    .eq("id", id)
+    .eq("account_type", "company");
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/moderation?ok=${ok ? "kvk_checked" : "kvk_unchecked"}#kvk`);
+}
+
 export async function rejectCompanyJob(formData: FormData) {
   const server = await requireAdmin();
   const { data: job } = await server

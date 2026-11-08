@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { approveCompanyJob, rejectCompanyJob, resolveReport } from "@/app/company-actions";
+import { approveCompanyJob, checkCompanyKvk, rejectCompanyJob, resolveReport } from "@/app/company-actions";
 import { REASON_RU } from "@/lib/report-i18n";
 import { SubmitButton } from "@/components/SubmitButton";
 import { dayMonthYear, jobTexts, type CompanyInfo, type CompanyJob } from "@/lib/company-jobs";
@@ -72,6 +72,17 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const reviewWorkerName = new Map((reviewWorkers ?? []).map((w) => [w.id as string, w.full_name as string | null]));
   const rvRu = getReviewsDict("ru");
 
+  // KvK check (research item 5): all companies with a KvK number, unchecked first.
+  const { data: kvkCompanies } = await server
+    .from("profiles")
+    .select("id, company_name, kvk_number, full_name, kvk_checked_at, kvk_checked_name")
+    .eq("account_type", "company")
+    .not("kvk_number", "is", null)
+    .order("kvk_checked_at", { ascending: false, nullsFirst: true })
+    .returns<{ id: string; company_name: string | null; kvk_number: string; full_name: string | null; kvk_checked_at: string | null; kvk_checked_name: string | null }[]>();
+  const kvkList = kvkCompanies ?? [];
+  const kvkOpen = kvkList.filter((c) => !c.kvk_checked_at).length;
+
   const jobByItem = new Map((reportedJobs ?? []).map((j) => [j.feed_item_id as string, j]));
   const workerById = new Map((reportedWorkers ?? []).map((w) => [w.id as string, w]));
 
@@ -94,6 +105,12 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
                 ? "Отзыв удалён: его больше нет в паспорте и в оценке."
               : ok === "review_kept"
                 ? "Отзыв оставлен и показан в паспорте. Повторно пожаловаться на него строитель не сможет."
+              : ok === "kvk_checked"
+                ? "KvK отмечен как проверенный: строители видят «KvK проверен» у заказов этой компании."
+              : ok === "kvk_unchecked"
+                ? "Отметка «KvK проверен» снята."
+              : ok === "kvk_name"
+                ? "Впишите название компании так, как оно указано на kvk.nl."
               : ok === "dismissed"
                 ? "Жалобы отклонены, всё осталось как было."
                 : "Заказ отклонён."}
@@ -143,6 +160,54 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
               </li>
             );
           })}
+        </ul>
+      )}
+
+      <h2 id="kvk" className="pt-4 text-xl font-bold">
+        Проверка KvK компаний {kvkOpen > 0 && <span className="text-red-600">({kvkOpen})</span>}
+      </h2>
+      <p className="text-sm text-slate-600">
+        Откройте номер на kvk.nl и сравните название. Если совпадает, впишите название как в реестре и нажмите «KvK проверен». Строители
+        увидят зелёный значок у заказов компании. Если компания поменяет номер KvK, отметка снимется сама.
+      </p>
+      {kvkList.length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-slate-500">Компаний пока нет.</p>
+      ) : (
+        <ul className="space-y-3">
+          {kvkList.map((c) => (
+            <li key={c.id} className={`rounded-xl border p-4 ${c.kvk_checked_at ? "border-green-200 bg-green-50" : "border-slate-200 bg-white"}`}>
+              <p className="text-sm">
+                <span className="font-semibold">{c.company_name ?? "—"}</span> · KvK{" "}
+                <a href={kvkSearchUrl(c.kvk_number)} target="_blank" rel="noopener" className="text-blue-700 underline">
+                  {c.kvk_number} ↗
+                </a>
+                {c.full_name ? <span className="text-slate-500"> · {c.full_name}</span> : null}
+              </p>
+              {c.kvk_checked_at ? (
+                <form action={checkCompanyKvk} className="mt-2 flex flex-wrap items-center gap-2 text-sm text-green-800">
+                  <span>
+                    ✓ Проверен {dayMonthYear(c.kvk_checked_at.slice(0, 10))}: «{c.kvk_checked_name}»
+                  </span>
+                  <input type="hidden" name="company" value={c.id} />
+                  <input type="hidden" name="ok" value="0" />
+                  <SubmitButton className="rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 disabled:opacity-60">Снять</SubmitButton>
+                </form>
+              ) : (
+                <form action={checkCompanyKvk} className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input type="hidden" name="company" value={c.id} />
+                  <input type="hidden" name="ok" value="1" />
+                  <input
+                    name="name"
+                    defaultValue={c.company_name ?? ""}
+                    required
+                    placeholder="Название как на kvk.nl"
+                    className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <SubmitButton className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">✓ KvK проверен</SubmitButton>
+                </form>
+              )}
+            </li>
+          ))}
         </ul>
       )}
 

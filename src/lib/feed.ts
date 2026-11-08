@@ -23,6 +23,8 @@ export type FeedItem = {
   lat?: number | null;
   lng?: number | null;
   region?: string | null;
+  // A company job whose company passed Haaks' KvK check.
+  kvk_ok?: boolean;
 };
 
 export type FeedEmailMode = "off" | "daily" | "instant";
