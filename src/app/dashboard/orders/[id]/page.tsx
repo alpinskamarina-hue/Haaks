@@ -98,6 +98,7 @@ export default async function OrderPage({
   const rate = order.hourly_rate ?? (Number(profile.hourly_rate) || null);
   const openHours = Math.round(hourList.filter((r) => !r.invoice_id).reduce((x, r) => x + Number(r.hours), 0) * 100) / 100;
   const hourWeeks = groupByWeek(hourList);
+  const fmtH = (n: number) => new Intl.NumberFormat(LOCALES[lang]).format(n);
   const photos = photoRows ?? [];
   const notes = noteRows ?? [];
 
@@ -561,7 +562,7 @@ export default async function OrderPage({
                 <span>
                   {fillP(hw.week, { n: w.week })} <span className="font-normal text-slate-500">({fmtDate(w.from)} – {fmtDate(w.to)})</span>
                 </span>
-                <span className="whitespace-nowrap">{fillP(hw.total, { h: w.hours, sum: rate ? euro(w.hours * rate) : "—" })}</span>
+                <span className="whitespace-nowrap">{fillP(hw.total, { h: fmtH(w.hours), sum: rate ? euro(w.hours * rate) : "—" })}</span>
               </div>
               <ul className="mt-2 space-y-1">
                 {w.rows.map((r) => {
@@ -569,7 +570,7 @@ export default async function OrderPage({
                   return (
                     <li key={r.id} className="flex items-center justify-between gap-2 text-slate-700">
                       <span className="min-w-0">
-                        {fmtDate(r.work_date)} · <b>{Number(r.hours)} {hw.h}</b>
+                        {fmtDate(r.work_date)} · <b>{fmtH(Number(r.hours))} {hw.h}</b>
                         {r.note ? ` · ${r.note}` : ""}
                       </span>
                       {r.invoice_id ? (
@@ -595,7 +596,7 @@ export default async function OrderPage({
             ) : (
               <form action={invoiceFromHours.bind(null, order.id)}>
                 <SubmitButton className="w-full rounded-xl bg-orange-500 px-4 py-3 font-semibold text-white disabled:opacity-60">
-                  {fillP(hw.makeInvoice, { h: openHours, sum: euro(openHours * rate) })}
+                  {fillP(hw.makeInvoice, { h: fmtH(openHours), sum: euro(openHours * rate) })}
                 </SubmitButton>
               </form>
             ))}
