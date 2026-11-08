@@ -12,6 +12,8 @@ import { LANG_NAMES, LANGS } from "@/lib/i18n";
 import { Flag } from "@/components/Flag";
 import type { AdvantagesDict } from "@/lib/landing-advantages";
 import { getPricingDict } from "@/lib/pricing-i18n";
+import { DEFAULT_NAMES, STAFF_FACES, faceUrl } from "@/lib/staff";
+import { getStaffLanding, type StaffLandingDict } from "@/lib/staff-landing-i18n";
 import { legalSummary } from "@/lib/legal";
 import { requestLang } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
@@ -104,6 +106,8 @@ export default async function Home({
 
         <Advantages a={a} />
 
+        <StaffBlock s={getStaffLanding(lang)} />
+
         <section className="mx-auto max-w-5xl px-4 py-14">
           <h2 className="text-3xl font-bold">{l.problemsTitle}</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -174,6 +178,68 @@ export default async function Home({
 
       <SiteFooter lang={lang} note={l.footer} />
     </div>
+  );
+}
+
+// «Цифровой сотрудник»: how the Ultra employee works, with a sample job card from the chat.
+function StaffBlock({ s }: { s: StaffLandingDict }) {
+  return (
+    <section id="staff" className="relative isolate overflow-hidden bg-gradient-to-b from-violet-950 to-slate-950 text-white">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_80%_20%,rgba(139,92,246,.4),transparent_50%)]" />
+      <div className="mx-auto grid max-w-5xl gap-10 px-4 py-14 lg:grid-cols-[1fr_360px] lg:items-center">
+        <div>
+          <p className="inline-block rounded-full bg-violet-500/25 px-3 py-1 text-sm font-medium text-violet-100 ring-1 ring-violet-300/40">✨ {s.badge}</p>
+          <h2 className="mt-4 text-3xl font-bold sm:text-4xl">{s.title}</h2>
+          <p className="mt-3 max-w-xl text-slate-300">{s.lead}</p>
+          <ol className="mt-8 space-y-4">
+            {s.steps.map((st, i) => (
+              <li key={st.title} className="flex gap-4">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-white/20">{st.icon}</span>
+                <span>
+                  <span className="block font-semibold">
+                    {i + 1}. {st.title}
+                  </span>
+                  <span className="block text-sm text-slate-300">{st.text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-8 flex -space-x-2">
+            {STAFF_FACES.map((f) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={f} src={faceUrl(f)} alt={DEFAULT_NAMES[f]} className="h-11 w-11 rounded-full border-2 border-violet-950 object-cover" />
+            ))}
+          </div>
+          <p className="mt-3 max-w-xl text-sm text-slate-300">{s.choose}</p>
+          <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <a href="#signup" className={`${ctaClass} sm:shrink-0 sm:whitespace-nowrap`}>
+              {s.cta}
+              <Icon name="arrow" />
+            </a>
+            <span className="text-sm text-slate-400">{s.note}</span>
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-slate-100 p-3 text-slate-900 shadow-[0_30px_60px_-20px_rgba(139,92,246,.6)]">
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={faceUrl(1)} alt="" className="h-10 w-10 rounded-full object-cover ring-2 ring-violet-500" />
+            <span>
+              <span className="block font-bold leading-tight">{DEFAULT_NAMES[1]}</span>
+              <span className="block text-xs text-slate-500">{s.chat.role}</span>
+            </span>
+          </div>
+          <div className="mt-3 rounded-2xl rounded-bl-sm bg-white p-3 text-sm shadow-sm">
+            <p className="text-xs font-semibold text-slate-500">{s.chat.found}</p>
+            <p className="mt-1.5 rounded-xl border border-slate-200 p-2.5 font-semibold">{s.chat.job}</p>
+            <p className="mt-2">{s.chat.why}</p>
+            <p className="mt-3 text-xs font-semibold text-slate-500">{s.chat.draftTitle}</p>
+            <p className="mt-1 rounded-lg bg-slate-50 p-2 text-[13px] text-slate-700">{s.chat.draft}</p>
+            <p className="mt-3 rounded-xl bg-orange-600 py-2.5 text-center font-semibold text-white">{s.chat.send}</p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
