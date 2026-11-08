@@ -4,6 +4,7 @@ import { HelpButton } from "@/components/HelpButton";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { StaffFab } from "@/components/StaffFab";
+import { AutoCloseMenu } from "@/components/AutoCloseMenu";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
@@ -122,7 +123,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             )}
           </Link>
           {/* Menu: profile, settings, plan, sign out. */}
-          <details className="relative shrink-0">
+          <AutoCloseMenu className="relative shrink-0">
             <summary className="list-none p-1 text-slate-500 [&::-webkit-details-marker]:hidden" aria-label={t.settingsTitle}>
               <Icon name="menu" />
             </summary>
@@ -152,7 +153,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <button className="block w-full px-4 py-3 text-left">🚪 {t.signOut}</button>
               </form>
             </div>
-          </details>
+          </AutoCloseMenu>
         </header>
         {children}
       </div>
