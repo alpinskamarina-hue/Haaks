@@ -60,6 +60,8 @@ const SECTIONS: { key: Section; icon: string; solid: string; label: (f: FeedDict
   { key: "tender", icon: "📋", solid: "bg-blue-700", label: (f) => f.secTender, chip: "border-blue-600 text-blue-700", bg: "bg-blue-50", stripe: "border-l-blue-600", text: "text-blue-700" },
   { key: "business", icon: "🏢", solid: "bg-purple-700", label: (f) => f.secBusiness, chip: "border-purple-600 text-purple-700", bg: "bg-purple-50", stripe: "border-l-purple-600", text: "text-purple-700" },
 ];
+// How many columns the «Нужен помощник» tile takes, by how many tiles come before it in a row of 4.
+const HELPER_SPAN = ["col-span-4 sm:col-span-1", "col-span-3 sm:col-span-1", "col-span-2 sm:col-span-1", ""];
 const sectionInfo = (kind: ScoredFeedItem["kind"]) => SECTIONS.find((x) => x.key === SECTION_OF[kind])!;
 
 // "inschrijven tot 2026-11-30" -> days left until the tender closes.
@@ -193,6 +195,7 @@ export default async function FeedPage({
   };
   const locked = visible.filter((i) => i.locked);
   const open = visible.filter((i) => !i.locked);
+  const tilesBefore = 1 + (receivedItems.length > 0 || showReceived ? 1 : 0) + SECTIONS.length + (!showReceived && firmCount > 0 ? 1 : 0);
   // Private clients' jobs («Vakman gezocht»): reply counts, my reply, and the job photos.
   const clientItems = open.filter((i) => i.source === "client").map((i) => i.id);
   const cc = getClientCardDict(lang);
@@ -262,7 +265,7 @@ export default async function FeedPage({
           )}
 
           {/* Sections: 3D tiles, all visible at once (no sideways scrolling on a phone). */}
-          <div className="grid grid-cols-3 gap-3 pb-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-4 gap-2 pb-1 sm:grid-cols-8">
             <FeedTile
               href={query({ section: null })}
               icon="🗂️"
@@ -298,7 +301,8 @@ export default async function FeedPage({
             {!showReceived && firmCount > 0 && (
               <FeedTile href="/dashboard/leads/firms" icon="🏬" label={firmsTab} count={firmCount} color="firms" />
             )}
-            <FeedTile href="/dashboard/helpers" icon="👷" label={helper.nav} sub="→" color="helper" />
+            {/* The last tile fills the row, so the grid stays an even block. */}
+            <FeedTile href="/dashboard/helpers" icon="👷" label={helper.nav} sub="→" color="helper" className={HELPER_SPAN[tilesBefore % 4]} />
           </div>
           {/* Which jobs: a two-way switch, then saved and hidden as small links. */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
