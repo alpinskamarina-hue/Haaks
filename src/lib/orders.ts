@@ -8,6 +8,7 @@ export type Order = {
   address: string | null;
   status: "open" | "closed";
   created_at: string;
+  hourly_rate?: number | null;
 };
 
 export type VatLine = { rate: number; base: number | null; vat: number };
