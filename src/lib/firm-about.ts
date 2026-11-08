@@ -98,8 +98,9 @@ async function summarize(name: string, text: string, lang: Lang) {
   client ??= new Anthropic();
   const res = await client.messages.parse({
     model: MODEL,
-    max_tokens: 1200,
-    output_config: { format: zodOutputFormat(Summary) },
+    // Haiku 5.5 thinks by default: leave room for thinking before the answer.
+    max_tokens: 8000,
+    output_config: { effort: "low", format: zodOutputFormat(Summary) },
     system:
       "You help foreign construction workers (ZZP) in the Netherlands decide whether to offer their services to a building firm. " +
       "You get the text of the firm's website. Use only what the text says; never guess. " +
@@ -111,6 +112,7 @@ async function summarize(name: string, text: string, lang: Lang) {
       "hires_zzp: true only if the text says they work with ZZP'ers, subcontractors (onderaannemers) or freelancers.",
     messages: [{ role: "user", content: `Firm: ${name}\n\nWebsite text:\n${text}` }],
   });
+  if (res.stop_reason !== "end_turn") console.error("firm-about: stop", res.stop_reason, name);
   return res.stop_reason === "refusal" ? null : (res.parsed_output ?? null);
 }
 
@@ -134,7 +136,10 @@ export async function loadFirmAbout(server: SupabaseClient, firm: FirmForAbout, 
   }
 
   if (about.site === "ok" && siteText && claudeEnabled()) {
-    const ai = await summarize(firm.name, siteText, lang).catch(() => null);
+    const ai = await summarize(firm.name, siteText, lang).catch((e) => {
+      console.error("firm-about: AI failed", firm.name, e instanceof Error ? e.message : e);
+      return null;
+    });
     if (ai) {
       about = {
         ...about,
