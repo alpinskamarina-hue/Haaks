@@ -1,6 +1,6 @@
 import type { Lang } from "./i18n";
 
-// Landing block «Цифровой сотрудник: как он работает» (Nasim, 2026-11-08).
+// «Цифровой сотрудник: как он работает» texts for the cabinet home card (removed from the landing at Nasim's ask, 2026-11-08).
 // Machine-assisted translations: have a native speaker review before launch.
 export type StaffLandingDict = {
   badge: string;
