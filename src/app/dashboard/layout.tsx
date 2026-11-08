@@ -3,6 +3,7 @@ import { signOut } from "@/app/actions";
 import { HelpButton } from "@/components/HelpButton";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
+import { StaffFab } from "@/components/StaffFab";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
 import { legalSummary } from "@/lib/legal";
@@ -109,11 +110,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
-          {/* The worker's digital employee, one tap away. */}
-          <Link href="/dashboard/staff" className="shrink-0" aria-label={getStaffDict(lang).nav} title={getStaffDict(lang).nav}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-violet-500 ring-offset-1" />
-          </Link>
           <HelpButton label={help.helpHere} variant="round" />
           <Link href="/dashboard/profile" className="shrink-0" aria-label={w.navProfile} title={w.navProfile}>
             {avatarUrl ? (
@@ -164,6 +160,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
+      {/* The worker's digital employee, always one tap away in the bottom-right corner. */}
+      <StaffFab face={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} label={getStaffDict(lang).nav} />
       <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/helpers", "/dashboard/staff"].includes(i.href))} />
     </div>
   );
