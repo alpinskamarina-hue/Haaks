@@ -29,6 +29,18 @@ export async function setLanguage(lang: string) {
   revalidatePath("/", "layout");
 }
 
+// The builder's own payment link (bunq.me, Tikkie, bank «betaalverzoek»): only https links are kept.
+function payLink(value: string | null | undefined) {
+  if (!value) return null;
+  const v = value.trim();
+  try {
+    const url = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`);
+    return url.protocol === "https:" && v.length <= 300 ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveProfile(formData: FormData) {
   const { supabase, user } = await requireUser();
   await supabase
@@ -44,6 +56,7 @@ export async function saveProfile(formData: FormData) {
       business_address: text(formData, "business_address"),
       business_email: text(formData, "business_email"),
       iban: text(formData, "iban")?.replace(/\s/g, "").toUpperCase() ?? null,
+      pay_link: payLink(text(formData, "pay_link")),
     })
     .eq("id", user.id);
   revalidatePath("/dashboard", "layout");

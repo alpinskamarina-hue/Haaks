@@ -83,6 +83,7 @@ export default async function InvoicePage({
     remindedAt: invoice.reminded_at,
     link,
     iban: profile.iban ?? null,
+    payLink: profile.pay_link ?? null,
     company,
     worker: profile.full_name ?? null,
     credit:
@@ -167,6 +168,7 @@ export default async function InvoicePage({
               .join(" · ")}
           </p>
         )}
+        {invoice.status === "sent" && !closed && <p className="mt-1 text-xs text-slate-500">⏰ {iv.autoInfo}</p>}
         {invoice.credit_for && (
           <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm">{fill(iv.creditInfo, { number: related.get(invoice.credit_for)?.number ?? "—" })}</p>
         )}

@@ -12,6 +12,8 @@ type Input = {
   remindedAt: string | null;
   link: string;
   iban: string | null;
+  // The builder's own payment link (bunq.me, Tikkie), when set.
+  payLink?: string | null;
   company: string;
   worker: string | null;
   // On a corrected invoice: the Dutch line about the credit note that cancels the old one.
@@ -36,6 +38,7 @@ export function invoiceSubject(kind: SendKind, number: string, company: string) 
 export function invoiceEmail(i: Input) {
   const hello = i.clientName ? `Beste ${i.clientName},` : "Geachte heer/mevrouw,";
   const sum = euro(i.total);
+  const direct = i.payLink ? [`Direct betalen kan ook via deze link: ${i.payLink}`] : [];
   const pay = i.iban ? `op rekeningnummer ${i.iban} t.n.v. ${i.company}, onder vermelding van ${i.number}` : `onder vermelding van ${i.number}`;
   const body =
     i.kind === "send"
@@ -45,6 +48,7 @@ export function invoiceEmail(i: Input) {
           ...(i.credit ? ["", i.credit] : []),
           "",
           `Graag ontvang ik het bedrag${i.dueDate ? ` vóór ${nl(i.dueDate)}` : ""} ${pay}.`,
+          ...direct,
           "",
           "Bedankt voor de opdracht.",
         ]
@@ -54,6 +58,7 @@ export function invoiceEmail(i: Input) {
             "Volgens mijn administratie heb ik de betaling nog niet ontvangen.",
             "",
             `Wilt u het bedrag binnen 7 dagen overmaken ${pay}?`,
+            ...direct,
             `De factuur: ${i.link}`,
             "",
             "Heeft u al betaald? Dan kunt u dit bericht als niet verzonden beschouwen.",
@@ -62,6 +67,7 @@ export function invoiceEmail(i: Input) {
             `Op ${nl(i.remindedAt ?? i.sentAt ?? new Date().toISOString())} heb ik u een herinnering gestuurd voor factuur ${i.number} van ${sum}. Ik heb de betaling nog steeds niet ontvangen.`,
             "",
             `Ik verzoek u het bedrag uiterlijk binnen 7 dagen over te maken ${pay}.`,
+            ...direct,
             `De factuur: ${i.link}`,
             "",
             "Is er een probleem met de factuur of het werk? Neem dan vandaag nog contact met mij op, dan zoeken we samen een oplossing.",
