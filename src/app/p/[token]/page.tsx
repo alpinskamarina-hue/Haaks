@@ -30,6 +30,7 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { Stars } from "@/components/Stars";
 import { ratingSummary, ratingText, type Review } from "@/lib/reviews";
 import { getReviewsDict, PUBLIC_REVIEWS } from "@/lib/reviews-i18n";
+import { fillO, hasOwnMeans, ondernemerSigns, PUBLIC_MIN, PUBLIC_ONDERNEMER, type OndernemerFacts } from "@/lib/ondernemer";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,19 @@ export default async function PassportPage({
     user_agent: (await headers()).get("user-agent")?.slice(0, 300) ?? null,
   });
 
+  // «Zelfstandig ondernemer»: facts from the builder's own administration, only the true ones, and only
+  // the documents the client can see here. Shown from PUBLIC_MIN true signs.
+  const { data: facts } = await admin.rpc("ondernemer_facts", { p_user: profile.id });
+  const ondernemer = ondernemerSigns({
+    profile,
+    docs: documents,
+    facts: (facts as OndernemerFacts | null) ?? null,
+    means: hasOwnMeans(worker),
+    works: works.length,
+    reviews: rating.n,
+  }).filter((s) => s.ok);
+  const po = PUBLIC_ONDERNEMER[lang];
+
   const hasVca = documents.some((d) => d.doc_type === "vca");
   const pack = documents.length
     ? await packProps({ profile, documents, urlOf: (p) => urlByPath.get(p), passportUrl: `${await siteUrl()}/p/${token}`, lang })
@@ -193,6 +207,23 @@ export default async function PassportPage({
       </section>
 
       <WorkerBlock worker={worker} lang={lang} photoUrls={worker.work_photos.flatMap((p) => urlByPath.get(p) ?? [])} />
+
+      {ondernemer.length >= PUBLIC_MIN && (
+        <section className="rounded-2xl border border-green-200 bg-green-50/60 p-5 shadow-sm">
+          <h2 className="text-xl font-semibold">💼 {po.title}</h2>
+          <ul className="mt-3 space-y-1.5 text-sm">
+            {ondernemer.map((s) => (
+              <li key={s.id} className="flex gap-2">
+                <span className="font-bold text-green-700" aria-hidden>
+                  ✓
+                </span>
+                <span>{fillO(po.signs[s.id], s.vars)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-slate-500">{fillO(po.note, { date: new Date(`${dutchToday()}T12:00:00Z`).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB") })}</p>
+        </section>
+      )}
 
       {rating.n > 0 && (
         <section id="reviews" className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

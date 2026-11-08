@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Lang } from "@/lib/i18n";
 import { siteUrl } from "@/lib/lang";
 import { createClient } from "@/lib/supabase/server";
+import { getOndernemerDict } from "@/lib/ondernemer";
 
 // Documents, finished work and reviews all live under one menu item, the ZZP passport.
 // These tabs sit at the top of each of the three pages.
@@ -15,7 +16,7 @@ const LABELS: Record<Lang, { title: string; docs: string; works: string; reviews
   nl: { title: "ZZP-paspoort", docs: "Documenten", works: "Werk", reviews: "Beoordelingen", client: "Zo ziet de klant het" },
 };
 
-export type PassportTab = "docs" | "works" | "reviews";
+export type PassportTab = "docs" | "works" | "reviews" | "business";
 
 export async function PassportTabs({
   active,
@@ -60,6 +61,7 @@ export function PassportTabsView({
     { id: "docs", href: "/dashboard/passport", label: l.docs },
     { id: "works", href: "/dashboard/works", label: l.works, n: works },
     { id: "reviews", href: "/dashboard/reviews", label: l.reviews, n: reviews },
+    { id: "business", href: "/dashboard/ondernemer", label: getOndernemerDict(lang).tab },
   ];
 
   return (
@@ -81,13 +83,13 @@ export function PassportTabsView({
           👁 {l.client}
         </a>
       </div>
-      <nav className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1" aria-label={l.title}>
+      <nav className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1" aria-label={l.title}>
         {tabs.map((tab) => (
           <Link
             key={tab.id}
             href={tab.href}
             aria-current={tab.id === active ? "page" : undefined}
-            className={`truncate rounded-lg px-2 py-2 text-center text-sm font-semibold ${
+            className={`truncate rounded-lg px-1 py-2 text-center text-[13px] font-semibold sm:px-2 sm:text-sm ${
               tab.id === active ? "bg-white text-orange-700 shadow-sm" : "text-slate-600"
             }`}
           >
