@@ -6,6 +6,7 @@ import { loadWorkspace } from "@/lib/workspace";
 
 type Firm = {
   id: string;
+  place_id: string | null;
   name: string;
   address: string | null;
   phone: string | null;
@@ -20,6 +21,14 @@ type Firm = {
 const button =
   "rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-800";
 
+// Google Maps "search" URL with query_place_id opens the exact place in the app and in the browser;
+// the old "place/?q=place_id:…" form makes the Android app search for the id as text.
+function mapsLink(f: Firm): string {
+  const query = encodeURIComponent([f.name, f.address].filter(Boolean).join(", "));
+  const id = f.place_id ? `&query_place_id=${encodeURIComponent(f.place_id)}` : "";
+  return `https://www.google.com/maps/search/?api=1&query=${query}${id}`;
+}
+
 // «Фирмы рядом»: construction firms near the builder, nearest first.
 export default async function FirmsPage() {
   const { supabase, profile, lang } = await loadWorkspace();
@@ -33,7 +42,7 @@ export default async function FirmsPage() {
   const { data } = await supabase
     .from("nearby_firms")
     .select(
-      "id, name, address, phone, website, rating, review_count, lat, lng, maps_url",
+      "id, place_id, name, address, phone, website, rating, review_count, lat, lng, maps_url",
     )
     .limit(500);
   const radius = home.travel_km || 50;
@@ -107,9 +116,9 @@ export default async function FirmsPage() {
                   📞 {t.call}
                 </a>
               )}
-              {f.maps_url && (
+              {(f.place_id || f.maps_url) && (
                 <a
-                  href={f.maps_url}
+                  href={mapsLink(f)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={button}
