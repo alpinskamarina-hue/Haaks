@@ -314,16 +314,6 @@ export default async function Home() {
         />
       )}
 
-      <StaffHomeCard
-        s={getStaffLanding(lang)}
-        f={getStaffFeedDict(lang)}
-        face={faceUrl(staff.face)}
-        name={staff.name}
-        ultra={plan === "ultra"}
-        canTrial={plan === "free" && !planProfile.trial_started_at}
-        plansLabel={getPricingDict(lang).nav}
-      />
-
       {nextStep ? (
         <section className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
           <div className="flex items-baseline justify-between gap-3">
@@ -535,6 +525,16 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      <StaffHomeCard
+        s={getStaffLanding(lang)}
+        f={getStaffFeedDict(lang)}
+        face={faceUrl(staff.face)}
+        name={staff.name}
+        ultra={plan === "ultra"}
+        canTrial={plan === "free" && !planProfile.trial_started_at}
+        plansLabel={getPricingDict(lang).nav}
+      />
     </main>
   );
 }
