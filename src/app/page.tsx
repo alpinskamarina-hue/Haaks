@@ -7,6 +7,10 @@ import { LoginForm } from "@/components/LoginForm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getDict } from "@/lib/i18n";
 import { getLanding } from "@/lib/landing";
+import { getAdvantages } from "@/lib/landing-advantages";
+import { LANG_NAMES, LANGS } from "@/lib/i18n";
+import { Flag } from "@/components/Flag";
+import type { AdvantagesDict } from "@/lib/landing-advantages";
 import { getPricingDict } from "@/lib/pricing-i18n";
 import { legalSummary } from "@/lib/legal";
 import { requestLang } from "@/lib/lang";
@@ -34,6 +38,7 @@ export default async function Home({
   const lang = await requestLang();
   const t = getDict(lang);
   const l = getLanding(lang);
+  const a = getAdvantages(lang);
   const { error, mode, as } = await searchParams;
 
   return (
@@ -67,8 +72,15 @@ export default async function Home({
               <p className="inline-block rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium sm:text-sm text-orange-200 ring-1 ring-orange-400/40">
                 {l.badge}
               </p>
-              <h1 className="mt-5 max-w-2xl text-3xl font-bold leading-tight sm:text-5xl">{l.title}</h1>
-              <p className="mt-4 max-w-xl text-base text-slate-300 sm:mt-5 sm:text-lg">{l.subtitle}</p>
+              <h1 className="mt-5 max-w-2xl text-3xl font-bold leading-tight sm:text-5xl">{a.heroTitle}</h1>
+              <p className="mt-4 max-w-xl text-base text-slate-300 sm:mt-5 sm:text-lg">{a.heroSubtitle}</p>
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {a.pills.map((p) => (
+                  <li key={p} className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-orange-100 ring-1 ring-white/25">
+                    {p}
+                  </li>
+                ))}
+              </ul>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <a href="#signup" className={ctaClass}>
                   {l.cta}
@@ -90,6 +102,8 @@ export default async function Home({
           </div>
         </section>
 
+        <Advantages a={a} />
+
         <section className="mx-auto max-w-5xl px-4 py-14">
           <h2 className="text-3xl font-bold">{l.problemsTitle}</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -103,31 +117,6 @@ export default async function Home({
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="mx-auto max-w-5xl px-4 py-14">
-            <h2 className="text-3xl font-bold">{l.featuresTitle}</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {l.features.map((f, i) => (
-                <div
-                  key={f.title}
-                  className={`rounded-2xl border p-5 shadow-[0_10px_30px_-12px_rgba(15,23,42,.25)] ${tilt} ${
-                    i === 0
-                      ? "border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50 ring-2 ring-orange-400 sm:col-span-2 sm:flex sm:items-start sm:gap-5 lg:col-span-3"
-                      : `border-slate-200 bg-gradient-to-b from-white to-slate-50 ${i === 5 ? "sm:col-span-2 lg:col-span-2" : ""}`
-                  }`}
-                >
-                  <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-[inset_0_2px_0_rgba(255,255,255,.35),inset_0_-5px_0_rgba(124,45,18,.35),0_10px_18px_-6px_rgba(234,88,12,.6)] [transform:perspective(300px)_rotateX(12deg)_rotateY(-12deg)]">
-                    <Icon name={f.icon} className="h-7 w-7 drop-shadow" />
-                  </span>
-                  <div>
-                    <h3 className={`mt-4 font-semibold ${i === 0 ? "text-2xl sm:mt-0" : "text-lg"}`}>{f.title}</h3>
-                    <p className={`mt-2 text-slate-600 ${i === 0 ? "max-w-2xl text-lg" : ""}`}>{f.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section className="mx-auto max-w-5xl px-4 py-14">
           <h2 className="text-3xl font-bold">{l.stepsTitle}</h2>
@@ -142,17 +131,13 @@ export default async function Home({
               </li>
             ))}
           </ol>
-          <div className="mt-8 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.1),0_20px_40px_-16px_rgba(15,23,42,.6)]">
-            <h3 className="text-xl font-semibold">{l.langTitle}</h3>
-            <p className="mt-2 text-slate-300">{l.langText}</p>
-          </div>
         </section>
 
         <section className="bg-white">
           <div className="mx-auto max-w-3xl px-4 py-14">
             <h2 className="text-3xl font-bold">{l.faqTitle}</h2>
             <div className="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200">
-              {l.faq.map((f) => (
+              {[...a.faq, ...l.faq.slice(1)].map((f) => (
                 <details key={f.q} className="group p-5">
                   <summary className="cursor-pointer list-none text-lg font-semibold marker:hidden">
                     <span className="mr-2 inline-block text-orange-600 transition group-open:rotate-45">+</span>
@@ -209,6 +194,143 @@ function SignupConsent({ lang }: { lang: Parameters<typeof legalSummary>[0] }) {
       {middle}
       {link("/privacy", s.consentLinks.privacy)}
       {after}
+    </>
+  );
+}
+
+const card = "rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-12px_rgba(15,23,42,.25)]";
+const tile =
+  "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-2xl shadow-[inset_0_2px_0_rgba(255,255,255,.35),inset_0_-5px_0_rgba(124,45,18,.35),0_10px_18px_-6px_rgba(234,88,12,.6)] [transform:perspective(300px)_rotateX(12deg)_rotateY(-12deg)]";
+const trustTags = ["bg-green-100 text-green-800", "bg-blue-100 text-blue-800", "bg-amber-100 text-amber-800", "bg-purple-100 text-purple-800"];
+
+// Advantages from the competitor research: what a job costs elsewhere, permits first, one service instead of four,
+// trust for companies, faster payment and the native language.
+function Advantages({ a }: { a: AdvantagesDict }) {
+  return (
+    <>
+      <section className="bg-white">
+        <div className="mx-auto max-w-3xl px-4 py-14">
+          <h2 className="text-3xl font-bold">{a.costTitle}</h2>
+          <p className="mt-2 text-slate-600">{a.costLead}</p>
+          <div className={`mt-6 overflow-hidden ${card}`}>
+            {a.costRows.map((r) => (
+              <div key={r.who} className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                <span className="text-slate-700">{r.who}</span>
+                <span className="text-right">
+                  <span className="block text-lg font-bold text-red-700">{r.cost}</span>
+                  <span className="block text-xs text-slate-500">{r.unit}</span>
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-3 bg-orange-50 px-5 py-4">
+              <span className="text-lg font-bold">{a.costUs.who}</span>
+              <span className="text-right">
+                <span className="block text-xl font-bold text-green-700">{a.costUs.cost}</span>
+                <span className="block text-sm font-semibold text-green-700">{a.costUs.unit}</span>
+              </span>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-400">{a.costNote}</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 py-14">
+        <h2 className="text-3xl font-bold">{a.earlyTitle}</h2>
+        <p className="mt-2 max-w-2xl text-slate-600">{a.earlyLead}</p>
+        <ol className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+          {a.earlySteps.map((s, i) => (
+            <li key={s} className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-center text-sm font-semibold text-orange-900 sm:text-base">
+              <span className="mb-1 block text-2xl">{["🏗️", "✉️", "📄"][i]}</span>
+              {s}
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {a.early.map((f, i) => (
+            <div key={f.title} className={`flex gap-4 p-5 sm:block ${card} ${tilt}`}>
+              <span className={tile}>{["🗺️", "🏛️", "🔔"][i]}</span>
+              <div>
+                <h3 className="text-lg font-semibold sm:mt-4">{f.title}</h3>
+                <p className="mt-1 text-slate-600">{f.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-3xl px-4 py-14">
+          <h2 className="text-3xl font-bold">{a.bundleTitle}</h2>
+          <p className="mt-2 text-slate-600">{a.bundleLead}</p>
+          <div className={`mt-6 p-5 ${card}`}>
+            {a.bundle.map((b) => (
+              <div key={b.name} className="flex justify-between gap-3 py-1.5 text-slate-600">
+                <span>{b.name}</span>
+                <span className={`whitespace-nowrap text-right text-red-700 ${b.price.includes("€") ? "line-through decoration-red-300" : ""}`}>{b.price}</span>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-between gap-3 border-t-2 border-dashed border-slate-200 pt-3 font-bold">
+              <span>{a.bundleTotal[0]}</span>
+              <span className="text-right text-red-700">{a.bundleTotal[1]}</span>
+            </div>
+            <div className="mt-3 flex flex-col gap-1 rounded-xl bg-green-50 p-3 text-lg font-bold text-green-700 sm:flex-row sm:justify-between sm:gap-3">
+              <span>{a.bundleUs[0]}</span>
+              <span className="sm:text-right">{a.bundleUs[1]}</span>
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-slate-500">
+            {a.bundleNote}
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 py-14">
+        <h2 className="text-3xl font-bold">{a.trustTitle}</h2>
+        <p className="mt-2 max-w-2xl text-slate-600">{a.trustLead}</p>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {a.trust.map((t, i) => (
+            <div key={t.title} className={`p-4 ${card} ${tilt}`}>
+              <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold ${trustTags[i]}`}>{t.tag}</span>
+              <h3 className="mt-2 font-semibold">{t.title}</h3>
+              <p className="mt-1 text-sm text-slate-600">{t.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-14">
+          <h2 className="text-3xl font-bold">{a.moneyTitle}</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">{a.moneyLead}</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {a.money.map((f, i) => (
+              <div key={f.title} className={`flex gap-4 p-5 sm:block ${card} ${tilt}`}>
+                <span className={tile}>{["⏱️", "💶", "🧾"][i]}</span>
+                <div>
+                  <h3 className="text-lg font-semibold sm:mt-4">{f.title}</h3>
+                  <p className="mt-1 text-slate-600">{f.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 py-14">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.1),0_20px_40px_-16px_rgba(15,23,42,.6)] sm:p-8">
+          <h2 className="text-2xl font-bold sm:text-3xl">{a.onlyTitle}</h2>
+          <p className="mt-3 max-w-2xl text-slate-300">{a.onlyText}</p>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {LANGS.map((code) => (
+              <li key={code} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
+                <Flag lang={code} className="h-3.5 w-5 rounded-sm" />
+                {LANG_NAMES[code]}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-slate-300">{a.onlyNote}</p>
+        </div>
+      </section>
     </>
   );
 }
