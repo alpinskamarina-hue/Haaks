@@ -23,6 +23,7 @@ import { completeness, withDefaults, type WorkerProfile } from "@/lib/worker-pro
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { loadWorkspace } from "@/lib/workspace";
 import { FirmsHomeBlock } from "@/components/FirmsHomeBlock";
+import { getFirmAboutDict } from "@/lib/firm-about-i18n";
 import { loadNearFirms } from "@/lib/firms";
 import { getFirmOfferDict } from "@/lib/firm-offer-i18n";
 import { daysBetween, recentQuarters, vatDeadline } from "@/lib/accountant";
@@ -419,7 +420,7 @@ export default async function Home() {
         </section>
       </div>
 
-      {near.known && near.firms.length > 0 && <FirmsHomeBlock firms={near.firms} offers={near.offers} o={getFirmOfferDict(lang)} />}
+      {near.known && near.firms.length > 0 && <FirmsHomeBlock firms={near.firms} offers={near.offers} o={getFirmOfferDict(lang)} about={getFirmAboutDict(lang).button} />}
 
       <section className="grid grid-cols-4 gap-2">
         {actions.map((a) => (
