@@ -1,26 +1,12 @@
 import Link from "next/link";
-import { distanceKm } from "@/lib/feed";
+import { loadNearFirms, type Firm } from "@/lib/firms";
 import { waNumber } from "@/lib/firm-offer";
 import { getFirmOfferDict } from "@/lib/firm-offer-i18n";
-import { FirmOfferState, type Offer } from "@/components/FirmOfferState";
+import { FirmOfferState } from "@/components/FirmOfferState";
 import { getFirmsDict } from "@/lib/firms-i18n";
 import { fill } from "@/lib/feed-i18n";
 import { loadWorkspace } from "@/lib/workspace";
 
-type Firm = {
-  id: string;
-  place_id: string | null;
-  name: string;
-  address: string | null;
-  phone: string | null;
-  website: string | null;
-  rating: number | null;
-  review_count: number | null;
-  lat: number | null;
-  lng: number | null;
-  maps_url: string | null;
-  email: string | null;
-};
 
 
 const button =
@@ -39,30 +25,8 @@ export default async function FirmsPage() {
   const { supabase, profile, lang } = await loadWorkspace();
   const t = getFirmsDict(lang);
   const o = getFirmOfferDict(lang);
-  const home = profile as typeof profile & {
-    home_lat?: number | null;
-    home_lng?: number | null;
-    travel_km?: number | null;
-  };
-  const me = { lat: home.home_lat ?? null, lng: home.home_lng ?? null };
-  const { data } = await supabase
-    .from("nearby_firms")
-    .select(
-      "id, place_id, name, address, phone, website, rating, review_count, lat, lng, maps_url, email",
-    )
-    .limit(500);
-  const { data: offerRows } = await supabase.from("firm_offers").select("firm_id, channel, sent_at, outcome").returns<Offer[]>();
-  const offers = new Map((offerRows ?? []).map((r) => [r.firm_id, r]));
+  const { firms, offers, known } = await loadNearFirms(supabase, profile);
   const dateFmt = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : lang, { day: "numeric", month: "short" });
-  const radius = home.travel_km || 50;
-  const firms = ((data ?? []) as Firm[])
-    .map((f) => ({ ...f, km: distanceKm(f, me) }))
-    .filter((f) => f.km == null || f.km <= Math.max(radius, 30))
-    .sort(
-      (a, b) =>
-        (a.km ?? 1e9) - (b.km ?? 1e9) ||
-        (b.review_count ?? 0) - (a.review_count ?? 0),
-    );
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
@@ -76,8 +40,8 @@ export default async function FirmsPage() {
             {t.test}
           </span>
         </h1>
-        <p className="mt-1 text-slate-600">{t.intro}</p>
-        {me.lat == null && (
+        <p className="mt-2 rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">{o.hint}</p>
+        {!known && (
           <p className="mt-2 text-sm text-slate-500">{t.noHome}</p>
         )}
       </div>
