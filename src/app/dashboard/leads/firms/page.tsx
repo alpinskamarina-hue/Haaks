@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { loadNearFirms, type Firm } from "@/lib/firms";
+import { loadNearFirms, mapsLink } from "@/lib/firms";
+import { getFirmAboutDict } from "@/lib/firm-about-i18n";
 import { waNumber } from "@/lib/firm-offer";
 import { getFirmOfferDict } from "@/lib/firm-offer-i18n";
 import { FirmOfferState } from "@/components/FirmOfferState";
@@ -7,24 +8,15 @@ import { getFirmsDict } from "@/lib/firms-i18n";
 import { fill } from "@/lib/feed-i18n";
 import { loadWorkspace } from "@/lib/workspace";
 
-
-
 const button =
   "rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-800";
-
-// Google Maps "search" URL with query_place_id opens the exact place in the app and in the browser;
-// the old "place/?q=place_id:…" form makes the Android app search for the id as text.
-function mapsLink(f: Firm): string {
-  const query = encodeURIComponent([f.name, f.address].filter(Boolean).join(", "));
-  const id = f.place_id ? `&query_place_id=${encodeURIComponent(f.place_id)}` : "";
-  return `https://www.google.com/maps/search/?api=1&query=${query}${id}`;
-}
 
 // «Фирмы рядом»: construction firms near the builder, nearest first.
 export default async function FirmsPage() {
   const { supabase, profile, lang } = await loadWorkspace();
   const t = getFirmsDict(lang);
   const o = getFirmOfferDict(lang);
+  const a = getFirmAboutDict(lang);
   const { firms, offers, known } = await loadNearFirms(supabase, profile);
   const dateFmt = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : lang, { day: "numeric", month: "short" });
 
@@ -77,6 +69,9 @@ export default async function FirmsPage() {
             )}
             <FirmOfferState offer={offers.get(f.id)} firmId={f.id} o={o} dateFmt={dateFmt} />
             <div className="mt-3 flex flex-wrap gap-2">
+              <Link href={`/dashboard/leads/firms/${f.id}`} className={`${button} bg-purple-50`}>
+                {a.button}
+              </Link>
               {f.website && (
                 <a
                   href={f.website}

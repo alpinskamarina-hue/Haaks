@@ -40,3 +40,11 @@ export async function loadNearFirms(supabase: SupabaseClient, profile: object) {
   const offers = new Map((offerRows ?? []).map((r) => [r.firm_id, r]));
   return { firms, offers, known: me.lat != null };
 }
+
+// Google Maps "search" URL with query_place_id opens the exact place in the app and in the browser;
+// the old "place/?q=place_id:…" form makes the Android app search for the id as text.
+export function mapsLink(f: { name: string; address: string | null; place_id: string | null }): string {
+  const query = encodeURIComponent([f.name, f.address].filter(Boolean).join(", "));
+  const id = f.place_id ? `&query_place_id=${encodeURIComponent(f.place_id)}` : "";
+  return `https://www.google.com/maps/search/?api=1&query=${query}${id}`;
+}
