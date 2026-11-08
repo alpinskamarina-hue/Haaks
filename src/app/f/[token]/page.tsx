@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/documents";
 import { invoiceTotals, vatNote, type Invoice } from "@/lib/invoices";
 import { euro } from "@/lib/orders";
 import { lineTotal } from "@/lib/quotes";
+import { dutchRange, groupByWeek } from "@/lib/hours";
 import { after } from "next/server";
 import { notifyInvoiceViewed } from "@/lib/invoice-notify";
 import { siteUrl } from "@/lib/lang";
@@ -81,6 +82,13 @@ export default async function PublicInvoicePage({
       ? admin.from("invoices").select("number, public_token, status").eq("replaces", invoice.id).neq("status", "draft").limit(1).maybeSingle<{ number: string; public_token: string; status: string }>()
       : Promise.resolve({ data: null }),
   ]);
+  // Urenstaat: the hours behind this invoice, per week, with the company's Akkoord (step 3 of «часы → счёт»).
+  const { data: hourRows } = await admin.rpc("invoice_urenstaat", { p_token: token });
+  const uren = ((hourRows ?? []) as { work_date: string; hours: number; note: string | null; approved_by: string | null; approved_at: string | null }[]).map(
+    (h, i) => ({ id: String(i), work_date: h.work_date, hours: Number(h.hours), note: h.note, invoice_id: invoice.id, approved_by: h.approved_by, approved_at: h.approved_at }),
+  );
+  const urenWeeks = groupByWeek(uren).reverse();
+  const urenTotal = Math.round(uren.reduce((s, h) => s + h.hours, 0) * 100) / 100;
   const iban = (worker?.iban ?? "").replace(/\s/g, "").toUpperCase();
   const payLink = worker?.pay_link && /^https:\/\//.test(worker.pay_link) ? worker.pay_link : null;
   const payable = !isCredit && !isCredited && invoice.status !== "paid" && sum.incl > 0;
@@ -307,6 +315,58 @@ export default async function PublicInvoicePage({
         {invoice.notes && !isCredit && <p className="whitespace-pre-line">{invoice.notes}</p>}
         <p className="pt-2">{company}</p>
       </footer>
+
+      {urenWeeks.length > 0 && (
+        <section className="space-y-3 border-t border-slate-300 pt-6 print:break-before-page print:border-0 print:pt-0">
+          <h2 className="text-xl font-bold">Urenstaat</h2>
+          <p className="text-sm text-slate-600">
+            Bijlage bij factuur {invoice.number}
+            {invoice.project_address ? ` · ${invoice.project_address}` : ""} · {company}
+          </p>
+          {urenWeeks.map((w) => {
+            const rows = w.rows as typeof uren;
+            const names = [...new Set(rows.map((r) => r.approved_by).filter(Boolean))];
+            const allApproved = rows.every((r) => r.approved_by);
+            const at = rows.find((r) => r.approved_at)?.approved_at;
+            return (
+              <div key={w.key} className="break-inside-avoid">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 text-left [print-color-adjust:exact]">
+                      <th className="p-2 font-semibold" colSpan={2}>
+                        Week {w.week} ({dutchRange(w.from, w.to)})
+                      </th>
+                      <th className="whitespace-nowrap p-2 text-right font-semibold">{qty(w.hours)} uur</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id} className="border-b border-slate-200 align-top">
+                        <td className="w-28 whitespace-nowrap p-2">
+                          {new Date(`${r.work_date}T00:00:00Z`).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
+                        </td>
+                        <td className="p-2 text-slate-700">{r.note || ""}</td>
+                        <td className="whitespace-nowrap p-2 text-right">{qty(r.hours)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className={`mt-1 text-xs ${allApproved ? "font-semibold text-green-800" : "text-slate-500"}`}>
+                  {allApproved
+                    ? `✓ Akkoord gegeven door ${names.join(", ")}${at ? ` op ${date(at)}` : ""} via Haaks`
+                    : names.length
+                      ? `Deels akkoord gegeven door ${names.join(", ")}`
+                      : "Niet vooraf ter akkoord voorgelegd"}
+                </p>
+              </div>
+            );
+          })}
+          <p className="flex justify-between border-t border-slate-800 pt-2 text-base font-bold">
+            <span>Totaal uren</span>
+            <span>{qty(urenTotal)} uur</span>
+          </p>
+        </section>
+      )}
       <PublicFooter />
     </main>
   );

@@ -32,6 +32,9 @@ const ru = {
   okBody: "{name} подтвердил неделю {n}: {h} ч. Можно делать счёт.",
   noTitle: "❌ Часы не подтверждены",
   noBody: "{name} не подтвердил неделю {n}. {comment}",
+  remindTitle: "⏱ Внесите часы за неделю",
+  remindBody: "По заказу «{title}» на этой неделе ещё нет часов. Запишите их, пока помните.",
+  remindMore: "Ещё заказов без часов: {n}.",
 };
 type Dict = typeof ru;
 
@@ -68,6 +71,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name} підтвердив тиждень {n}: {h} год. Можна робити рахунок.",
     noTitle: "❌ Години не підтверджено",
     noBody: "{name} не підтвердив тиждень {n}. {comment}",
+    remindTitle: "⏱ Внесіть години за тиждень",
+    remindBody: "За замовленням «{title}» цього тижня ще немає годин. Запишіть їх, поки пам'ятаєте.",
+    remindMore: "Ще замовлень без годин: {n}.",
   },
   pl: {
     tab: "Godziny",
@@ -100,6 +106,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name} potwierdził tydzień {n}: {h} godz. Możesz zrobić fakturę.",
     noTitle: "❌ Godziny niepotwierdzone",
     noBody: "{name} nie potwierdził tygodnia {n}. {comment}",
+    remindTitle: "⏱ Wpisz godziny za tydzień",
+    remindBody: "Przy zleceniu «{title}» w tym tygodniu nie ma jeszcze godzin. Zapisz je, póki pamiętasz.",
+    remindMore: "Jeszcze zleceń bez godzin: {n}.",
   },
   ro: {
     tab: "Ore",
@@ -132,6 +141,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name} a confirmat săptămâna {n}: {h} ore. Poți face factura.",
     noTitle: "❌ Orele nu au fost confirmate",
     noBody: "{name} nu a confirmat săptămâna {n}. {comment}",
+    remindTitle: "⏱ Introdu orele săptămânii",
+    remindBody: "La comanda «{title}» nu sunt încă ore săptămâna aceasta. Notează-le cât îți amintești.",
+    remindMore: "Alte comenzi fără ore: {n}.",
   },
   tr: {
     tab: "Saatler",
@@ -164,6 +176,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name}, {n}. haftayı onayladı: {h} sa. Fatura yapabilirsiniz.",
     noTitle: "❌ Saatler onaylanmadı",
     noBody: "{name}, {n}. haftayı onaylamadı. {comment}",
+    remindTitle: "⏱ Haftanın saatlerini girin",
+    remindBody: "«{title}» işinde bu hafta henüz saat yok. Unutmadan kaydedin.",
+    remindMore: "Saati girilmemiş başka iş: {n}.",
   },
   en: {
     tab: "Hours",
@@ -196,6 +211,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name} approved week {n}: {h} h. You can make the invoice.",
     noTitle: "❌ Hours not approved",
     noBody: "{name} did not approve week {n}. {comment}",
+    remindTitle: "⏱ Log this week's hours",
+    remindBody: "No hours yet this week for «{title}». Write them down while you remember.",
+    remindMore: "More jobs without hours: {n}.",
   },
   nl: {
     tab: "Uren",
@@ -228,6 +246,9 @@ const DICTS: Record<Lang, Dict> = {
     okBody: "{name} gaf akkoord op week {n}: {h} u. U kunt de factuur maken.",
     noTitle: "❌ Uren niet akkoord",
     noBody: "{name} gaf geen akkoord op week {n}. {comment}",
+    remindTitle: "⏱ Vul je uren van deze week in",
+    remindBody: "Voor «{title}» staan deze week nog geen uren. Schrijf ze op nu je het nog weet.",
+    remindMore: "Nog meer klussen zonder uren: {n}.",
   },
 };
 
