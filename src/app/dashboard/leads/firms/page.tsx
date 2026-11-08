@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { distanceKm } from "@/lib/feed";
+import { waNumber } from "@/lib/firm-offer";
+import { getFirmOfferDict } from "@/lib/firm-offer-i18n";
+import { FirmOfferState, type Offer } from "@/components/FirmOfferState";
 import { getFirmsDict } from "@/lib/firms-i18n";
 import { fill } from "@/lib/feed-i18n";
 import { loadWorkspace } from "@/lib/workspace";
@@ -16,7 +19,9 @@ type Firm = {
   lat: number | null;
   lng: number | null;
   maps_url: string | null;
+  email: string | null;
 };
+
 
 const button =
   "rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-800";
@@ -33,6 +38,7 @@ function mapsLink(f: Firm): string {
 export default async function FirmsPage() {
   const { supabase, profile, lang } = await loadWorkspace();
   const t = getFirmsDict(lang);
+  const o = getFirmOfferDict(lang);
   const home = profile as typeof profile & {
     home_lat?: number | null;
     home_lng?: number | null;
@@ -42,9 +48,12 @@ export default async function FirmsPage() {
   const { data } = await supabase
     .from("nearby_firms")
     .select(
-      "id, place_id, name, address, phone, website, rating, review_count, lat, lng, maps_url",
+      "id, place_id, name, address, phone, website, rating, review_count, lat, lng, maps_url, email",
     )
     .limit(500);
+  const { data: offerRows } = await supabase.from("firm_offers").select("firm_id, channel, sent_at, outcome").returns<Offer[]>();
+  const offers = new Map((offerRows ?? []).map((r) => [r.firm_id, r]));
+  const dateFmt = new Intl.DateTimeFormat(lang === "en" ? "en-GB" : lang, { day: "numeric", month: "short" });
   const radius = home.travel_km || 50;
   const firms = ((data ?? []) as Firm[])
     .map((f) => ({ ...f, km: distanceKm(f, me) }))
@@ -97,6 +106,12 @@ export default async function FirmsPage() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            {(waNumber(f.phone) || f.email) && (
+              <p className="mt-0.5 text-sm text-slate-500">
+                {[waNumber(f.phone) && o.mobile, f.email && o.emailFound].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            <FirmOfferState offer={offers.get(f.id)} firmId={f.id} o={o} dateFmt={dateFmt} />
             <div className="mt-3 flex flex-wrap gap-2">
               {f.website && (
                 <a
@@ -134,3 +149,4 @@ export default async function FirmsPage() {
     </main>
   );
 }
+
