@@ -5,6 +5,10 @@ export function PublicFooter() {
   return (
     <p className="border-t border-slate-200 pt-4 text-center text-xs text-slate-400 print:hidden">
       Gemaakt met Haaks ·{" "}
+      <Link href="/vakman-gezocht" className="font-semibold text-orange-700 underline">
+        Vakman nodig? Plaats gratis je klus
+      </Link>{" "}
+      ·{" "}
       <Link href="/privacy?v=nl" className="underline">
         Privacy
       </Link>{" "}

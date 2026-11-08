@@ -17,6 +17,9 @@ export function SiteFooter({ lang, note }: { lang: Lang; note?: string }) {
           <Link href="/pricing" className="font-medium text-slate-700 hover:text-orange-700">
             {getPricingDict(lang).nav}
           </Link>
+          <Link href={lang === "nl" ? "/vakman-gezocht" : "/vakman-gezocht?lang=en"} className="font-medium text-orange-700 hover:underline">
+            {lang === "nl" ? "Vakman nodig? Plaats je klus" : "Need a tradesperson? Post your job"}
+          </Link>
           {KINDS.map((k) => (
             <Link key={k} href={`/${k}`} className="font-medium text-slate-700 hover:text-orange-700">
               {s.links[k]}

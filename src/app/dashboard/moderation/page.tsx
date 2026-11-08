@@ -7,6 +7,8 @@ import { kvkSearchUrl } from "@/lib/documents";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadWorkspace } from "@/lib/workspace";
 import { resolveReviewReport } from "@/app/reviews-actions";
+import { approveClientRequest, rejectClientRequest } from "@/app/client-request-actions";
+import { workType, type ClientRequest } from "@/lib/client-requests";
 import { ReviewCard } from "@/components/ReviewCard";
 import type { Review } from "@/lib/reviews";
 import { getReviewsDict } from "@/lib/reviews-i18n";
@@ -81,6 +83,16 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     .order("kvk_checked_at", { ascending: false, nullsFirst: true })
     .returns<{ id: string; company_name: string | null; kvk_number: string; full_name: string | null; kvk_checked_at: string | null; kvk_checked_name: string | null }[]>();
   const kvkList = kvkCompanies ?? [];
+  // Jobs from private clients («Vakman gezocht»), waiting for a check.
+  const { data: clientReqs } = await server
+    .from("client_requests")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .returns<ClientRequest[]>();
+  const reqPhotos = (clientReqs ?? []).flatMap((r) => r.photos);
+  const { data: reqSigned } = reqPhotos.length ? await server.storage.from("documents").createSignedUrls(reqPhotos, 3600) : { data: [] };
+  const reqUrl = new Map((reqSigned ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl as string]));
   const kvkOpen = kvkList.filter((c) => !c.kvk_checked_at).length;
 
   const jobByItem = new Map((reportedJobs ?? []).map((j) => [j.feed_item_id as string, j]));
@@ -111,11 +123,67 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
                 ? "Отметка «KvK проверен» снята."
               : ok === "kvk_name"
                 ? "Впишите название компании так, как оно указано на kvk.nl."
+              : ok === "client_published"
+                ? "Заявка клиента опубликована: она в ленте у подходящих строителей, им ушли уведомления."
+              : ok === "client_rejected"
+                ? "Заявка клиента отклонена. Клиент увидит причину на своей странице."
               : ok === "dismissed"
                 ? "Жалобы отклонены, всё осталось как было."
                 : "Заказ отклонён."}
         </p>
       )}
+      <h2 id="client-requests" className="text-xl font-bold">
+        Заявки клиентов {!!clientReqs?.length && <span className="text-orange-600">({clientReqs.length})</span>}
+      </h2>
+      {!clientReqs?.length ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-slate-500">Нет заявок клиентов на проверке.</p>
+      ) : (
+        <ul className="space-y-4">
+          {clientReqs.map((r) => (
+            <li key={r.id} className="rounded-xl border border-orange-200 bg-white p-4 sm:p-5">
+              <p className="text-sm text-slate-500">
+                {dayMonthYear(r.created_at.slice(0, 10))} · <span className="rounded bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-800">Клиент</span>{" "}
+                <span className="font-semibold text-slate-900">{r.name}</span> · {r.email}
+                {r.phone ? ` · ${r.phone}` : ""}
+              </p>
+              <h3 className="mt-3 font-semibold">
+                {workType(r.work_type)?.icon} {workType(r.work_type)?.nl ?? r.work_type} · {r.postcode} {r.city ?? ""}
+              </h3>
+              <p className="text-sm text-slate-600">{[r.size, r.budget ? `budget ${r.budget}` : null, r.timing].filter(Boolean).join(" · ")}</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{r.description}</p>
+              {r.photos.length > 0 && (
+                <div className="mt-2 flex gap-2">
+                  {r.photos.map((p) =>
+                    reqUrl.get(p) ? (
+                      <a key={p} href={reqUrl.get(p)} target="_blank" rel="noopener">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={reqUrl.get(p)} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                      </a>
+                    ) : null,
+                  )}
+                </div>
+              )}
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+                <form action={approveClientRequest}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <SubmitButton className="w-full rounded-lg bg-green-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60 sm:w-auto">
+                    Опубликовать
+                  </SubmitButton>
+                </form>
+                <form action={rejectClientRequest} className="flex flex-1 gap-2">
+                  <input type="hidden" name="id" value={r.id} />
+                  <input name="reason" placeholder="Причина (клиент увидит, по-голландски)" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                  <SubmitButton className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:opacity-60">
+                    Отклонить
+                  </SubmitButton>
+                </form>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="pt-4 text-xl font-bold">Заказы компаний</h2>
       {!jobs?.length ? (
         <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-slate-500">Нет заказов на проверке.</p>
       ) : (

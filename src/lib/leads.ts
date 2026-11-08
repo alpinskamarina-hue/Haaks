@@ -1,7 +1,7 @@
 export type Lead = {
   id: string;
   user_id: string;
-  source: "manual" | "telegram" | "email" | "bekendmakingen" | "tenderned" | "haaks" | "facebook" | "googlejobs";
+  source: "manual" | "telegram" | "email" | "bekendmakingen" | "tenderned" | "haaks" | "facebook" | "googlejobs" | "client";
   source_name: string | null;
   source_url: string | null;
   raw_text: string;
@@ -34,6 +34,7 @@ export const SOURCE_LABELS: Record<Lead["source"], string> = {
   haaks: "Haaks",
   facebook: "Facebook",
   googlejobs: "Vacature",
+  client: "Klant",
 };
 
 // A phone number in the contact field becomes a WhatsApp link with the reply prefilled.

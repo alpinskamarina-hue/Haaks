@@ -10,7 +10,12 @@ import {
   unhideFeedItem,
   unlockFeedItem,
   replyToCompanyJob,
+  replyToClientRequest,
 } from "@/app/feed-actions";
+import { ClientReplyForm } from "@/components/ClientReplyForm";
+import { getClientCardDict, type ClientCardDict } from "@/lib/client-request-i18n";
+import { MAX_REPLIES, type MyClientReply } from "@/lib/client-requests";
+import { createServerAccountClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/SubmitButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
 import { KVK_BADGE } from "@/lib/kvk-check";
@@ -187,6 +192,26 @@ export default async function FeedPage({
   };
   const locked = visible.filter((i) => i.locked);
   const open = visible.filter((i) => !i.locked);
+  // Private clients' jobs («Vakman gezocht»): reply counts, my reply, and the job photos.
+  const clientItems = open.filter((i) => i.source === "client").map((i) => i.id);
+  const cc = getClientCardDict(lang);
+  const clientRows = new Map<string, MyClientReply>();
+  const clientPhotos = new Map<string, string[]>();
+  if (clientItems.length) {
+    const server = await createServerAccountClient();
+    const [{ data: rows }, { data: reqs }] = await Promise.all([
+      supabase.rpc("my_client_replies"),
+      server.from("client_requests").select("feed_item_id, photos").in("feed_item_id", clientItems),
+    ]);
+    for (const r of (rows ?? []) as MyClientReply[]) clientRows.set(r.feed_item_id, r);
+    const paths = ((reqs ?? []) as { feed_item_id: string; photos: string[] }[]).flatMap((r) => r.photos.map((p) => ({ item: r.feed_item_id, p })));
+    const { data: signed } = paths.length ? await server.storage.from("documents").createSignedUrls(paths.map((x) => x.p), 3600) : { data: [] };
+    const byPath = new Map((signed ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl as string]));
+    for (const { item, p } of paths) {
+      const u = byPath.get(p);
+      if (u) clientPhotos.set(item, [...(clientPhotos.get(item) ?? []), u]);
+    }
+  }
   const hiddenCount = items.filter((i) => i.action === "hidden").length;
   const hasDemo = items.some((i) => i.is_demo);
 
@@ -411,6 +436,7 @@ export default async function FeedPage({
                 fp={fp}
                 js={js}
                 shareTargets={shareTargets}
+                client={item.source === "client" ? { t: cc, row: clientRows.get(item.id), photos: clientPhotos.get(item.id) ?? [] } : undefined}
               />
             ))}
           </ul>
@@ -490,6 +516,7 @@ function FeedCard({
   fp,
   js,
   shareTargets,
+  client,
 }: {
   item: ScoredFeedItem;
   f: FeedDict;
@@ -510,6 +537,7 @@ function FeedCard({
   fp: FeedPlusDict;
   js: JobShareDict;
   shareTargets: { username: string; name: string }[];
+  client?: { t: ClientCardDict; row?: MyClientReply; photos: string[] };
 }) {
   // An opened card is shown like for Pro.
   const pro = isPro || item.opened;
@@ -579,9 +607,9 @@ function FeedCard({
       </p>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
         <span
-          className={`rounded-full px-2 py-0.5 font-medium ${item.source === "haaks" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-700"}`}
+          className={`rounded-full px-2 py-0.5 font-medium ${item.source === "haaks" || client ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-700"}`}
         >
-          {item.source === "bekendmakingen" ? sourceLabel(item).split(" · ")[0] : sourceLabel(item)}
+          {client ? client.t.badge : item.source === "bekendmakingen" ? sourceLabel(item).split(" · ")[0] : sourceLabel(item)}
         </span>
         {vacancy && isBureau(item.source_name) && (
           <span title={vt.bureauHint} className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">
@@ -623,10 +651,27 @@ function FeedCard({
       <p className="text-sm text-slate-500">
         {vacancy ? vt.badge : kindLabel(item.kind, f)} · {meta.join(" · ")}
       </p>
-      <p className="mt-2 break-words text-sm text-slate-700">{summary}</p>
+      <p className="mt-2 whitespace-pre-line break-words text-sm text-slate-700">{summary}</p>
+      {client && client.photos.length > 0 && (
+        <div className="mt-2 flex gap-2">
+          {client.photos.map((u) => (
+            <a key={u} href={u} target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={u} alt="" className="h-16 w-16 rounded-lg object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
+      {client && (
+        <p className="mt-2 text-xs font-medium text-slate-600">
+          👥 {fill(client.t.replied, { n: client.row?.replies ?? 0, max: MAX_REPLIES })}
+        </p>
+      )}
       {/* One bright main action; a second one, if any, is outlined; small actions are grey icons below. */}
       <div className="mt-3 flex flex-col gap-2 text-sm">
-        {companyJob && ownJob ? (
+        {client ? (
+          <ClientCardAction item={item} client={client} pro={pro} lang={lang} replyQuota={replyQuota} f={f} opensLeft={opensLeft} />
+        ) : companyJob && ownJob ? (
           <Link href={`/dashboard/helpers/jobs/${ownJob}`} className="rounded-xl bg-sky-50 px-4 py-2.5 text-center font-medium text-sky-800">
             👷 {yourJob}
           </Link>
@@ -742,6 +787,79 @@ function FeedCard({
         )}
       </div>
     </li>
+  );
+}
+
+// The main action on a private client's job: reply, or the state of my reply.
+function ClientCardAction({
+  item,
+  client,
+  pro,
+  lang,
+  replyQuota,
+  f,
+  opensLeft,
+}: {
+  item: ScoredFeedItem;
+  client: { t: ClientCardDict; row?: MyClientReply };
+  pro: boolean;
+  lang: Lang;
+  replyQuota: FreeQuota | null;
+  f: FeedDict;
+  opensLeft: number;
+}) {
+  const { t, row } = client;
+  if (row?.my_status === "chosen") {
+    return (
+      <div className="rounded-xl bg-green-50 p-3">
+        <p className="font-semibold text-green-800">🎉 {t.chosen}</p>
+        <p className="text-sm text-green-900">
+          {t.clientContact}: {row.client_name}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {row.client_phone && (
+            <a href={`tel:${row.client_phone.replace(/\s/g, "")}`} className="rounded-xl bg-green-600 px-4 py-2 font-semibold text-white">
+              📞 {t.call} {row.client_phone}
+            </a>
+          )}
+          {row.client_email && (
+            <a href={`mailto:${row.client_email}`} className="rounded-xl border border-green-600 bg-white px-4 py-2 font-semibold text-green-700">
+              ✉️ {t.mail}
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+  if (row?.my_status === "not_chosen") return <p className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-slate-500">{t.notChosen}</p>;
+  if (row?.my_status === "sent") return <p className="rounded-xl bg-purple-50 px-4 py-2.5 text-center font-medium text-purple-800">⏳ {t.sent}</p>;
+  if (row && !row.request_open) return <p className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-slate-500">{t.closed}</p>;
+  if ((row?.replies ?? 0) >= MAX_REPLIES) return <p className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-slate-500">{t.full}</p>;
+  if (!pro) {
+    return opensLeft > 0 ? (
+      <OpenButton id={item.id} f={f} opensLeft={opensLeft} />
+    ) : (
+      <a href="#pro" className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-slate-600">
+        🔒 {f.lockedActions}
+      </a>
+    );
+  }
+  if (replyQuota && replyQuota.left === 0) {
+    return (
+      <div>
+        <p className="text-sm font-medium text-slate-600">⏳ {fill(limitText(lang, "job_reply").none, { h: replyQuota.hours })}</p>
+        <a href="#pro" className="mt-1 inline-block text-sm font-semibold text-orange-700 underline">
+          {limitText(lang, "job_reply").pro}
+        </a>
+      </div>
+    );
+  }
+  return (
+    <ClientReplyForm
+      action={replyToClientRequest.bind(null, item.id)}
+      t={t}
+      quotaLine={replyQuota ? fill(limitText(lang, "job_reply").left, { n: replyQuota.left }) : undefined}
+    />
   );
 }
 

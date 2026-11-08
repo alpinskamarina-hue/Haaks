@@ -14,6 +14,7 @@ export function MyReplies({
   catalogUntil,
   rt,
   helper,
+  top,
 }: {
   replies: MyReply[];
   invites: MyInvite[];
@@ -21,10 +22,12 @@ export function MyReplies({
   catalogUntil: string | null;
   rt: ReplyDict;
   helper: { nav: string; cardText: string };
+  top?: React.ReactNode;
 }) {
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <h1 className="text-2xl font-bold">🙋 {rt.pageTitle}</h1>
+      {top}
 
       <section id="catalog" className={`rounded-xl border p-4 ${inCatalog ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
         <h2 className="font-semibold">🔎 {rt.catalogTitle}</h2>
