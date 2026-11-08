@@ -6,6 +6,7 @@ export type HourRow = {
   hours: number;
   note: string | null;
   invoice_id: string | null;
+  approval_id?: string | null;
 };
 
 // ISO week number and the Monday of that week, for a yyyy-mm-dd date.
@@ -42,4 +43,30 @@ export function dutchRange(from: string, to: string) {
     new Date(`${d}T00:00:00Z`).toLocaleDateString("nl-NL", { day: "numeric", ...(month ? { month: "short" } : {}), timeZone: "UTC" });
   if (from === to) return f(from, true);
   return from.slice(0, 7) === to.slice(0, 7) ? `${f(from, false)}–${f(to, true)}` : `${f(from, true)} – ${f(to, true)}`;
+}
+
+export type HourApproval = {
+  id: string;
+  token: string;
+  date_from: string;
+  date_to: string;
+  hours: number;
+  status: "pending" | "approved" | "rejected";
+  decided_name: string | null;
+  comment: string | null;
+  viewed_at: string | null;
+  decided_at: string | null;
+};
+
+// The Dutch message the builder sends to the company with the link.
+export function hoursMessage(i: { client: string | null; order: string; week: number; range: string; hours: string; link: string; worker: string }) {
+  return [
+    i.client ? `Beste ${i.client},` : "Goedendag,",
+    "",
+    `Hierbij mijn uren voor ${i.order}, week ${i.week} (${i.range}): ${i.hours} uur.`,
+    `Wilt u ze controleren en akkoord geven via deze link: ${i.link}`,
+    "",
+    "Met vriendelijke groet,",
+    i.worker,
+  ].join("\n");
 }

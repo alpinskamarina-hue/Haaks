@@ -23,8 +23,10 @@ import { fillP, getProjectDict } from "@/lib/project-i18n";
 import { loadProjectParts } from "@/lib/project-server";
 import { OrderPhotos, type OrderPhoto } from "@/components/OrderPhotos";
 import { addOrderNote, deleteOrderNote } from "@/app/project-actions";
-import { addHours, deleteHours, invoiceFromHours, setOrderRate } from "@/app/hours-actions";
-import { groupByWeek, type HourRow } from "@/lib/hours";
+import { addHours, deleteHours, invoiceFromHours, sendHoursForApproval, setOrderRate } from "@/app/hours-actions";
+import { SendHours } from "@/components/SendHours";
+import { siteUrl } from "@/lib/lang";
+import { groupByWeek, hoursMessage, isoWeek, type HourApproval, type HourRow } from "@/lib/hours";
 import { getHoursDict } from "@/lib/hours-i18n";
 import { dutchToday } from "@/lib/quotes";
 
@@ -88,11 +90,24 @@ export default async function OrderPage({
     .eq("order_id", id)
     .order("created_at", { ascending: false })
     .returns<MaterialList[]>();
-  const [{ data: photoRows }, { data: noteRows }, { data: hourRows }] = await Promise.all([
+  const [{ data: photoRows }, { data: noteRows }, { data: hourRows }, { data: approvalRows }] = await Promise.all([
     supabase.from("order_photos").select("id, kind, path, created_at").eq("order_id", id).order("created_at", { ascending: false }).returns<PhotoRow[]>(),
     supabase.from("order_notes").select("id, body, created_at").eq("order_id", id).order("created_at", { ascending: false }).returns<NoteRow[]>(),
-    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id").eq("order_id", id).returns<HourRow[]>(),
+    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id, approval_id").eq("order_id", id).returns<HourRow[]>(),
+    supabase
+      .from("hour_approvals")
+      .select("id, token, date_from, date_to, hours, status, decided_name, comment, viewed_at, decided_at")
+      .eq("order_id", id)
+      .order("created_at", { ascending: false })
+      .returns<HourApproval[]>(),
   ]);
+  const approvals = approvalRows ?? [];
+  const site = tab === "hours" ? await siteUrl() : "";
+  const weekKey = (d: string) => {
+    const w = isoWeek(d);
+    return `${w.year}-${w.week}`;
+  };
+  const plusDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
   const hourList = hourRows ?? [];
   const hw = getHoursDict(lang);
   const rate = order.hourly_rate ?? (Number(profile.hourly_rate) || null);
@@ -577,7 +592,7 @@ export default async function OrderPage({
                         <Link href={`/dashboard/invoices/${r.invoice_id}`} className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
                           {fillP(hw.inInvoice, { number: inv?.number ?? "" })}
                         </Link>
-                      ) : (
+                      ) : r.approval_id ? null : (
                         <form action={deleteHours.bind(null, r.id)} className="shrink-0">
                           <button className="text-xs text-slate-500 underline">{hw.remove}</button>
                         </form>
@@ -586,6 +601,60 @@ export default async function OrderPage({
                   );
                 })}
               </ul>
+              {(() => {
+                const mine = approvals.filter((a) => weekKey(a.date_from) === w.key);
+                const latest = mine[0];
+                const loose = w.rows.filter((r) => !r.approval_id);
+                const looseHours = Math.round(loose.reduce((x, r) => x + Number(r.hours), 0) * 100) / 100;
+                const monday = isoWeek(w.from).monday;
+                return (
+                  <div className="mt-3 space-y-2">
+                    {mine
+                      .filter((a) => a.status !== "rejected" || a === latest)
+                      .map((a) =>
+                        a.status === "approved" ? (
+                          <p key={a.id} className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+                            {fillP(hw.approved, { name: a.decided_name ?? "", date: a.decided_at ? fmtDate(a.decided_at) : "" })}
+                          </p>
+                        ) : a.status === "rejected" ? (
+                          <p key={a.id} className="rounded-lg bg-red-50 p-2 text-xs text-red-900">
+                            {fillP(hw.rejected, { name: a.decided_name ?? "" })}
+                            {a.comment ? `: «${a.comment}»` : ""}
+                          </p>
+                        ) : (
+                          <div key={a.id} className="space-y-2 rounded-lg bg-amber-50 p-2">
+                            <p className="text-xs font-semibold text-amber-900">
+                              {hw.pending}
+                              {a.viewed_at ? ` · ${hw.opened}` : ""}
+                            </p>
+                            <p className="text-xs text-slate-600">{hw.sendHint}</p>
+                            <SendHours
+                              lang={lang}
+                              labels={{ copy: hw.copy, copied: hw.copied }}
+                              subject={`Urenstaat week ${w.week} — ${order.title}`}
+                              message={hoursMessage({
+                                client: order.client_name,
+                                order: order.title,
+                                week: w.week,
+                                range: `${fmtDate(a.date_from)} – ${fmtDate(a.date_to)}`,
+                                hours: new Intl.NumberFormat("nl-NL").format(Number(a.hours)),
+                                link: `${site}/uren/${a.token}`,
+                                worker: profile.full_name || profile.company_name || "",
+                              })}
+                            />
+                          </div>
+                        ),
+                      )}
+                    {looseHours > 0 && (
+                      <form action={sendHoursForApproval.bind(null, order.id, monday, plusDays(monday, 6))}>
+                        <SubmitButton className="w-full rounded-lg border-2 border-orange-500 px-3 py-2 text-sm font-semibold text-orange-600 disabled:opacity-60">
+                          {fillP(hw.send, { h: fmtH(looseHours) })}
+                        </SubmitButton>
+                      </form>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
           {hourList.length > 0 &&
