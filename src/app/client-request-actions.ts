@@ -6,13 +6,12 @@ import { requireUser } from "@/lib/auth";
 import {
   cleanPostcode,
   MAX_PHOTOS,
-  publishClientRequest,
-  takeRequestOffline,
   TIMINGS,
   workType,
   type ClientRequest,
   type Timing,
 } from "@/lib/client-requests";
+import { publishClientRequest, takeRequestOffline } from "@/lib/client-requests-server";
 import { postcodePlace } from "@/lib/collect/geo";
 import { emailEnabled, escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/lang";
