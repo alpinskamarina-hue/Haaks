@@ -12,6 +12,8 @@ import { getAccountantDict } from "@/lib/accountant-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
 import { getMaterialsDict } from "@/lib/materials-i18n";
 import { getPricingDict } from "@/lib/pricing-i18n";
+import { faceUrl, staffOf } from "@/lib/staff";
+import { getStaffDict } from "@/lib/staff-i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadWorkspace, signedUrls } from "@/lib/workspace";
@@ -52,6 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport", also: ["/dashboard/works", "/dashboard/reviews"] },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
     { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
+    { href: "/dashboard/staff", label: getStaffDict(lang).nav, icon: "sparkle" },
     ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }] : []),
   ];
   const name = profile.company_name || profile.full_name || user.email;
@@ -106,6 +109,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/search" className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
             🔍 <span className="truncate">{so.searchPlaceholder}</span>
           </Link>
+          {/* The worker's digital employee, one tap away. */}
+          <Link href="/dashboard/staff" className="shrink-0" aria-label={getStaffDict(lang).nav} title={getStaffDict(lang).nav}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-violet-500 ring-offset-1" />
+          </Link>
           <HelpButton label={help.helpHere} variant="round" />
           <Link href="/dashboard/profile" className="shrink-0" aria-label={w.navProfile} title={w.navProfile}>
             {avatarUrl ? (
@@ -125,6 +133,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-lg">
               <Link href="/dashboard/profile" className="block px-4 py-3">
                 👤 {w.navProfile}
+              </Link>
+              <Link href="/dashboard/staff" className="block border-t border-slate-100 px-4 py-3">
+                🤖 {getStaffDict(lang).nav}
               </Link>
               <Link href="/dashboard/settings" className="block border-t border-slate-100 px-4 py-3">
                 ⚙️ {t.settingsTitle}
@@ -153,7 +164,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </div>
 
-      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/helpers"].includes(i.href))} />
+      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/helpers", "/dashboard/staff"].includes(i.href))} />
     </div>
   );
 }

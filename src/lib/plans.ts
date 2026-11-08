@@ -9,7 +9,7 @@ export const PRICES = {
   pro: { month: 29, founder: 19, year: 290, founderYear: 190 },
   ultra: { month: 89, founder: 59, year: 890, founderYear: 590 },
 } as const;
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 3;
 // The founder counter is shown once there are this many founders; before that only the days.
 export const FOUNDER_COUNTER_FROM = 10;
 // AI uses per 30 days (Ultra = fair use).
