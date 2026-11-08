@@ -18,7 +18,8 @@ import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
 import { FIT_SCORE, FREE_OPENS, isNewJob, loadFeed, markFeedSeen, newSince, type ScoredFeedItem } from "@/lib/feed-server";
 import type { Lang } from "@/lib/i18n";
 import { getHelperDict } from "@/lib/helper-i18n";
-import { getFirmsDict } from "@/lib/firms-i18n";
+import { getFirmOfferDict } from "@/lib/firm-offer-i18n";
+import { loadNearFirms } from "@/lib/firms";
 import { getLetterDict } from "@/lib/letter-i18n";
 import { getReportDict, JOB_REASONS, type ReportDict } from "@/lib/report-i18n";
 import { ReportButton } from "@/components/ReportButton";
@@ -109,9 +110,9 @@ export default async function FeedPage({
     name: r.full_name ? shortName(r.full_name) : `@${r.username}`,
   }));
   const myNick = (profile as typeof profile & { username?: string | null }).username ?? null;
-  // «Фирмы рядом» (test): shown only once firms were collected.
-  const { count: firmCount } = await supabase.from("nearby_firms").select("id", { count: "exact", head: true });
-  const firmsT = getFirmsDict(lang);
+  // «Фирмы рядом»: a tab of its own once there are firms within the builder's radius.
+  const firmCount = (await loadNearFirms(supabase, profile)).firms.length;
+  const firmsTab = getFirmOfferDict(lang).tab;
   const reportedJobs = new Set((myReports ?? []).map((r) => r.target_id as string));
   const reportT = getReportDict(lang);
   const letterLabel = getLetterDict(lang).button;
@@ -272,6 +273,14 @@ export default async function FeedPage({
                 )}
               </Link>
             ))}
+            {!showReceived && firmCount > 0 && (
+              <Link
+                href="/dashboard/leads/firms"
+                className="shrink-0 whitespace-nowrap rounded-full bg-purple-50 px-3.5 py-1.5 font-semibold text-purple-800 ring-1 ring-purple-200"
+              >
+                🏢 {firmsTab} <span className="opacity-70">{firmCount}</span>
+              </Link>
+            )}
           </div>
           {/* Which jobs: a two-way switch, then saved and hidden as small links. */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -432,13 +441,6 @@ export default async function FeedPage({
                 {getPricingDict(lang).nav} →
               </Link>
             </section>
-          )}
-
-          {!!firmCount && (
-            <Link href="/dashboard/leads/firms" className="block rounded-2xl border border-l-4 border-slate-200 border-l-purple-600 bg-white p-5 shadow-sm">
-              <h2 className="font-semibold">{firmsT.card}</h2>
-              <p className="mt-1 text-sm text-slate-600">{fill(firmsT.cardText, { n: firmCount })} →</p>
-            </Link>
           )}
 
           <section className={card}>

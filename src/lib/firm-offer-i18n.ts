@@ -29,6 +29,16 @@ export type FirmOfferDict = {
   reminderTitle: string;
   reminderBody: string;
   error: string;
+  homeTitle: string;
+  homeIntro: string;
+  offerShort: string;
+  sentShort: string;
+  statSent: string;
+  statAnswered: string;
+  statWork: string;
+  allFirms: string;
+  tab: string;
+  hint: string;
 };
 
 const join = (parts: (string | false)[]) => parts.filter(Boolean).join("");
@@ -71,6 +81,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} не ответила",
     reminderBody: "Прошло 5 дней после вашего предложения. Позвоните или напишите ещё раз.",
     error: "Не получилось сохранить. Попробуйте ещё раз.",
+    homeTitle: "🤝 Фирмы рядом: предложите себя",
+    homeIntro: "Фирмам часто нужны субподрядчики. Одно сообщение, ответ придёт вам.",
+    offerShort: "Предложить",
+    sentShort: "✓ Отправлено",
+    statSent: "отправлено",
+    statAnswered: "ответили",
+    statWork: "👍 работа",
+    allFirms: "Все фирмы рядом ({n})",
+    tab: "Фирмы",
+    hint: "Это не заказы, а фирмы рядом, которым могут быть нужны люди. Предложите себя: на бесплатном тарифе 3 в день вместе с откликами.",
   },
   uk: {
     offer: "🤝 Запропонувати себе",
@@ -109,6 +129,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} не відповіла",
     reminderBody: "Минуло 5 днів після вашої пропозиції. Зателефонуйте або напишіть ще раз.",
     error: "Не вдалося зберегти. Спробуйте ще раз.",
+    homeTitle: "🤝 Фірми поруч: запропонуйте себе",
+    homeIntro: "Фірмам часто потрібні субпідрядники. Одне повідомлення, відповідь прийде вам.",
+    offerShort: "Запропонувати",
+    sentShort: "✓ Надіслано",
+    statSent: "надіслано",
+    statAnswered: "відповіли",
+    statWork: "👍 робота",
+    allFirms: "Усі фірми поруч ({n})",
+    tab: "Фірми",
+    hint: "Це не замовлення, а фірми поруч, яким можуть бути потрібні люди. Запропонуйте себе: на безкоштовному тарифі 3 на день разом із відгуками.",
   },
   pl: {
     offer: "🤝 Zaproponuj siebie",
@@ -147,6 +177,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} nie odpowiedziała",
     reminderBody: "Minęło 5 dni od Twojej propozycji. Zadzwoń albo napisz jeszcze raz.",
     error: "Nie udało się zapisać. Spróbuj jeszcze raz.",
+    homeTitle: "🤝 Firmy w pobliżu: zaproponuj siebie",
+    homeIntro: "Firmy często potrzebują podwykonawców. Jedna wiadomość, odpowiedź przyjdzie do Ciebie.",
+    offerShort: "Zaproponuj",
+    sentShort: "✓ Wysłano",
+    statSent: "wysłano",
+    statAnswered: "odpowiedzieli",
+    statWork: "👍 praca",
+    allFirms: "Wszystkie firmy w pobliżu ({n})",
+    tab: "Firmy",
+    hint: "To nie zlecenia, tylko firmy w pobliżu, które mogą potrzebować ludzi. Zaproponuj siebie: w darmowym planie 3 dziennie razem ze zgłoszeniami.",
   },
   ro: {
     offer: "🤝 Propune-te",
@@ -185,6 +225,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} nu a răspuns",
     reminderBody: "Au trecut 5 zile de la propunerea ta. Sună sau scrie din nou.",
     error: "Nu s-a putut salva. Încearcă din nou.",
+    homeTitle: "🤝 Firme în apropiere: propune-te",
+    homeIntro: "Firmele au des nevoie de subcontractori. Un mesaj, răspunsul vine la tine.",
+    offerShort: "Propune-te",
+    sentShort: "✓ Trimis",
+    statSent: "trimise",
+    statAnswered: "au răspuns",
+    statWork: "👍 lucru",
+    allFirms: "Toate firmele din apropiere ({n})",
+    tab: "Firme",
+    hint: "Nu sunt lucrări, ci firme din apropiere care pot avea nevoie de oameni. Propune-te: în planul gratuit 3 pe zi împreună cu răspunsurile.",
   },
   tr: {
     offer: "🤝 Kendini öner",
@@ -222,6 +272,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} cevap vermedi",
     reminderBody: "Teklifinden bu yana 5 gün geçti. Ara ya da tekrar yaz.",
     error: "Kaydedilemedi. Tekrar dene.",
+    homeTitle: "🤝 Yakındaki firmalar: kendini öner",
+    homeIntro: "Firmalar sık sık taşeron arar. Tek mesaj, cevap sana gelir.",
+    offerShort: "Öner",
+    sentShort: "✓ Gönderildi",
+    statSent: "gönderildi",
+    statAnswered: "cevap verdi",
+    statWork: "👍 iş",
+    allFirms: "Yakındaki tüm firmalar ({n})",
+    tab: "Firmalar",
+    hint: "Bunlar iş ilanı değil, adam arayabilecek yakındaki firmalar. Kendini öner: ücretsiz planda başvurularla birlikte günde 3.",
   },
   en: {
     offer: "🤝 Offer yourself",
@@ -260,6 +320,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} did not answer",
     reminderBody: "5 days since your offer. Call or write again.",
     error: "Could not save. Try again.",
+    homeTitle: "🤝 Firms nearby: offer yourself",
+    homeIntro: "Firms often need subcontractors. One message, the answer comes to you.",
+    offerShort: "Offer",
+    sentShort: "✓ Sent",
+    statSent: "sent",
+    statAnswered: "answered",
+    statWork: "👍 work",
+    allFirms: "All firms nearby ({n})",
+    tab: "Firms",
+    hint: "These are not jobs but firms nearby that may need people. Offer yourself: on the free plan 3 a day, shared with job replies.",
   },
   nl: {
     offer: "🤝 Stel jezelf voor",
@@ -298,6 +368,16 @@ const DICTS: Record<Lang, FirmOfferDict> = {
     reminderTitle: "{firm} heeft niet geantwoord",
     reminderBody: "5 dagen na je voorstel. Bel of schrijf nog eens.",
     error: "Opslaan lukte niet. Probeer het opnieuw.",
+    homeTitle: "🤝 Bedrijven in de buurt: stel jezelf voor",
+    homeIntro: "Bedrijven zoeken vaak onderaannemers. Eén bericht, het antwoord komt bij jou.",
+    offerShort: "Voorstellen",
+    sentShort: "✓ Verstuurd",
+    statSent: "verstuurd",
+    statAnswered: "geantwoord",
+    statWork: "👍 werk",
+    allFirms: "Alle bedrijven in de buurt ({n})",
+    tab: "Bedrijven",
+    hint: "Dit zijn geen klussen maar bedrijven in de buurt die mensen kunnen zoeken. Stel jezelf voor: met het gratis plan 3 per dag, samen met reacties.",
   },
 };
 
