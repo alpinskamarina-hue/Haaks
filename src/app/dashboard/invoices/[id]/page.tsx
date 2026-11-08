@@ -206,6 +206,11 @@ export default async function InvoicePage({
           <a href={link} target="_blank" className={button}>
             🖨 {t.openInvoice}
           </a>
+          {invoice.status !== "draft" && (
+            <a href={`/dashboard/invoices/${invoice.id}/ubl`} download title={iv.ublHint} className={button}>
+              {iv.ubl}
+            </a>
+          )}
           {invoice.status === "draft" && (
             <form action={setInvoiceStatus.bind(null, invoice.id, "sent")}>
               <button className={button}>{iv.alreadySent}</button>
