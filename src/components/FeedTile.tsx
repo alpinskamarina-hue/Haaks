@@ -22,6 +22,7 @@ export function FeedTile({
   color,
   active,
   dim,
+  className = "",
 }: {
   href: string;
   icon: string;
@@ -32,36 +33,39 @@ export function FeedTile({
   color: keyof typeof TILE_COLORS;
   active?: boolean;
   dim?: boolean;
+  className?: string;
 }) {
   const c = TILE_COLORS[color];
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`relative block min-h-[100px] rounded-2xl p-2.5 text-white transition-transform duration-75 active:translate-y-[5px] active:[box-shadow:0_2px_0_var(--edge),0_3px_6px_rgba(0,0,0,.25)] ${
-        active ? "translate-y-[5px] outline outline-[3px] outline-offset-[3px] outline-amber-400" : ""
-      } ${dim ? "opacity-60" : ""}`}
+      className={`relative block min-h-[58px] rounded-xl px-1.5 pb-1.5 pt-1 text-center text-white transition-transform duration-75 active:translate-y-[3px] active:[box-shadow:0_1px_0_var(--edge),0_2px_4px_rgba(0,0,0,.25)] ${
+        active ? "translate-y-[3px] outline outline-2 outline-offset-2 outline-amber-400" : ""
+      } ${dim ? "opacity-60" : ""} ${className}`}
       style={
         {
           "--edge": c.edge,
           background: `linear-gradient(160deg, ${c.from}, ${c.to})`,
           boxShadow: active
-            ? `0 2px 0 ${c.edge}, 0 3px 6px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.35)`
-            : `0 7px 0 ${c.edge}, 0 12px 16px rgba(0,0,0,.22), inset 0 2px 0 rgba(255,255,255,.4)`,
+            ? `0 1px 0 ${c.edge}, 0 2px 4px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.35)`
+            : `0 4px 0 ${c.edge}, 0 6px 10px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.4)`,
         } as React.CSSProperties
       }
     >
-      <span aria-hidden className="pointer-events-none absolute inset-x-2 top-1 h-1/3 rounded-xl bg-gradient-to-b from-white/35 to-white/0" />
+      <span aria-hidden className="pointer-events-none absolute inset-x-1 top-0.5 h-1/3 rounded-lg bg-gradient-to-b from-white/35 to-white/0" />
       {plus ? (
-        <span className="absolute -right-2 -top-2 rounded-full border-2 border-white bg-red-600 px-1.5 text-xs font-extrabold text-white shadow-lg">+{plus}</span>
+        <span className="absolute -right-1.5 -top-1.5 rounded-full border-2 border-white bg-red-600 px-1 text-[10px] font-extrabold text-white shadow-lg">+{plus}</span>
       ) : null}
-      <span className="block text-2xl [filter:drop-shadow(0_3px_2px_rgba(0,0,0,.35))]">{icon}</span>
-      <span className="mt-1 block text-[13px] font-bold leading-tight [text-shadow:0_1px_1px_rgba(0,0,0,.3)]">{label}</span>
-      {count !== undefined ? (
-        <span className="block text-2xl font-extrabold leading-tight [text-shadow:0_2px_2px_rgba(0,0,0,.3)]">{count}</span>
-      ) : sub ? (
-        <span className="block text-xs font-semibold opacity-90">{sub}</span>
-      ) : null}
+      <span className="flex items-center justify-center gap-1">
+        <span className="text-lg leading-none [filter:drop-shadow(0_2px_1px_rgba(0,0,0,.35))]">{icon}</span>
+        {count !== undefined ? (
+          <span className="text-lg font-extrabold leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,.3)]">{count}</span>
+        ) : sub ? (
+          <span className="text-sm font-bold">{sub}</span>
+        ) : null}
+      </span>
+      <span className="mt-0.5 block text-[11px] font-bold leading-tight [text-shadow:0_1px_1px_rgba(0,0,0,.3)]">{label}</span>
     </Link>
   );
 }
