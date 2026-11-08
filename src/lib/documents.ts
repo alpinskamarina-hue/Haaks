@@ -15,6 +15,7 @@ export type Profile = {
   business_email?: string | null;
   iban?: string | null;
   pay_link?: string | null;
+  hourly_rate?: number | null;
   lead_regions?: string | null;
   language: string;
   passport_token: string;

@@ -23,11 +23,15 @@ import { fillP, getProjectDict } from "@/lib/project-i18n";
 import { loadProjectParts } from "@/lib/project-server";
 import { OrderPhotos, type OrderPhoto } from "@/components/OrderPhotos";
 import { addOrderNote, deleteOrderNote } from "@/app/project-actions";
+import { addHours, deleteHours, invoiceFromHours, setOrderRate } from "@/app/hours-actions";
+import { groupByWeek, type HourRow } from "@/lib/hours";
+import { getHoursDict } from "@/lib/hours-i18n";
+import { dutchToday } from "@/lib/quotes";
 
 const LOCALES = { pl: "pl-PL", ro: "ro-RO", uk: "uk-UA", ru: "ru-RU", tr: "tr-TR", en: "en-GB", nl: "nl-NL" } as const;
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
-const TABS = ["overview", "money", "docs", "materials", "photos", "notes"] as const;
+const TABS = ["overview", "money", "hours", "docs", "materials", "photos", "notes"] as const;
 type Tab = (typeof TABS)[number];
 type PhotoRow = { id: string; kind: OrderPhoto["kind"]; path: string; created_at: string };
 type NoteRow = { id: string; body: string; created_at: string };
@@ -84,10 +88,17 @@ export default async function OrderPage({
     .eq("order_id", id)
     .order("created_at", { ascending: false })
     .returns<MaterialList[]>();
-  const [{ data: photoRows }, { data: noteRows }] = await Promise.all([
+  const [{ data: photoRows }, { data: noteRows }, { data: hourRows }] = await Promise.all([
     supabase.from("order_photos").select("id, kind, path, created_at").eq("order_id", id).order("created_at", { ascending: false }).returns<PhotoRow[]>(),
     supabase.from("order_notes").select("id, body, created_at").eq("order_id", id).order("created_at", { ascending: false }).returns<NoteRow[]>(),
+    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id").eq("order_id", id).returns<HourRow[]>(),
   ]);
+  const hourList = hourRows ?? [];
+  const hw = getHoursDict(lang);
+  const rate = order.hourly_rate ?? (Number(profile.hourly_rate) || null);
+  const openHours = Math.round(hourList.filter((r) => !r.invoice_id).reduce((x, r) => x + Number(r.hours), 0) * 100) / 100;
+  const hourWeeks = groupByWeek(hourList);
+  const fmtH = (n: number) => new Intl.NumberFormat(LOCALES[lang]).format(n);
   const photos = photoRows ?? [];
   const notes = noteRows ?? [];
 
@@ -117,10 +128,11 @@ export default async function OrderPage({
   const incl = (i: Invoice) => invoiceTotals(i.lines, i.vat_mode).incl;
   const paidIncl = sentInv.filter((i) => i.status === "paid").reduce((x, i) => x + incl(i), 0);
   const openIncl = sentInv.filter((i) => i.status === "sent").reduce((x, i) => x + incl(i), 0);
-  const tabLabel: Record<Tab, string> = { overview: p.tabOverview, money: p.tabMoney, docs: p.tabDocs, materials: p.tabMaterials, photos: p.tabPhotos, notes: p.tabNotes };
+  const tabLabel: Record<Tab, string> = { overview: p.tabOverview, money: p.tabMoney, hours: hw.tab, docs: p.tabDocs, materials: p.tabMaterials, photos: p.tabPhotos, notes: p.tabNotes };
   const tabCount: Record<Tab, number> = {
     overview: 0,
     money: 0,
+    hours: hourList.filter((r) => !r.invoice_id).length,
     docs: (quoteRows ?? []).length + (invoiceRows ?? []).length + receipts.length,
     materials: (materialRows ?? []).length,
     photos: photos.length,
@@ -164,7 +176,7 @@ export default async function OrderPage({
         <StageLine stage={s.stage} p={p} />
       </section>
 
-      <nav className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-200/70 p-1 text-center text-xs font-semibold">
+      <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-200/70 p-1 text-center text-xs font-semibold">
         {TABS.map((k) => (
           <Link
             key={k}
@@ -498,6 +510,96 @@ export default async function OrderPage({
               failed: p.photoFailed,
             }}
           />
+        </section>
+      )}
+
+      {tab === "hours" && (
+        <section className={`${card} space-y-4`}>
+          <p className="text-sm text-slate-600">{hw.intro}</p>
+          <form action={setOrderRate} className="flex items-end gap-2">
+            <input type="hidden" name="order_id" value={order.id} />
+            <label className="text-sm font-medium">
+              {hw.rate}
+              <input
+                name="rate"
+                inputMode="decimal"
+                defaultValue={rate ?? ""}
+                className="mt-1 block w-28 rounded-lg border border-slate-300 px-3 py-2 text-base"
+              />
+            </label>
+            <SubmitButton className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-60">{hw.saveRate}</SubmitButton>
+          </form>
+          <form id="add" action={addHours} className="grid scroll-mt-4 grid-cols-[1fr_5rem] gap-2 rounded-xl bg-slate-50 p-3">
+            <input type="hidden" name="order_id" value={order.id} />
+            <label className="text-xs font-medium text-slate-600">
+              {hw.date}
+              <input type="date" name="work_date" required defaultValue={dutchToday()} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-base" />
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              {hw.hours}
+              <input
+                name="hours"
+                type="number"
+                required
+                min="0.25"
+                max="24"
+                step="0.25"
+                inputMode="decimal"
+                defaultValue="8"
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-base"
+              />
+            </label>
+            <label className="col-span-2 text-xs font-medium text-slate-600">
+              {hw.note}
+              <input name="note" maxLength={200} placeholder={hw.notePh} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base" />
+            </label>
+            <SubmitButton className="col-span-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{hw.add}</SubmitButton>
+          </form>
+          {hourWeeks.length === 0 && <p className="text-sm text-slate-600">{hw.empty}</p>}
+          {hourWeeks.map((w) => (
+            <div key={w.key} className="rounded-xl border border-slate-200 p-3 text-sm">
+              <div className="flex items-baseline justify-between gap-2 font-semibold">
+                <span>
+                  {fillP(hw.week, { n: w.week })} <span className="font-normal text-slate-500">({fmtDate(w.from)} – {fmtDate(w.to)})</span>
+                </span>
+                <span className="whitespace-nowrap">{fillP(hw.total, { h: fmtH(w.hours), sum: rate ? euro(w.hours * rate) : "—" })}</span>
+              </div>
+              <ul className="mt-2 space-y-1">
+                {w.rows.map((r) => {
+                  const inv = r.invoice_id ? (invoiceRows ?? []).find((i) => i.id === r.invoice_id) : null;
+                  return (
+                    <li key={r.id} className="flex items-center justify-between gap-2 text-slate-700">
+                      <span className="min-w-0">
+                        {fmtDate(r.work_date)} · <b>{fmtH(Number(r.hours))} {hw.h}</b>
+                        {r.note ? ` · ${r.note}` : ""}
+                      </span>
+                      {r.invoice_id ? (
+                        <Link href={`/dashboard/invoices/${r.invoice_id}`} className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+                          {fillP(hw.inInvoice, { number: inv?.number ?? "" })}
+                        </Link>
+                      ) : (
+                        <form action={deleteHours.bind(null, r.id)} className="shrink-0">
+                          <button className="text-xs text-slate-500 underline">{hw.remove}</button>
+                        </form>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          {hourList.length > 0 &&
+            (openHours === 0 ? (
+              <p className="text-sm text-slate-600">{hw.allInvoiced}</p>
+            ) : !rate ? (
+              <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{hw.noRate}</p>
+            ) : (
+              <form action={invoiceFromHours.bind(null, order.id)}>
+                <SubmitButton className="w-full rounded-xl bg-orange-500 px-4 py-3 font-semibold text-white disabled:opacity-60">
+                  {fillP(hw.makeInvoice, { h: fmtH(openHours), sum: euro(openHours * rate) })}
+                </SubmitButton>
+              </form>
+            ))}
         </section>
       )}
 
