@@ -8,7 +8,10 @@ import { nextInvoiceNumber } from "@/lib/invoices";
 import { addDays, cleanLines, type QuoteLine } from "@/lib/quotes";
 
 const PAYMENT_DAYS = 14;
-const refresh = (orderId: string) => revalidatePath(`/dashboard/orders/${orderId}`);
+const refresh = (orderId: string) => {
+  revalidatePath(`/dashboard/orders/${orderId}`);
+  revalidatePath("/dashboard");
+};
 const num = (v: FormDataEntryValue | null) => {
   const n = Number(String(v ?? "").replace(",", ".").trim());
   return Number.isFinite(n) ? n : NaN;
