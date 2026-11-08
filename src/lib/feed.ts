@@ -3,7 +3,7 @@ import type { Lang } from "@/lib/i18n";
 // One job in the order feed, as feed_for_me() returns it to the signed-in worker.
 export type FeedItem = {
   id: string;
-  source: "telegram" | "bekendmakingen" | "email" | "tenderned" | "haaks" | "facebook" | "googlejobs" | null;
+  source: "telegram" | "bekendmakingen" | "email" | "tenderned" | "haaks" | "facebook" | "googlejobs" | "client" | null;
   source_name: string | null;
   source_url: string | null;
   kind: "private" | "business" | "permit" | "tender";
@@ -172,6 +172,7 @@ export function sourceLabel(item: Pick<FeedItem, "source" | "source_name">) {
     haaks: "Haaks",
     facebook: "Facebook",
     googlejobs: "Vacature",
+    client: "Klant",
   };
   if (!item.source) return "";
   const name = item.source_name;

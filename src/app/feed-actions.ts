@@ -18,6 +18,8 @@ import { HIDE_REASONS } from "@/lib/feed-plus-i18n";
 import { sendPush, type PushSubscriptionRow } from "@/lib/push";
 import { botUsername, ensureWebhook, telegramEnabled } from "@/lib/telegram";
 import { loadWorkspace } from "@/lib/workspace";
+import { emailEnabled, sendEmail } from "@/lib/email";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 function refresh() {
   revalidatePath("/dashboard", "layout");
@@ -266,4 +268,38 @@ export async function decideInvite(id: string, accept: boolean) {
   const { error } = await supabase.rpc("decide_invite", { p_invite: id, p_accept: accept });
   if (error) console.error("Deciding an invitation failed", error.message);
   refresh();
+}
+
+// A builder replies to a private client's job («Vakman gezocht»): ready phrases plus an own line.
+// The client sees the reply on their secret page; contacts open only when the client chooses.
+export type ClientReplyState = { ok?: boolean; error?: "request_closed" | "request_full" | "card_locked" | "free_limit" | "failed" };
+export async function replyToClientRequest(itemId: string, _prev: ClientReplyState, formData: FormData): Promise<ClientReplyState> {
+  const { supabase } = await requireUser();
+  const phrases = formData.getAll("phrase").map(String).slice(0, 10);
+  const message = String(formData.get("message") ?? "").slice(0, 1000);
+  const { error } = await supabase.rpc("reply_to_client_request", { p_item: itemId, p_phrases: phrases, p_message: message });
+  if (error) {
+    const known = (["request_closed", "request_full", "card_locked", "free_limit"] as const).find((k) => error.message.includes(k));
+    if (!known) console.error("Reply to client request failed", error.message);
+    return { error: known ?? "failed" };
+  }
+  await notifyClientOfReply(itemId).catch(() => null);
+  refresh();
+  return { ok: true };
+}
+
+// Tell the client by e-mail that a builder replied (only once e-mail sending is set up).
+async function notifyClientOfReply(itemId: string) {
+  if (!emailEnabled()) return;
+  const server = await createServerAccountClient();
+  const { data: req } = await server
+    .from("client_requests")
+    .select("token, email, lang")
+    .eq("feed_item_id", itemId)
+    .maybeSingle<{ token: string; email: string; lang: "nl" | "en" }>();
+  if (!req) return;
+  const link = `${await siteUrl()}/klus/${req.token}`;
+  const en = req.lang === "en";
+  const line = en ? "A tradesperson replied to your job" : "Een vakman heeft gereageerd op je klus";
+  await sendEmail({ to: req.email, subject: `${line} · Haaks`, text: `${line}: ${link}`, html: `<p>${line}:</p><p><a href="${link}">${link}</a></p>` });
 }
