@@ -27,6 +27,8 @@ import { HideMenu } from "@/components/HideMenu";
 import { ShareButton } from "@/components/ShareButton";
 import { Icon } from "@/components/icons";
 import { getShareDict } from "@/lib/share-i18n";
+import { getVacancyDict } from "@/lib/vacancy-i18n";
+import { isBureau } from "@/lib/collect/vacancies";
 import { getJobShareDict, type JobShareDict } from "@/lib/job-share-i18n";
 import { thankShare } from "@/app/share-actions";
 import { shortName } from "@/lib/company-jobs";
@@ -523,6 +525,9 @@ function FeedCard({
   const meta = [item.city, item.trades.map((tr) => tradeLabel(tr, lang)).join(", "), item.timing, item.budget].filter(Boolean);
   // A job a company posted on Haaks: builders reply here, contacts open when the company accepts.
   const companyJob = item.source === "haaks";
+  // A ZZP vacancy from a job site: the builder applies on the original ad.
+  const vacancy = item.source === "googlejobs";
+  const vt = getVacancyDict(lang);
   const q = item.quote;
   const status = !q
     ? { text: `✓ ${fp.statusTaken}`, cls: "border border-slate-300" }
@@ -578,6 +583,11 @@ function FeedCard({
         >
           {item.source === "bekendmakingen" ? sourceLabel(item).split(" · ")[0] : sourceLabel(item)}
         </span>
+        {vacancy && isBureau(item.source_name) && (
+          <span title={vt.bureauHint} className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">
+            {vt.bureau}
+          </span>
+        )}
         {item.kvk_ok && (
           <span title={KVK_BADGE[lang].hint} className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800">
             ✓ {KVK_BADGE[lang].badge}
@@ -611,7 +621,7 @@ function FeedCard({
         </form>
       </div>
       <p className="text-sm text-slate-500">
-        {kindLabel(item.kind, f)} · {meta.join(" · ")}
+        {vacancy ? vt.badge : kindLabel(item.kind, f)} · {meta.join(" · ")}
       </p>
       <p className="mt-2 break-words text-sm text-slate-700">{summary}</p>
       {/* One bright main action; a second one, if any, is outlined; small actions are grey icons below. */}
@@ -642,6 +652,10 @@ function FeedCard({
             <p className="mt-1 text-xs text-slate-500">{rt.hint}</p>
             {replyQuota && <p className="mt-1 text-xs font-medium text-orange-800">{fill(limitText(lang, "job_reply").left, { n: replyQuota.left })}</p>}
           </div>
+        ) : vacancy && pro && item.source_url ? (
+          <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-purple-700 px-4 py-2.5 text-center font-semibold text-white">
+            📝 {vt.apply}
+          </a>
         ) : item.leadId ? (
           <Link href={`/dashboard/leads/${item.leadId}`} className={`rounded-xl px-4 py-2.5 text-center font-medium ${status.cls}`}>
             {status.text} · {f.openLead}

@@ -2,10 +2,10 @@ import type { Lang } from "@/lib/i18n";
 
 // One job as the collectors write it into feed_items.
 export type CollectedItem = {
-  source: "bekendmakingen" | "tenderned";
-  source_name: string;
+  source: "bekendmakingen" | "tenderned" | "googlejobs";
+  source_name: string | null;
   source_url: string;
-  kind: "permit" | "tender";
+  kind: "permit" | "tender" | "business";
   title: string;
   summary: string;
   translations: Partial<Record<Lang, { title: string; summary: string }>>;

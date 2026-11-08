@@ -2,10 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { collectPermits } from "./permits";
 import { collectTenders } from "./tenders";
 import type { CollectedItem } from "./types";
+import { collectVacancies } from "./vacancies";
 
 export const KEEP_DAYS = 30;
 
-export type CollectOptions = { since?: string; only?: "permits" | "tenders"; municipalities?: string[] };
+export type CollectOptions = { since?: string; only?: "permits" | "tenders" | "vacancies"; municipalities?: string[] };
 
 // One run of the daily collector: new permits and tenders into the shared feed,
 // jobs older than 30 days out of it (the feed itself shows permits for 7 days). Jobs already in the feed are skipped by fingerprint.
@@ -17,11 +18,15 @@ export async function collectFeed(supabase: SupabaseClient, options: CollectOpti
   // Stop reading new permits in time to save them and send the alerts (the function has 60 s).
   const deadline = Date.now() + 38_000;
 
-  const [permits, tenders] = await Promise.all([
-    options.only === "tenders" ? null : collectPermits({ since: options.since, municipalities: options.municipalities, skip, deadline }),
-    options.only === "permits" ? null : collectTenders({ since: options.since, skip }).catch((e: Error) => ({ found: 0, items: [], error: e.message })),
+  // ZZP vacancies are paid searches (Treg): only in their own run, never with the permit runs.
+  const [permits, tenders, vacancies] = await Promise.all([
+    options.only === "tenders" || options.only === "vacancies" ? null : collectPermits({ since: options.since, municipalities: options.municipalities, skip, deadline }),
+    options.only === "permits" || options.only === "vacancies"
+      ? null
+      : collectTenders({ since: options.since, skip }).catch((e: Error) => ({ found: 0, items: [], error: e.message })),
+    options.only === "vacancies" ? collectVacancies({ skip }) : null,
   ]);
-  const items: CollectedItem[] = [...(permits?.items ?? []), ...(tenders?.items ?? [])];
+  const items: CollectedItem[] = [...(permits?.items ?? []), ...(tenders?.items ?? []), ...(vacancies?.items ?? [])];
 
   let added = 0;
   for (let i = 0; i < items.length; i += 100) {
@@ -55,6 +60,9 @@ export async function collectFeed(supabase: SupabaseClient, options: CollectOpti
       ? { found: permits.found, kept: permits.items.length, notWork: permits.rejected.length, left: permits.left, errors: permits.errors }
       : "skipped",
     tenders: tenders ? { found: tenders.found, kept: tenders.items.length, ...("error" in tenders ? { error: tenders.error } : {}) } : "skipped",
+    vacancies: vacancies
+      ? { searches: vacancies.searches, found: vacancies.found, kept: vacancies.items.length, errors: vacancies.errors }
+      : "skipped",
     added,
     removed: removed ?? 0,
   };

@@ -9,7 +9,7 @@ import { telegramEnabled } from "@/lib/telegram";
 export const maxDuration = 60;
 
 // The job collector (vercel.json: tenders + permits early morning, more permit runs during the day), with "Authorization: Bearer <CRON_SECRET>".
-// Optional for a manual run: ?since=YYYY-MM-DD, ?only=permits|tenders, ?cities=Rotterdam,Utrecht.
+// Optional for a manual run: ?since=YYYY-MM-DD, ?only=permits|tenders|vacancies, ?cities=Rotterdam,Utrecht.
 // New fitting jobs go out at once to Pro workers with instant e-mail or Telegram alerts.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
   }
   const q = request.nextUrl.searchParams;
   const since = /^\d{4}-\d{2}-\d{2}$/.test(q.get("since") ?? "") ? q.get("since")! : undefined;
-  const only = q.get("only") === "permits" || q.get("only") === "tenders" ? (q.get("only") as "permits" | "tenders") : undefined;
+  const onlyParam = q.get("only");
+  const only = onlyParam === "permits" || onlyParam === "tenders" || onlyParam === "vacancies" ? onlyParam : undefined;
   const municipalities = q.get("cities")?.split(",").map((c) => c.trim()).filter(Boolean);
 
   const supabase = await createServerAccountClient();
