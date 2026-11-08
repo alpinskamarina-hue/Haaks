@@ -19,6 +19,8 @@ import { vapidPublicKey } from "@/lib/push";
 import { fill } from "@/lib/quotes-i18n";
 import { getSettingsDict } from "@/lib/settings-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
+import { faceUrl, staffOf } from "@/lib/staff";
+import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
 import { telegramEnabled } from "@/lib/telegram";
 import { suggestUsername } from "@/lib/username";
 import { withDefaults, type WorkerProfile } from "@/lib/worker-profile";
@@ -67,8 +69,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const shareOn = (extra as { share_from?: string }).share_from !== "nobody";
   const js = getJobShareDict(lang);
   const d = describeProfile(withDefaults(profile as unknown as Partial<WorkerProfile>), w, lang);
+  const sd = getStaffDict(lang);
+  const sf = getStaffFeedDict(lang);
+  const staff = staffOf(profile as Parameters<typeof staffOf>[0]);
+  const staffRules = profile as { staff_feed?: boolean | null; staff_feed_max?: number | null };
   const jumps = [
     ["account", s.account],
+    ["staff", sd.nav],
     ["plan", s.plan],
     ["notify", s.notifyShort],
     ["feed", s.feedShort],
@@ -106,6 +113,40 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </p>
           <PasswordForm t={t} />
         </div>
+      </section>
+
+      <section id="staff" className={`${card} scroll-mt-20`}>
+        <p className={head}>🤖 {sd.nav}</p>
+        <Link href="/dashboard/staff/settings?from=settings" className={row}>
+          <span className="flex min-w-0 items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={faceUrl(staff.face)} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-violet-500 ring-offset-1" />
+            <span className="min-w-0">
+              <span className="block font-semibold">{staff.name}</span>
+              <span className="block text-sm text-slate-500">
+                {sd.styles[staff.style]} · {staff.formal ? sd.vy : sd.ty}
+              </span>
+            </span>
+          </span>
+          <span className="text-slate-300">›</span>
+        </Link>
+        <Link href="/dashboard/staff/settings?from=settings" className={`${row} font-medium text-orange-700`}>
+          ⚙ {sf.setup}
+          <span className="text-slate-300">›</span>
+        </Link>
+        <Link href="/dashboard/staff/settings?from=settings#feed" className={row}>
+          <span>
+            📋 {sf.rulesTitle}
+            <span className="block text-sm text-slate-500">
+              {(staffRules.staff_feed ?? true) ? sf.feedOn.replace("{n}", String(staffRules.staff_feed_max ?? 5)) : sf.feedOff}
+            </span>
+          </span>
+          <span className="text-slate-300">›</span>
+        </Link>
+        <Link href="/dashboard/staff" className={`${row} text-slate-700`}>
+          💬 {sf.openChat}
+          <span className="text-slate-300">›</span>
+        </Link>
       </section>
 
       <section id="plan" className={`${card} scroll-mt-20`}>

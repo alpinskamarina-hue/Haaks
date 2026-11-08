@@ -130,9 +130,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/dashboard/profile" className="block px-4 py-3">
                 👤 {w.navProfile}
               </Link>
-              <Link href="/dashboard/staff" className="block border-t border-slate-100 px-4 py-3">
-                🤖 {getStaffDict(lang).nav}
-              </Link>
               <Link href="/dashboard/settings" className="block border-t border-slate-100 px-4 py-3">
                 ⚙️ {t.settingsTitle}
               </Link>

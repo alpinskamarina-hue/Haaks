@@ -380,6 +380,10 @@ const feedRu = {
   rulesMax: "Сколько заказов в день, не больше",
   rulesKinds: "Какие заказы приносить",
   rulesNote: "Без вашего нажатия сотрудник ничего никому не отправляет.",
+  setup: "Настроить: лицо, имя, характер",
+  feedOn: "Приносит до {n} заказов в день",
+  feedOff: "Заказы из ленты не приносит",
+  openChat: "Открыть чат",
 };
 export type StaffFeedDict = typeof feedRu;
 
@@ -413,6 +417,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Скільки замовлень на день, не більше",
     rulesKinds: "Які замовлення приносити",
     rulesNote: "Без вашого натискання співробітник нічого нікому не надсилає.",
+    setup: "Налаштувати: обличчя, ім'я, характер",
+    feedOn: "Приносить до {n} замовлень на день",
+    feedOff: "Замовлення зі стрічки не приносить",
+    openChat: "Відкрити чат",
   },
   pl: {
     found: "Znalazłem dla Ciebie zlecenie",
@@ -442,6 +450,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Ile zleceń dziennie, maksymalnie",
     rulesKinds: "Jakie zlecenia przynosić",
     rulesNote: "Bez Twojego kliknięcia pracownik niczego nikomu nie wysyła.",
+    setup: "Ustaw: twarz, imię, charakter",
+    feedOn: "Przynosi do {n} zleceń dziennie",
+    feedOff: "Nie przynosi zleceń",
+    openChat: "Otwórz czat",
   },
   ro: {
     found: "Am găsit o lucrare pentru tine",
@@ -471,6 +483,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Câte lucrări pe zi, maximum",
     rulesKinds: "Ce lucrări să aducă",
     rulesNote: "Fără apăsarea ta, angajatul nu trimite nimic nimănui.",
+    setup: "Setează: față, nume, caracter",
+    feedOn: "Aduce până la {n} lucrări pe zi",
+    feedOff: "Nu aduce lucrări din flux",
+    openChat: "Deschide chatul",
   },
   tr: {
     found: "Size uygun bir iş buldum",
@@ -500,6 +516,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Günde en fazla kaç iş",
     rulesKinds: "Hangi işleri getirsin",
     rulesNote: "Siz dokunmadan çalışan kimseye bir şey göndermez.",
+    setup: "Ayarla: yüz, isim, karakter",
+    feedOn: "Günde en fazla {n} iş getirir",
+    feedOff: "Akıştan iş getirmez",
+    openChat: "Sohbeti aç",
   },
   en: {
     found: "I found a job for you",
@@ -529,6 +549,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Jobs per day, at most",
     rulesKinds: "Which jobs to bring",
     rulesNote: "Your employee never sends anything to anyone without your tap.",
+    setup: "Set up: face, name, character",
+    feedOn: "Brings up to {n} jobs a day",
+    feedOff: "Doesn't bring feed jobs",
+    openChat: "Open chat",
   },
   nl: {
     found: "Ik heb een klus voor u gevonden",
@@ -558,6 +582,10 @@ const FEED: Record<Lang, StaffFeedDict> = {
     rulesMax: "Klussen per dag, maximaal",
     rulesKinds: "Welke klussen brengen",
     rulesNote: "Zonder uw tik verstuurt de medewerker niets naar niemand.",
+    setup: "Instellen: gezicht, naam, karakter",
+    feedOn: "Brengt tot {n} klussen per dag",
+    feedOff: "Brengt geen klussen uit de feed",
+    openChat: "Open chat",
   },
 };
 
