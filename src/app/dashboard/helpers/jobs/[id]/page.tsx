@@ -5,6 +5,8 @@ import type { CompanyJob } from "@/lib/company-jobs";
 import { getHelperDict } from "@/lib/helper-i18n";
 import type { CompanyReply } from "@/lib/job-replies";
 import { loadWorkspace } from "@/lib/workspace";
+import { getOndernemerDict, ondernemerByPassport, SIGNS } from "@/lib/ondernemer";
+import { createServerAccountClient } from "@/lib/supabase/server";
 
 export default async function HelperJobRepliesPage({
   params,
@@ -26,16 +28,21 @@ export default async function HelperJobRepliesPage({
     supabase.rpc("job_replies_for_company", { p_job: id }),
   ]);
   if (!job) notFound();
+  const list = (replies ?? []) as CompanyReply[];
+  const ondernemer = await ondernemerByPassport(await createServerAccountClient(), list.map((r) => r.passport_token)).catch(() => new Map());
+  const od = getOndernemerDict(lang);
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <CompanyReplies
         job={job}
-        replies={(replies ?? []) as CompanyReply[]}
+        replies={list}
         t={getHelperDict(lang)}
         lang={lang}
         ok={ok}
         decideAction={decideHelperReply}
         base="/dashboard/helpers"
+        ondernemer={ondernemer}
+        ondernemerText={{ title: od.badge, lines: Object.fromEntries(SIGNS.map((id) => [id, od.signs[id].ok])) }}
       />
     </main>
   );

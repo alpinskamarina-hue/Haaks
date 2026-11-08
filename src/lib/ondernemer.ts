@@ -64,6 +64,7 @@ export const fillO = (s: string, vars: Record<string, number | string>) => s.rep
 type SignText = { name: string; ok: string; todo: string };
 type Dict = {
   tab: string;
+  badge: string;
   title: string;
   intro: string;
   score: string;
@@ -79,6 +80,7 @@ type Dict = {
 
 const ru: Dict = {
   tab: "Бизнес",
+  badge: "Самостоятельный предприниматель",
   title: "Я настоящий предприниматель",
   intro:
     "С 2025 года налоговая (Belastingdienst) строже проверяет «фиктивных ZZP». Компании боятся нанимать самозанятых и просят доказательства, что вы работаете как настоящий предприниматель. Haaks считает эти признаки по вашим заказам, предложениям и счетам.",
@@ -108,6 +110,7 @@ const DICTS: Record<Lang, Dict> = {
   ru,
   uk: {
     tab: "Бізнес",
+    badge: "Самостійний підприємець",
     title: "Я справжній підприємець",
     intro:
       "З 2025 року податкова (Belastingdienst) суворіше перевіряє «фіктивних ZZP». Компанії бояться наймати самозайнятих і просять доказів, що ви працюєте як справжній підприємець. Haaks рахує ці ознаки за вашими замовленнями, пропозиціями й рахунками.",
@@ -134,6 +137,7 @@ const DICTS: Record<Lang, Dict> = {
   },
   pl: {
     tab: "Firma",
+    badge: "Samodzielny przedsiębiorca",
     title: "Jestem prawdziwym przedsiębiorcą",
     intro:
       "Od 2025 roku urząd skarbowy (Belastingdienst) ostrzej sprawdza «fikcyjnych ZZP». Firmy boją się zatrudniać samozatrudnionych i proszą o dowody, że działasz jak prawdziwy przedsiębiorca. Haaks liczy te oznaki z twoich zleceń, ofert i faktur.",
@@ -160,6 +164,7 @@ const DICTS: Record<Lang, Dict> = {
   },
   ro: {
     tab: "Firmă",
+    badge: "Antreprenor independent",
     title: "Sunt antreprenor adevărat",
     intro:
       "Din 2025 fiscul (Belastingdienst) verifică mai strict «ZZP fictivi». Firmele se tem să angajeze independenți și cer dovezi că lucrezi ca un antreprenor adevărat. Haaks numără aceste semne din comenzile, ofertele și facturile tale.",
@@ -186,6 +191,7 @@ const DICTS: Record<Lang, Dict> = {
   },
   tr: {
     tab: "İşletme",
+    badge: "Bağımsız girişimci",
     title: "Gerçek bir girişimciyim",
     intro:
       "2025'ten beri vergi dairesi (Belastingdienst) «sahte ZZP»leri daha sıkı denetliyor. Şirketler serbest çalışan tutmaktan çekiniyor ve gerçek bir girişimci gibi çalıştığınızın kanıtını istiyor. Haaks bu işaretleri işlerinizden, tekliflerinizden ve faturalarınızdan sayar.",
@@ -212,6 +218,7 @@ const DICTS: Record<Lang, Dict> = {
   },
   en: {
     tab: "Business",
+    badge: "Independent entrepreneur",
     title: "I'm a real entrepreneur",
     intro:
       "Since 2025 the tax office (Belastingdienst) checks «false self-employment» more strictly. Companies are wary of hiring freelancers and ask for proof that you work as a real business. Haaks counts these signs from your jobs, quotes and invoices.",
@@ -238,6 +245,7 @@ const DICTS: Record<Lang, Dict> = {
   },
   nl: {
     tab: "Ondernemer",
+    badge: "Zelfstandig ondernemer",
     title: "Ik ben echt ondernemer",
     intro:
       "Sinds 2025 controleert de Belastingdienst strenger op schijnzelfstandigheid. Bedrijven zijn voorzichtig met zzp'ers en vragen om bewijs dat je echt als ondernemer werkt. Haaks telt die kenmerken uit je klussen, offertes en facturen.",
@@ -325,4 +333,39 @@ export async function loadOndernemer(
     works: works ?? 0,
     reviews: reviews ?? 0,
   });
+}
+
+// For companies (catalog, replies): the true signs of each builder by passport link, computed like on the
+// public passport (only documents shown there, only published reviews). Needs the server account client.
+export async function ondernemerByPassport(server: import("@supabase/supabase-js").SupabaseClient, tokens: (string | null)[]) {
+  const wanted = [...new Set(tokens.filter((t): t is string => !!t))];
+  const out = new Map<string, SignResult[]>();
+  if (!wanted.length) return out;
+  const { data: profiles } = await server
+    .from("profiles")
+    .select("id, passport_token, kvk_number, btw_number, vehicle, tools, equipment")
+    .in("passport_token", wanted)
+    .eq("passport_enabled", true);
+  const ids = (profiles ?? []).map((p) => p.id as string);
+  if (!ids.length) return out;
+  const [{ data: docs }, { data: works }, { data: reviews }, facts] = await Promise.all([
+    server.from("documents").select("user_id, doc_type, issued_on, expires_on").in("user_id", ids).eq("show_in_passport", true),
+    server.from("works").select("user_id").in("user_id", ids),
+    server.from("reviews").select("worker_id").in("worker_id", ids).eq("status", "submitted").eq("held", false).lte("publish_at", new Date().toISOString()),
+    Promise.all(ids.map(async (id) => [id, (await server.rpc("ondernemer_facts", { p_user: id })).data as OndernemerFacts | null] as const)),
+  ]);
+  const factsBy = new Map(facts);
+  const count = (rows: { [k: string]: unknown }[] | null, key: string, id: string) => (rows ?? []).filter((r) => r[key] === id).length;
+  for (const p of profiles ?? []) {
+    const signs = ondernemerSigns({
+      profile: p,
+      docs: (docs ?? []).filter((d) => d.user_id === p.id) as Pick<DocumentRow, "doc_type" | "issued_on" | "expires_on">[],
+      facts: factsBy.get(p.id) ?? null,
+      means: hasOwnMeans({ vehicle: p.vehicle, tools: p.tools, equipment: p.equipment ?? [] }),
+      works: count(works, "user_id", p.id),
+      reviews: count(reviews, "worker_id", p.id),
+    }).filter((x) => x.ok);
+    if (signs.length >= PUBLIC_MIN) out.set(p.passport_token as string, signs);
+  }
+  return out;
 }
