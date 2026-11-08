@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { collectFeed } from "@/lib/collect";
+import { postVacancySearches } from "@/lib/collect/vacancies";
 import { emailEnabled } from "@/lib/email";
 import { sendFeedEmails, sendFeedPush, sendFeedTelegram } from "@/lib/feed-notify";
 import { siteUrl } from "@/lib/lang";
@@ -19,7 +20,9 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams;
   const since = /^\d{4}-\d{2}-\d{2}$/.test(q.get("since") ?? "") ? q.get("since")! : undefined;
   const onlyParam = q.get("only");
-  const only = onlyParam === "permits" || onlyParam === "tenders" || onlyParam === "vacancies" ? onlyParam : undefined;
+  // Vacancies: only ask Google Jobs here; the answers come to /api/vacancies/postback.
+  if (onlyParam === "vacancies") return NextResponse.json(await postVacancySearches(await siteUrl()));
+  const only = onlyParam === "permits" || onlyParam === "tenders" ? onlyParam : undefined;
   const municipalities = q.get("cities")?.split(",").map((c) => c.trim()).filter(Boolean);
 
   const supabase = await createServerAccountClient();
