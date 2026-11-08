@@ -9,8 +9,9 @@ import { loadWorkspace } from "@/lib/workspace";
 import { saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
 
 // Face, name and manner of the worker's digital employee.
-export default async function StaffSettingsPage() {
-  const { profile, lang } = await loadWorkspace();
+export default async function StaffSettingsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
+  const fromSettings = (await searchParams).from === "settings";
+  const { profile, lang, t } = await loadWorkspace();
   const d = getStaffDict(lang);
   const s = staffOf(profile as Parameters<typeof staffOf>[0]);
   const ownName = (profile as { staff_name?: string | null }).staff_name ?? "";
@@ -24,15 +25,15 @@ export default async function StaffSettingsPage() {
     "use server";
     await saveStaffSettings(formData);
     await saveStaffFeedRules(formData);
-    redirect("/dashboard/staff");
+    redirect(fromSettings ? "/dashboard/settings#staff" : "/dashboard/staff");
   }
 
   const choice = "block cursor-pointer rounded-lg border border-slate-300 py-2 text-center peer-checked:border-orange-600 peer-checked:bg-orange-600 peer-checked:text-white";
 
   return (
     <main className="mx-auto max-w-md space-y-5 px-4 py-6">
-      <Link href="/dashboard/staff" className="text-sm text-orange-700">
-        {d.back}
+      <Link href={fromSettings ? "/dashboard/settings#staff" : "/dashboard/staff"} className="text-sm text-orange-700">
+        {fromSettings ? `← ${t.settingsTitle}` : d.back}
       </Link>
       <div>
         <h1 className="text-2xl font-bold">⚙ {d.settingsTitle}</h1>
