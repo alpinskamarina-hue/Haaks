@@ -31,11 +31,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .then((server) =>
           Promise.all([
             server.from("company_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"),
+            server.from("client_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
             server.from("reports").select("id", { count: "exact", head: true }),
             server.from("reviews").select("id", { count: "exact", head: true }).eq("status", "submitted").not("report_reason", "is", null),
           ]),
         )
-        .then(([jobs, reports, reviews]) => (jobs.count ?? 0) + (reports.count ?? 0) + (reviews.count ?? 0))
+        .then(([jobs, clients, reports, reviews]) => (jobs.count ?? 0) + (clients.count ?? 0) + (reports.count ?? 0) + (reviews.count ?? 0))
         .catch(() => 0)
     : 0;
 
@@ -137,6 +138,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/dashboard/help" className="block border-t border-slate-100 px-4 py-3">
                 ❓ {help.help}
               </Link>
+              {isAdmin && (
+                <Link href="/dashboard/moderation" className="flex items-center gap-2 border-t border-slate-100 px-4 py-3">
+                  🛡 Модерация
+                  {pendingJobs > 0 && <span className="rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">{pendingJobs}</span>}
+                </Link>
+              )}
               <form action={signOut} className="border-t border-slate-100">
                 <button className="block w-full px-4 py-3 text-left">🚪 {t.signOut}</button>
               </form>
