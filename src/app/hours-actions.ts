@@ -40,7 +40,7 @@ export async function addHours(formData: FormData) {
   refresh(orderId);
 }
 
-// Only hours not on an invoice yet can be removed.
+// Only hours not on an invoice and not sent to the company yet can be removed.
 export async function deleteHours(id: string) {
   const { supabase, user } = await requireUser();
   const { data } = await supabase
@@ -49,6 +49,7 @@ export async function deleteHours(id: string) {
     .eq("id", id)
     .eq("user_id", user.id)
     .is("invoice_id", null)
+    .is("approval_id", null)
     .select("order_id")
     .maybeSingle();
   if (data) refresh(data.order_id);
@@ -60,17 +61,28 @@ export async function invoiceFromHours(orderId: string) {
   const { supabase, user } = await requireUser();
   const [{ data: order }, { data: rows }, { data: numbers }] = await Promise.all([
     supabase.from("orders").select("id, title, client_name, address, hourly_rate").eq("id", orderId).eq("user_id", user.id).maybeSingle(),
-    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id").eq("order_id", orderId).is("invoice_id", null).returns<HourRow[]>(),
+    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id, approval_id").eq("order_id", orderId).is("invoice_id", null).returns<HourRow[]>(),
     supabase.from("invoices").select("number").eq("user_id", user.id),
   ]);
   const rate = Number(order?.hourly_rate);
   if (!order || !rows?.length || !(rate > 0)) return;
 
   const weeks = groupByWeek(rows).reverse();
+  // Weeks the company fully approved say so on the invoice line: "(akkoord P. de Vries)".
+  const approvalIds = [...new Set(rows.map((r) => r.approval_id).filter((x): x is string => !!x))];
+  const { data: approved } = approvalIds.length
+    ? await supabase.from("hour_approvals").select("id, decided_name").in("id", approvalIds).eq("status", "approved")
+    : { data: [] as { id: string; decided_name: string | null }[] };
+  const approver = new Map((approved ?? []).map((a) => [a.id, a.decided_name]));
+  const akkoord = (w: (typeof weeks)[number]) => {
+    const names = new Set(w.rows.map((r) => (r.approval_id ? approver.get(r.approval_id) : undefined)));
+    const [only] = [...names];
+    return names.size === 1 && only ? ` (akkoord ${only})` : "";
+  };
   const lines: QuoteLine[] = cleanLines(
     weeks.map((w) => ({
       kind: "labour",
-      description: `Werkzaamheden week ${w.week} (${dutchRange(w.from, w.to)}): ${order.title}`,
+      description: `Werkzaamheden week ${w.week} (${dutchRange(w.from, w.to)}): ${order.title}${akkoord(w)}`,
       quantity: w.hours,
       unit: "uur",
       unit_price: rate,
@@ -118,4 +130,38 @@ export async function invoiceFromHours(orderId: string) {
   revalidatePath("/dashboard/invoices", "layout");
   refresh(orderId);
   redirect(`/dashboard/invoices/${invoice.id}`);
+}
+
+// Sends the not yet approved hours of one week (Monday..Sunday) to the company: a request with a
+// snapshot of the days; the hours are linked to it. The page then shows the link to send.
+export async function sendHoursForApproval(orderId: string, from: string, to: string) {
+  const { supabase, user } = await requireUser();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return;
+  const { data: rows } = await supabase
+    .from("order_hours")
+    .select("id, work_date, hours, note")
+    .eq("order_id", orderId)
+    .eq("user_id", user.id)
+    .is("approval_id", null)
+    .gte("work_date", from)
+    .lte("work_date", to)
+    .order("work_date")
+    .returns<{ id: string; work_date: string; hours: number; note: string | null }[]>();
+  if (!rows?.length) return;
+  const hours = Math.round(rows.reduce((x, r) => x + Number(r.hours), 0) * 100) / 100;
+  const { data: approval, error } = await supabase
+    .from("hour_approvals")
+    .insert({
+      user_id: user.id,
+      order_id: orderId,
+      date_from: rows[0].work_date,
+      date_to: rows[rows.length - 1].work_date,
+      hours,
+      lines: rows.map((r) => ({ work_date: r.work_date, hours: Number(r.hours), note: r.note })),
+    })
+    .select("id")
+    .single();
+  if (error || !approval) throw new Error(error?.message ?? "Insert failed");
+  await supabase.from("order_hours").update({ approval_id: approval.id }).in("id", rows.map((r) => r.id)).eq("user_id", user.id);
+  refresh(orderId);
 }
