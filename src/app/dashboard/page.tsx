@@ -30,6 +30,12 @@ import { daysBetween, recentQuarters, vatDeadline } from "@/lib/accountant";
 import { getAccountantDict } from "@/lib/accountant-i18n";
 import { cookies } from "next/headers";
 import { DailyQuote } from "@/components/DailyQuote";
+import { StaffHomeCard } from "@/components/StaffHomeCard";
+import { planOf } from "@/lib/plans";
+import { getPricingDict } from "@/lib/pricing-i18n";
+import { faceUrl, staffOf } from "@/lib/staff";
+import { getStaffFeedDict } from "@/lib/staff-i18n";
+import { getStaffLanding } from "@/lib/staff-landing-i18n";
 import { getQuoteLabels, QUOTE_COOKIE, quoteOfDay } from "@/lib/daily-quotes";
 
 const LOCALES: Record<Lang, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
@@ -275,6 +281,9 @@ export default async function Home() {
   );
 
   const near = await nearPromise;
+  const planProfile = profile as typeof profile & { plan?: string | null; plan_until?: string | null; trial_started_at?: string | null };
+  const plan = planOf(planProfile);
+  const staff = staffOf(profile as Parameters<typeof staffOf>[0]);
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
       <div>
@@ -516,6 +525,16 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      <StaffHomeCard
+        s={getStaffLanding(lang)}
+        f={getStaffFeedDict(lang)}
+        face={faceUrl(staff.face)}
+        name={staff.name}
+        ultra={plan === "ultra"}
+        canTrial={plan === "free" && !planProfile.trial_started_at}
+        plansLabel={getPricingDict(lang).nav}
+      />
     </main>
   );
 }

@@ -6,6 +6,7 @@ export type StaffLandingDict = {
   badge: string;
   title: string;
   lead: string;
+  howTitle: string;
   steps: { icon: string; title: string; text: string }[];
   choose: string;
   cta: string;
@@ -18,6 +19,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Новое · тариф Ultra",
     title: "Цифровой сотрудник, который работает за вас",
     lead: "Личный помощник на вашем языке. Сам ищет заказы, пишет клиентам на голландском и разбирается с бумагами.",
+    howTitle: "Как он работает",
     steps: [
       { icon: "🔎", title: "Каждый час смотрит ленту", text: "Находит новые заказы по вашей профессии и району и приносит их в чат." },
       { icon: "✍️", title: "Готовит ответ на голландском", text: "На вашем языке объясняет, почему заказ подходит, и пишет вежливый ответ клиенту." },
@@ -41,6 +43,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Нове · тариф Ultra",
     title: "Цифровий співробітник, який працює за вас",
     lead: "Особистий помічник вашою мовою. Сам шукає замовлення, пише клієнтам нідерландською і розбирається з паперами.",
+    howTitle: "Як він працює",
     steps: [
       { icon: "🔎", title: "Щогодини дивиться стрічку", text: "Знаходить нові замовлення за вашою професією і районом і приносить їх у чат." },
       { icon: "✍️", title: "Готує відповідь нідерландською", text: "Вашою мовою пояснює, чому замовлення підходить, і пише ввічливу відповідь клієнту." },
@@ -64,6 +67,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Nowość · pakiet Ultra",
     title: "Cyfrowy pracownik, który pracuje za Ciebie",
     lead: "Osobisty asystent w Twoim języku. Sam szuka zleceń, pisze do klientów po niderlandzku i ogarnia papiery.",
+    howTitle: "Jak to działa",
     steps: [
       { icon: "🔎", title: "Co godzinę przegląda zlecenia", text: "Znajduje nowe zlecenia dla Twojego zawodu i okolicy i przynosi je do czatu." },
       { icon: "✍️", title: "Przygotowuje odpowiedź po niderlandzku", text: "W Twoim języku wyjaśnia, dlaczego zlecenie pasuje, i pisze uprzejmą odpowiedź do klienta." },
@@ -87,6 +91,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Nou · abonament Ultra",
     title: "Un angajat digital care lucrează pentru tine",
     lead: "Asistent personal în limba ta. Caută singur lucrări, le scrie clienților în neerlandeză și se ocupă de hârtii.",
+    howTitle: "Cum lucrează",
     steps: [
       { icon: "🔎", title: "Verifică fluxul în fiecare oră", text: "Găsește lucrări noi pentru meseria și zona ta și le aduce în chat." },
       { icon: "✍️", title: "Pregătește răspunsul în neerlandeză", text: "Îți explică în limba ta de ce lucrarea se potrivește și scrie un răspuns politicos clientului." },
@@ -110,6 +115,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Yeni · Ultra paket",
     title: "Sizin yerinize çalışan dijital çalışan",
     lead: "Kendi dilinizde kişisel asistan. Kendisi iş arar, müşterilere Hollandaca yazar ve evrak işlerini halleder.",
+    howTitle: "Nasıl çalışır",
     steps: [
       { icon: "🔎", title: "Her saat akışa bakar", text: "Mesleğinize ve bölgenize uygun yeni işleri bulur ve sohbete getirir." },
       { icon: "✍️", title: "Hollandaca cevap hazırlar", text: "İşin neden uygun olduğunu sizin dilinizde açıklar ve müşteriye kibar bir cevap yazar." },
@@ -133,6 +139,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "New · Ultra plan",
     title: "A digital employee who works for you",
     lead: "A personal assistant in your language. Finds jobs, writes to clients in Dutch and sorts out your paperwork.",
+    howTitle: "How it works",
     steps: [
       { icon: "🔎", title: "Checks the feed every hour", text: "Finds new jobs for your trade and area and brings them into the chat." },
       { icon: "✍️", title: "Prepares a reply in Dutch", text: "Explains in your language why the job fits and writes a polite reply to the client." },
@@ -156,6 +163,7 @@ const DICTS: Record<Lang, StaffLandingDict> = {
     badge: "Nieuw · Ultra-abonnement",
     title: "Een digitale medewerker die voor u werkt",
     lead: "Een persoonlijke assistent in uw eigen taal. Zoekt klussen, schrijft klanten in het Nederlands en regelt uw papierwerk.",
+    howTitle: "Hoe het werkt",
     steps: [
       { icon: "🔎", title: "Kijkt elk uur in de feed", text: "Vindt nieuwe klussen voor uw vak en regio en brengt ze in de chat." },
       { icon: "✍️", title: "Maakt een antwoord in het Nederlands", text: "Legt in uw taal uit waarom de klus past en schrijft een net antwoord aan de klant." },
