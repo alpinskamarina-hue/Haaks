@@ -4,6 +4,7 @@ import { HtmlLang } from "@/components/HtmlLang";
 import { PublicFooter } from "@/components/PublicFooter";
 import { ShareButton } from "@/components/ShareButton";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedItem } from "@/lib/feed";
+import { KVK_BADGE } from "@/lib/kvk-check";
 import { getFeedDict } from "@/lib/feed-i18n";
 import { isLang, type Lang } from "@/lib/i18n";
 import { requestLang, siteUrl } from "@/lib/lang";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 type Job = Pick<
   FeedItem,
   "id" | "source" | "source_name" | "kind" | "title" | "summary" | "translations" | "trades" | "city" | "timing" | "budget"
-> & { published_at: string | null; created_at: string; expires_at: string | null };
+> & { published_at: string | null; created_at: string; expires_at: string | null; kvk_ok?: boolean };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -29,7 +30,14 @@ async function loadJob(id: string): Promise<Job | null> {
     .eq("id", id)
     .maybeSingle<Job>();
   if (!data || (data.expires_at && new Date(data.expires_at) < new Date())) return null;
-  return { ...data, translations: data.translations ?? {}, trades: data.trades ?? [] };
+  // A company job: did Haaks check the company's KvK number?
+  const { data: cj } = data.kind === "business"
+    ? await admin.from("company_jobs").select("company_id").eq("feed_item_id", data.id).maybeSingle<{ company_id: string }>()
+    : { data: null };
+  const { data: company } = cj
+    ? await admin.from("profiles").select("kvk_checked_at").eq("id", cj.company_id).maybeSingle<{ kvk_checked_at: string | null }>()
+    : { data: null };
+  return { ...data, translations: data.translations ?? {}, trades: data.trades ?? [], kvk_ok: !!company?.kvk_checked_at };
 }
 
 async function pageLang(langParam?: string): Promise<{ lang: Lang; signedIn: boolean }> {
@@ -111,6 +119,11 @@ export default async function JobPage({ params, searchParams }: { params: Promis
           <p className="text-xs font-bold uppercase tracking-wide text-orange-700">{section}</p>
           <p className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
             <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{sourceLabel(job)}</span>
+            {job.kvk_ok && (
+              <span title={KVK_BADGE[lang].hint} className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800">
+                ✓ {KVK_BADGE[lang].badge}
+              </span>
+            )}
             <span>{timeAgo(job.published_at ?? job.created_at, lang)}</span>
           </p>
           <h1 className="mt-2 break-words text-xl font-bold">{title}</h1>

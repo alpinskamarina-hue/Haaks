@@ -48,6 +48,8 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
     supabase.from("feed_saved").select("item_id").eq("user_id", userId),
     supabase.rpc("my_shared_jobs"),
   ]);
+  const { data: kvkRows } = await supabase.rpc("kvk_checked_items");
+  const kvkOk = new Set(((kvkRows ?? []) as (string | { kvk_checked_items: string })[]).map((r) => (typeof r === "string" ? r : r.kvk_checked_items)));
   const shares = ((shareRows ?? []) as (SharedFrom & { item_id: string })[]);
   const sharesOf = new Map<string, SharedFrom[]>();
   for (const sh of shares) sharesOf.set(sh.item_id, [...(sharesOf.get(sh.item_id) ?? []), sh]);
@@ -67,7 +69,7 @@ export async function loadFeed(supabase: Supabase, userId: string, profile: Prof
   const match: WorkerMatch = workerMatch(profile);
   const scored: ScoredFeedItem[] = ((items ?? []) as FeedItem[]).map((row) => {
     const place = placeOf.get(row.id);
-    const item = { ...row, lat: place?.lat ?? null, lng: place?.lng ?? null, region: place?.region ?? null };
+    const item = { ...row, lat: place?.lat ?? null, lng: place?.lng ?? null, region: place?.region ?? null, kvk_ok: kvkOk.has(row.id) };
     const km = distanceKm(item, match);
     return {
       ...item,

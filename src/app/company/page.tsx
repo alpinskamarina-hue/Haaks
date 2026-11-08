@@ -3,6 +3,7 @@ import { companyCard as card, CompanyDetailsForm, CompanyJobRow, CompanyNotice }
 import { requireUser } from "@/lib/auth";
 import { companyLang, fill, getCompanyDict } from "@/lib/company-i18n";
 import { FREE_ACTIVE_JOBS, isActive, type CompanyInfo, type CompanyJob } from "@/lib/company-jobs";
+import { KVK_STATUS } from "@/lib/kvk-check";
 
 export default async function CompanyPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; edit?: string }> }) {
   const { supabase, user } = await requireUser();
@@ -10,9 +11,9 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
   const [{ data: profile }, { data: jobs }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("company_name, kvk_number, full_name, phone, business_email, language, company_verified")
+      .select("company_name, kvk_number, full_name, phone, business_email, language, company_verified, kvk_checked_at")
       .eq("id", user.id)
-      .single<CompanyInfo & { language: string; company_verified: boolean }>(),
+      .single<CompanyInfo & { language: string; company_verified: boolean; kvk_checked_at: string | null }>(),
     supabase.from("company_jobs").select("*").eq("company_id", user.id).order("created_at", { ascending: false }).returns<CompanyJob[]>(),
   ]);
   // Builders' replies per job (RLS: only replies to this company's jobs).
@@ -50,6 +51,13 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
             </p>
             <p className="text-sm text-slate-500">{fill(t.activeCount, { n: active, max: FREE_ACTIVE_JOBS })}</p>
           </div>
+          <p className={`rounded-lg p-3 text-sm ${profile!.kvk_checked_at ? "bg-green-50 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+            {profile!.kvk_checked_at
+              ? fill(KVK_STATUS[companyLang(profile?.language)].checked, {
+                  date: new Date(profile!.kvk_checked_at).toLocaleDateString(companyLang(profile?.language) === "nl" ? "nl-NL" : "en-GB"),
+                })
+              : KVK_STATUS[companyLang(profile?.language)].waiting}
+          </p>
           {active >= FREE_ACTIVE_JOBS ? (
             <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{fill(t.limitReached, { max: FREE_ACTIVE_JOBS })}</p>
           ) : (
