@@ -17,6 +17,7 @@ import { getClientCardDict, type ClientCardDict } from "@/lib/client-request-i18
 import { MAX_REPLIES, type MyClientReply } from "@/lib/client-requests";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/SubmitButton";
+import { FeedTile } from "@/components/FeedTile";
 import { feedText, sourceLabel, timeAgo, tradeLabel, type FeedEmailMode } from "@/lib/feed";
 import { KVK_BADGE } from "@/lib/kvk-check";
 import { fill, getFeedDict, type FeedDict } from "@/lib/feed-i18n";
@@ -236,15 +237,6 @@ export default async function FeedPage({
         </Link>
       )}
 
-      {/* "Need a helper": a builder posts a job for other builders. */}
-      <Link href="/dashboard/helpers" className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
-        <span>
-          <span className="block font-semibold text-sky-900">👷 {helper.nav}</span>
-          <span className="block text-sm text-slate-700">{helper.cardText}</span>
-        </span>
-        <span className="shrink-0 font-semibold text-sky-900">→</span>
-      </Link>
-
       <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
           {!pro && locked.length > 0 && (
@@ -269,45 +261,44 @@ export default async function FeedPage({
             </p>
           )}
 
-          {/* Sections: one calm row of tabs that scrolls sideways on a phone; empty ones are left out. */}
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
-            <Link
+          {/* Sections: 3D tiles, all visible at once (no sideways scrolling on a phone). */}
+          <div className="grid grid-cols-3 gap-3 pb-2 sm:grid-cols-4 lg:grid-cols-6">
+            <FeedTile
               href={query({ section: null })}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${!section && !showReceived ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"}`}
-            >
-              {f.secAll} <span className="opacity-70">{showReceived ? items.filter((i) => i.action !== "hidden" && i.score >= FIT_SCORE).length : base.length}</span>
-            </Link>
+              icon="🗂️"
+              label={f.secAll}
+              count={showReceived ? items.filter((i) => i.action !== "hidden" && i.score >= FIT_SCORE).length : base.length}
+              color="all"
+              active={!section && !showReceived}
+            />
             {(receivedItems.length > 0 || showReceived) && (
-              <Link
+              <FeedTile
                 href={query({ received: "1", section: null, all: null, hidden: null, starred: null, city: null })}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${showReceived ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-800 ring-1 ring-orange-200"}`}
-              >
-                📨 {js.tab} <span className="opacity-70">{receivedItems.length}</span>
-                {sharesUnseen > 0 && !showReceived && <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">+{sharesUnseen}</span>}
-              </Link>
+                icon="📨"
+                label={js.tab}
+                count={receivedItems.length}
+                plus={showReceived ? 0 : sharesUnseen}
+                color="received"
+                active={showReceived}
+              />
             )}
-            {SECTIONS.filter((x) => !showReceived && (sectionCount(x.key) > 0 || section === x.key)).map((x) => (
-              <Link
+            {SECTIONS.map((x) => (
+              <FeedTile
                 key={x.key}
                 href={query({ section: x.key })}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold ${
-                  section === x.key ? `${x.solid} text-white` : `${x.bg} ${x.text}`
-                }`}
-              >
-                {x.icon} {x.label(f)} <span className="opacity-70">{sectionCount(x.key)}</span>
-                {sectionNew(x.key) > 0 && (
-                  <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">+{sectionNew(x.key)}</span>
-                )}
-              </Link>
+                icon={x.icon}
+                label={x.label(f)}
+                count={showReceived ? undefined : sectionCount(x.key)}
+                plus={showReceived ? 0 : sectionNew(x.key)}
+                color={x.key}
+                active={section === x.key && !showReceived}
+                dim={!showReceived && sectionCount(x.key) === 0 && section !== x.key}
+              />
             ))}
             {!showReceived && firmCount > 0 && (
-              <Link
-                href="/dashboard/leads/firms"
-                className="shrink-0 whitespace-nowrap rounded-full bg-purple-50 px-3.5 py-1.5 font-semibold text-purple-800 ring-1 ring-purple-200"
-              >
-                🏢 {firmsTab} <span className="opacity-70">{firmCount}</span>
-              </Link>
+              <FeedTile href="/dashboard/leads/firms" icon="🏬" label={firmsTab} count={firmCount} color="firms" />
             )}
+            <FeedTile href="/dashboard/helpers" icon="👷" label={helper.nav} sub="→" color="helper" />
           </div>
           {/* Which jobs: a two-way switch, then saved and hidden as small links. */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
