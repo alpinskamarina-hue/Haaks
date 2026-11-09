@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedSourceInfo } from "@/components/FeedSourceInfo";
 import { loadNearFirms, mapsLink } from "@/lib/firms";
 import { getFirmAboutDict } from "@/lib/firm-about-i18n";
 import { waNumber } from "@/lib/firm-offer";
@@ -32,7 +33,7 @@ export default async function FirmsPage() {
             {t.test}
           </span>
         </h1>
-        <p className="mt-2 rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">{o.hint}</p>
+        <FeedSourceInfo source="firms" lang={lang} text={o.hint} className="mt-2" />
         {!known && (
           <p className="mt-2 text-sm text-slate-500">{t.noHome}</p>
         )}

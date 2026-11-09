@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedSourceInfo } from "@/components/FeedSourceInfo";
 import { closeHelperJob } from "@/app/company-actions";
 import { companyCard as card, CompanyJobRow, CompanyNotice } from "@/components/CompanyJobs";
 import { fill } from "@/lib/company-i18n";
@@ -32,7 +33,7 @@ export default async function HelperJobsPage({ searchParams }: { searchParams: P
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <div>
         <h1 className="text-2xl font-bold">👷 {t.title}</h1>
-        <p className="mt-1 text-slate-600">{t.intro}</p>
+        <FeedSourceInfo source="helper" lang={lang} text={t.intro} className="mt-2" />
       </div>
       <CompanyNotice t={t} ok={sp.ok} error={sp.error} />
       {missing ? (
