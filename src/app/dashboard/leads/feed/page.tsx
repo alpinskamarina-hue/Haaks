@@ -42,6 +42,7 @@ import { catalogActive, getReplyDict, type MyReply, type ReplyDict } from "@/lib
 import { contactPhones, emailLink, resumeMessage, scoreColor } from "@/lib/leads";
 import { siteUrl } from "@/lib/lang";
 import { loadWorkspace } from "@/lib/workspace";
+import { FeedSourceInfo } from "@/components/FeedSourceInfo";
 import { freeLeft, limitText, type FreeQuota } from "@/lib/free-limits";
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -304,6 +305,8 @@ export default async function FeedPage({
             {/* The last tile fills the row, so the grid stays an even block. */}
             <FeedTile href="/dashboard/helpers" icon="👷" label={helper.nav} sub="→" color="helper" className={HELPER_SPAN[tilesBefore % 4]} />
           </div>
+          {/* What the chosen tile means: where these jobs come from, in bold. */}
+          <FeedSourceInfo source={showReceived ? "received" : (section ?? "all")} lang={lang} />
           {/* Which jobs: a two-way switch, then saved and hidden as small links. */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <div className="flex rounded-full bg-slate-200/70 p-1">
