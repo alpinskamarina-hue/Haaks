@@ -29,7 +29,7 @@ export type ProjectSummary = {
   stage: Stage;
   group: Group;
   price: number | null;
-  priceKind: "accepted" | "offered" | "invoiced" | null;
+  priceKind: "accepted" | "offered" | "invoiced" | "fixed" | null;
   materials: number;
   receiptCount: number;
   km: number;
@@ -71,6 +71,9 @@ export function summarize(p: {
   } else if (sentInvoices.length) {
     price = invoicedExcl;
     priceKind = "invoiced";
+  } else if (Number(order.fixed_price) > 0) {
+    price = Number(order.fixed_price);
+    priceKind = "fixed";
   } else if (offered) {
     price = quoteTotals(offered.lines).excl;
     priceKind = "offered";

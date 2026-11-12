@@ -7,8 +7,9 @@ const PAYMENT_DAYS = 14;
 
 // A draft invoice from one order: all hours not on an invoice yet (one line per week,
 // "Werkzaamheden week 45 (3–7 nov): <order>", hours × the order's rate) and, when asked,
-// the receipts not on an invoice yet as materials. Returns the new invoice id, or null when
-// there is nothing to bill (or hours without a rate).
+// the receipts not on an invoice yet as materials. A fixed-price order (fixed_price) bills
+// "Aanneemsom: <order>" once instead of the hours; its hours are only for the worker's records.
+// Returns the new invoice id, or null when there is nothing to bill (or hours without a rate).
 export async function createOrderInvoice(
   supabase: SupabaseClient,
   userId: string,
@@ -16,7 +17,7 @@ export async function createOrderInvoice(
   opts: { receipts: boolean; markupPercent?: number } = { receipts: false },
 ): Promise<string | null> {
   const [{ data: order }, { data: rows }, { data: receipts }, { data: numbers }] = await Promise.all([
-    supabase.from("orders").select("id, title, client_name, address, hourly_rate").eq("id", orderId).eq("user_id", userId).maybeSingle(),
+    supabase.from("orders").select("id, title, client_name, address, hourly_rate, fixed_price, fixed_invoice_id").eq("id", orderId).eq("user_id", userId).maybeSingle(),
     supabase.from("order_hours").select("id, work_date, hours, note, invoice_id, approval_id").eq("order_id", orderId).is("invoice_id", null).returns<HourRow[]>(),
     opts.receipts
       ? supabase.from("receipts").select("id, store_name, purchased_on, total_excl_vat").eq("order_id", orderId).is("invoice_id", null).returns<{ id: string; store_name: string | null; purchased_on: string | null; total_excl_vat: number | null }[]>()
@@ -25,10 +26,12 @@ export async function createOrderInvoice(
   ]);
   if (!order) return null;
   const rate = Number(order.hourly_rate);
-  const hours = rows ?? [];
+  const fixedPrice = Number(order.fixed_price) > 0 ? Math.round(Number(order.fixed_price) * 100) / 100 : null;
+  const fixedDue = fixedPrice !== null && !order.fixed_invoice_id;
+  const hours = fixedPrice !== null ? [] : (rows ?? []);
   if (hours.length && !(rate > 0)) return null;
   const bills = (receipts ?? []).filter((r) => Number(r.total_excl_vat) > 0);
-  if (!hours.length && !bills.length) return null;
+  if (!fixedDue && !hours.length && !bills.length) return null;
 
   const weeks = groupByWeek(hours).reverse();
   // Weeks the company fully approved say so on the invoice line: "(akkoord P. de Vries)".
@@ -45,6 +48,7 @@ export async function createOrderInvoice(
   const factor = 1 + Math.max(0, Math.min(100, opts.markupPercent ?? 0)) / 100;
   const date = (d: string | null) => (d ? ` ${d.split("-").reverse().join("-")}` : "");
   const lines: QuoteLine[] = cleanLines([
+    ...(fixedDue ? [{ kind: "labour" as const, description: `Aanneemsom: ${order.title}`, quantity: 1, unit: "post", unit_price: fixedPrice, vat_rate: 21 }] : []),
     ...weeks.map((w) => ({
       kind: "labour" as const,
       description: `Werkzaamheden week ${w.week} (${dutchRange(w.from, w.to)}): ${order.title}${akkoord(w)}`,
@@ -97,6 +101,7 @@ export async function createOrderInvoice(
     .single();
   if (error || !invoice) throw new Error(error?.message ?? "Insert failed");
 
+  if (fixedDue) await supabase.from("orders").update({ fixed_invoice_id: invoice.id }).eq("id", order.id).eq("user_id", userId);
   if (hours.length) await supabase.from("order_hours").update({ invoice_id: invoice.id }).in("id", hours.map((r) => r.id)).eq("user_id", userId);
   if (bills.length) await supabase.from("receipts").update({ invoice_id: invoice.id }).in("id", bills.map((r) => r.id)).eq("user_id", userId);
   return invoice.id;

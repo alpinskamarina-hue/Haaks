@@ -573,11 +573,18 @@ export async function saveStaffPrices(messageId: string): Promise<{ ok: true; hr
     .maybeSingle<{ id: string; action: StaffPriceChange | null; action_status: string | null }>();
   const c = m?.action;
   if (!m || !c || c.type !== "prices") return { error: "failed" };
-  const href = `/dashboard/${c.target === "order_rate" ? "orders" : c.target === "quote" ? "quotes" : "invoices"}/${c.id}`;
+  const href = `/dashboard/${c.target === "order_rate" || c.target === "order_amount" ? "orders" : c.target === "quote" ? "quotes" : "invoices"}/${c.id}`;
   if (m.action_status === "done") return { ok: true, href };
   if (c.target === "order_rate") {
     const { data, error } = await supabase.from("orders").update({ hourly_rate: c.new_rate }).eq("id", c.id).eq("user_id", user.id).select("id");
     if (error || !data?.length) return { error: "failed" };
+  } else if (c.target === "order_amount") {
+    // Only while the job price is not on an invoice and still what the card showed.
+    const { data: order } = await supabase.from("orders").select("fixed_price, fixed_invoice_id").eq("id", c.id).eq("user_id", user.id).maybeSingle<{ fixed_price: number | null; fixed_invoice_id: string | null }>();
+    if (!order) return { error: "failed" };
+    if (order.fixed_invoice_id || (order.fixed_price === null ? null : Number(order.fixed_price)) !== c.old_amount) return { error: "stale" };
+    const { error } = await supabase.from("orders").update({ fixed_price: c.new_amount }).eq("id", c.id).eq("user_id", user.id);
+    if (error) return { error: "failed" };
   } else {
     const table = c.target === "quote" ? "quotes" : "invoices";
     const { data: doc } = await supabase.from(table).select("status, lines").eq("id", c.id).eq("user_id", user.id).maybeSingle<{ status: string; lines: unknown }>();

@@ -14,13 +14,14 @@ export const STAFF_PRICE_TOOLS: Anthropic.Tool[] = [
   {
     name: "prepare_price_change",
     description:
-      "Prepare a change the worker asked for: target order_rate (an order's hourly rate; id = order id) or quote / invoice lines (id = quote or invoice id; call get_lines first). Only quotes not accepted yet and DRAFT invoices can change. Shown as a card with old → new and a «Change» button; nothing changes until they tap it.",
+      "Prepare a change the worker asked for: target order_rate (an order's hourly rate; id = order id), order_amount (the fixed price for the whole job, «сумма заказа», excl. btw; id = order id; amount null removes it) or quote / invoice lines (id = quote or invoice id; call get_lines first). Only quotes not accepted yet and DRAFT invoices can change. Shown as a card with old → new and a «Change» button; nothing changes until they tap it.",
     input_schema: {
       type: "object",
       properties: {
-        target: { type: "string", enum: ["order_rate", "quote", "invoice"] },
+        target: { type: "string", enum: ["order_rate", "order_amount", "quote", "invoice"] },
         id: { type: "string" },
         hourly_rate: { type: "number", description: "order_rate: new € per hour excl. btw" },
+        amount: { type: ["number", "null"], description: "order_amount: new fixed price for the whole job in € excl. btw, or null to remove it" },
         changes: {
           type: "array",
           description: "quote/invoice: changes to existing lines by their number from get_lines",
@@ -54,6 +55,7 @@ export const STAFF_PRICE_TOOLS: Anthropic.Tool[] = [
 export type PriceRow = { label: string; before: string | null; after: string | null };
 export type StaffPriceChange =
   | { type: "prices"; target: "order_rate"; id: string; title: string; old_rate: number | null; new_rate: number; rows: PriceRow[] }
+  | { type: "prices"; target: "order_amount"; id: string; title: string; old_amount: number | null; new_amount: number | null; rows: PriceRow[] }
   | { type: "prices"; target: "quote" | "invoice"; id: string; title: string; old_lines: QuoteLine[]; new_lines: QuoteLine[]; rows: PriceRow[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,6 +100,26 @@ export async function runPriceTool(supabase: SupabaseClient, userId: string, nam
     return {
       text: `Card prepared: hourly rate of «${order.title}» € ${order.hourly_rate ?? "—"} → € ${newRate}. Hours already on an invoice keep the old rate. Nothing changes until they tap it.`,
       card: { type: "prices", target: "order_rate", id: order.id, title: order.title, old_rate: order.hourly_rate, new_rate: newRate, rows: [{ label: "€ / uur", before: order.hourly_rate ? euro(Number(order.hourly_rate)) : null, after: euro(newRate) }] },
+    };
+  }
+
+  if (a.target === "order_amount") {
+    const amount = a.amount === null ? null : num(a.amount);
+    if (amount !== null && !(amount > 0 && amount < 10000000)) return { text: "Give the fixed job price in € excl. btw (more than 0), or null to remove it." };
+    const { data: order } = await supabase
+      .from("orders")
+      .select("id, title, fixed_price, fixed_invoice_id")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle<{ id: string; title: string; fixed_price: number | null; fixed_invoice_id: string | null }>();
+    if (!order) return { text: "Order not found." };
+    if (order.fixed_invoice_id) return { text: `The fixed price of «${order.title}» is already on an invoice (/dashboard/invoices/${order.fixed_invoice_id}). Change that invoice instead (target invoice if it is a draft, «Corrigeren» if it was sent).` };
+    const oldAmount = order.fixed_price === null ? null : Number(order.fixed_price);
+    const newAmount = amount === null ? null : Math.round(amount * 100) / 100;
+    if (oldAmount === newAmount) return { text: "Nothing would change." };
+    return {
+      text: `Card prepared: fixed job price of «${order.title}» ${oldAmount === null ? "not set" : euro(oldAmount)} → ${newAmount === null ? "removed" : euro(newAmount)} excl. btw. With a fixed price, «invoice from order» bills this amount once (plus receipts) instead of the hours. Nothing changes until they tap it.`,
+      card: { type: "prices", target: "order_amount", id: order.id, title: order.title, old_amount: oldAmount, new_amount: newAmount, rows: [{ label: "Aanneemsom (excl. btw)", before: oldAmount === null ? null : euro(oldAmount), after: newAmount === null ? null : euro(newAmount) }] },
     };
   }
 
