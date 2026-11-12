@@ -131,3 +131,18 @@ const PRICE: Record<Lang, StaffPriceDict> = {
 };
 
 export const getStaffPriceDict = (lang: Lang): StaffPriceDict => PRICE[lang] ?? PRICE.en;
+
+// A finished job the employee prepares for «Мои работы» from chat photos.
+export type StaffWorkDict = { title: string; before: string; after: string; order: string; add: string; added: string; open: string; note: string; failed: string };
+
+const WORK: Record<Lang, StaffWorkDict> = {
+  ru: { title: "В мои работы", before: "До", after: "После", order: "Заказ", add: "Добавить в мои работы", added: "Добавлено", open: "Открыть", note: "Ничего не сохранится, пока вы не нажмёте «Добавить». Клиенты увидят работу в паспорте и профиле.", failed: "Не получилось добавить. Попробуйте ещё раз." },
+  uk: { title: "У мої роботи", before: "До", after: "Після", order: "Замовлення", add: "Додати в мої роботи", added: "Додано", open: "Відкрити", note: "Нічого не збережеться, поки ви не натиснете «Додати». Клієнти побачать роботу в паспорті й профілі.", failed: "Не вдалося додати. Спробуйте ще раз." },
+  pl: { title: "Do moich prac", before: "Przed", after: "Po", order: "Zlecenie", add: "Dodaj do moich prac", added: "Dodano", open: "Otwórz", note: "Nic nie zostanie zapisane, dopóki nie naciśniesz «Dodaj». Klienci zobaczą pracę w paszporcie i profilu.", failed: "Nie udało się dodać. Spróbuj jeszcze raz." },
+  ro: { title: "La lucrările mele", before: "Înainte", after: "După", order: "Comandă", add: "Adaugă la lucrările mele", added: "Adăugat", open: "Deschide", note: "Nimic nu se salvează până nu apeși «Adaugă». Clienții vor vedea lucrarea în pașaport și profil.", failed: "Nu s-a putut adăuga. Încearcă din nou." },
+  tr: { title: "İşlerime", before: "Önce", after: "Sonra", order: "İş", add: "İşlerime ekle", added: "Eklendi", open: "Aç", note: "«Ekle»ye basana kadar hiçbir şey kaydedilmez. Müşteriler işi pasaportta ve profilde görür.", failed: "Eklenemedi. Tekrar deneyin." },
+  en: { title: "To my work", before: "Before", after: "After", order: "Order", add: "Add to my work", added: "Added", open: "Open", note: "Nothing is saved until you tap «Add». Clients will see the work on your passport and profile.", failed: "Could not add it. Please try again." },
+  nl: { title: "Naar mijn werk", before: "Voor", after: "Na", order: "Klus", add: "Toevoegen aan mijn werk", added: "Toegevoegd", open: "Openen", note: "Er wordt niets opgeslagen tot je op «Toevoegen» tikt. Klanten zien het werk in je paspoort en profiel.", failed: "Toevoegen lukte niet. Probeer het opnieuw." },
+};
+
+export const getStaffWorkDict = (lang: Lang): StaffWorkDict => WORK[lang] ?? WORK.en;
