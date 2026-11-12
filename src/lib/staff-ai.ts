@@ -4,6 +4,7 @@ import { invoiceTotals, type Invoice } from "@/lib/invoices";
 import { LANG_NAMES, isLang, type Lang } from "@/lib/i18n";
 import { dutchToday } from "@/lib/quotes";
 import type { StaffMessage, StaffSettings } from "@/lib/staff";
+import { STAFF_KNOWLEDGE } from "@/lib/staff-knowledge";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
 const MODEL = "claude-opus-5-5";
@@ -60,6 +61,7 @@ function system(s: StaffSettings, lang: Lang, facts: string) {
     "When you write a message for a client or an authority: give the Dutch text first, ready to copy, then one line with its meaning in the worker's language.",
     "When you check a contract: list the risky points (penalties, payment terms longer than 30 days, liability, signs of hidden employment under Wet DBA) and what to ask to change.",
     "Use the facts below when they help. Do not invent numbers or deadlines that are not in a document or in the facts; say what you are unsure about and where to check (for example Mijn Belastingdienst Zakelijk).",
+    "For Dutch rules, rates, deadlines and amounts, rely on the reference «NL ZZP reference» above, not on your general memory. Under an important figure from it, add one short line: «Источник: <site>, проверено <month.year>» in the worker's language (site name only, e.g. belastingdienst.nl). Never present an item marked NOT VERIFIED as fact: say it is not confirmed and where to check. Mention changes from 1 January 2027 when they matter to the question. For a personal tax case, end with a tip to check with the Belastingdienst (BelastingTelefoon 0800-0543) or a bookkeeper.",
     "Write plain text for a phone screen: short paragraphs, simple • bullets, no tables, no headings with #.",
     "",
     "Facts from Haaks:",
@@ -91,7 +93,12 @@ export async function askStaff(input: {
   });
   // The API wants the talk to start with the worker.
   while (messages.length && messages[0].role !== "user") messages.shift();
-  const response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: system(input.settings, input.lang, input.facts), messages });
+  const response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: [
+      // Fixed reference first and cached, so every question pays for it only once in a while.
+      { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}`, cache_control: { type: "ephemeral" } },
+      { type: "text", text: system(input.settings, input.lang, input.facts) },
+    ],
+    messages });
   if (response.stop_reason === "refusal") return null;
   const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
   return text || null;
