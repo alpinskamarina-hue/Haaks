@@ -15,8 +15,9 @@ import { StaffDraftCard } from "@/components/StaffDraftCard";
 import type { StaffDraftDict } from "@/lib/staff-draft-i18n";
 import type { StaffDraft } from "@/lib/staff-tools";
 import { StaffProfileCard } from "@/components/StaffProfileCard";
-import type { StaffProfileDict } from "@/lib/staff-profile-i18n";
-import type { ProfileRow } from "@/lib/staff-profile-view";
+import type { StaffDocDict, StaffProfileDict } from "@/lib/staff-profile-i18n";
+import type { DocView, ProfileRow } from "@/lib/staff-profile-view";
+import { StaffDocCard } from "@/components/StaffDocCard";
 
 export type ShownStaffMessage = {
   id: string;
@@ -32,6 +33,7 @@ export type ShownStaffMessage = {
   actionHref?: string | null;
   profileRows?: ProfileRow[] | null;
   profileDone?: boolean;
+  docView?: DocView | null;
 };
 
 const KIND_STYLE: Record<StaffJob["kind"], string> = {
@@ -154,6 +156,7 @@ export function StaffChat({
   rate,
   draftDict,
   profileDict,
+  docDict,
 }: {
   d: StaffDict;
   f: StaffFeedDict;
@@ -165,6 +168,7 @@ export function StaffChat({
   rate: StaffRateDict;
   draftDict: StaffDraftDict;
   profileDict: StaffProfileDict;
+  docDict: StaffDocDict;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -329,6 +333,7 @@ export function StaffChat({
               <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
               <div className={bubbleStaff}>
                 <Linked text={m.body} />
+                {m.docView && <StaffDocCard messageId={m.id} view={m.docView} done={!!m.profileDone} d={docDict} />}
                 {m.profileRows && <StaffProfileCard messageId={m.id} rows={m.profileRows} done={!!m.profileDone} d={profileDict} />}
                 {m.action && <StaffDraftCard messageId={m.id} draft={m.action} doneHref={m.actionHref ?? null} d={draftDict} />}
                 <button type="button" onClick={() => copy(m)} className="mt-2 block text-xs font-medium text-orange-700">

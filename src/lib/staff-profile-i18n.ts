@@ -86,3 +86,18 @@ const FILL: Record<Lang, StaffFillDict> = {
 export const getStaffProfileDict = (lang: Lang): StaffProfileDict => PROFILE[lang] ?? PROFILE.en;
 export const getStaffFillDict = (lang: Lang): StaffFillDict => FILL[lang] ?? FILL.en;
 export const fillName = (text: string, name: string) => text.replace("{name}", name);
+
+// Step 2: the passport card for a document photo sent in the chat.
+export type StaffDocDict = { title: string; add: string; added: string; open: string; note: string; failed: string; remind: string; remindText: string; fills: string };
+
+const DOC: Record<Lang, StaffDocDict> = {
+  ru: { title: "В ZZP-паспорт", add: "Добавить в паспорт", added: "Добавлено в паспорт", open: "Открыть паспорт", note: "Ничего не добавится, пока вы не нажмёте кнопку.", failed: "Не получилось добавить. Попробуйте ещё раз.", remind: "Напомню за 30 дней до окончания срока.", remindText: "Через 30 дней заканчивается срок: {doc}. Закажите новый документ.", fills: "Заполню в профиле:" },
+  uk: { title: "До ZZP-паспорта", add: "Додати в паспорт", added: "Додано в паспорт", open: "Відкрити паспорт", note: "Нічого не додасться, поки ви не натиснете кнопку.", failed: "Не вдалося додати. Спробуйте ще раз.", remind: "Нагадаю за 30 днів до закінчення терміну.", remindText: "Через 30 днів закінчується термін: {doc}. Замовте новий документ.", fills: "Заповню в профілі:" },
+  pl: { title: "Do paszportu ZZP", add: "Dodaj do paszportu", added: "Dodano do paszportu", open: "Otwórz paszport", note: "Nic nie zostanie dodane, dopóki nie naciśniesz przycisku.", failed: "Nie udało się dodać. Spróbuj jeszcze raz.", remind: "Przypomnę 30 dni przed końcem ważności.", remindText: "Za 30 dni kończy się ważność: {doc}. Zamów nowy dokument.", fills: "Uzupełnię w profilu:" },
+  ro: { title: "În pașaportul ZZP", add: "Adaugă în pașaport", added: "Adăugat în pașaport", open: "Deschide pașaportul", note: "Nimic nu se adaugă până nu apeși butonul.", failed: "Nu s-a putut adăuga. Încearcă din nou.", remind: "Îți amintesc cu 30 de zile înainte de expirare.", remindText: "Peste 30 de zile expiră: {doc}. Comandă un document nou.", fills: "Completez în profil:" },
+  tr: { title: "ZZP pasaportuna", add: "Pasaporta ekle", added: "Pasaporta eklendi", open: "Pasaportu aç", note: "Butona basana kadar hiçbir şey eklenmez.", failed: "Eklenemedi. Tekrar deneyin.", remind: "Süresi bitmeden 30 gün önce hatırlatırım.", remindText: "30 gün sonra süresi bitiyor: {doc}. Yeni belge isteyin.", fills: "Profilde dolduracağım:" },
+  en: { title: "To your ZZP passport", add: "Add to passport", added: "Added to passport", open: "Open passport", note: "Nothing is added until you tap the button.", failed: "Could not add it. Please try again.", remind: "I'll remind you 30 days before it runs out.", remindText: "In 30 days this runs out: {doc}. Order a new one.", fills: "I'll fill in your profile:" },
+  nl: { title: "Naar je ZZP-paspoort", add: "Toevoegen aan paspoort", added: "Toegevoegd aan paspoort", open: "Paspoort openen", note: "Er wordt niets toegevoegd tot je op de knop tikt.", failed: "Toevoegen lukte niet. Probeer het opnieuw.", remind: "Ik herinner je 30 dagen voordat het verloopt.", remindText: "Over 30 dagen verloopt: {doc}. Vraag een nieuw document aan.", fills: "Ik vul in je profiel in:" },
+};
+
+export const getStaffDocDict = (lang: Lang): StaffDocDict => DOC[lang] ?? DOC.en;

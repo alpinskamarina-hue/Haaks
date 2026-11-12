@@ -17,7 +17,10 @@ import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
 import { runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
 import { staffFeedTools } from "@/lib/staff-feed-tools";
 import { cleanProfileChanges, PROFILE_SELECT, signUpDone, toProfileChange, type StaffProfileChange } from "@/lib/staff-profile";
-import { fillName, getStaffFillDict } from "@/lib/staff-profile-i18n";
+import { fillName, getStaffDocDict, getStaffFillDict } from "@/lib/staff-profile-i18n";
+import { toDocChange, type StaffDocChange } from "@/lib/staff-passport";
+import { dutchLocalToDate } from "@/lib/staff-reminders";
+import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { nextInvoiceNumber } from "@/lib/invoices";
 import { nextQuoteNumber } from "@/lib/quote-draft";
@@ -62,7 +65,9 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    let draft: StaffDraft | StaffProfileChange | null = null;
+    let draft: StaffDraft | StaffProfileChange | StaffDocChange | null = null;
+    // Step 2: the photo a passport card refers to (this message's, or the latest one in the talk).
+    const latestPhoto = input.imagePath ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
     const lang = staffLang(settings, appLang);
     let serverClient: ReturnType<typeof createServerAccountClient> | null = null;
     const getServer = () => (serverClient ??= createServerAccountClient());
@@ -81,6 +86,14 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
         return draft
           ? "Profile card prepared. It is shown under your answer with old → new values and a «Save» button. Nothing is saved until they tap it."
           : "Nothing new or usable for the profile (values already there, or not valid: KvK = 8 digits, btw-id NL123456789B01, IBAN). Ask again for what was unclear.";
+      }
+      if (name === "add_to_passport") {
+        if (draft) return "Only one card per answer; a card is already prepared.";
+        if (!latestPhoto) return "There is no photo in this talk. Ask the worker to send a photo of the document here (📎).";
+        draft = toDocChange(args, latestPhoto, profile);
+        return draft
+          ? "Passport card prepared under your answer with an «Add to passport» button; nothing is saved until they tap it. In one line say what you read and what is still missing for a full passport."
+          : "Unknown document type. Ask the worker what document it is.";
       }
       if (name === "find_feed_jobs" || name === "prepare_job_reply") return feedTools.run(name, args);
       return runStaffTool(supabase, user.id, name, args);
@@ -391,4 +404,70 @@ export async function fillWithStaff() {
   await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: fillName(getStaffFillDict(lang).greeting, settings.name) });
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard/staff");
+}
+
+// Step 2: the worker taps «Добавить в паспорт» on a document card. Copies the chat photo into the
+// passport documents, fills empty KvK fields, and sets a reminder 30 days before it runs out.
+export async function saveStaffDocument(messageId: string): Promise<{ ok: true } | { error: "failed" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffDocChange | null; action_status: string | null }>();
+  const c = m?.action;
+  if (!m || !c || c.type !== "document") return { error: "failed" };
+  if (m.action_status === "done") return { ok: true };
+  if (!c.image_path.startsWith(`${user.id}/staff/`)) return { error: "failed" };
+
+  const ext = (c.image_path.split(".").pop() ?? "jpg").toLowerCase();
+  const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+  const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  const { error: copyError } = await supabase.storage.from("documents").copy(c.image_path, path);
+  if (copyError) {
+    console.error("staff: document copy failed", copyError.message);
+    return { error: "failed" };
+  }
+  const { data: p } = await supabase.from("profiles").select("language, company_name, kvk_number, btw_number, staff_lang").eq("id", user.id).single();
+  const lang = isLang(p?.staff_lang) ? p.staff_lang : isLang(p?.language) ? p.language : "en";
+  const { data: doc, error } = await supabase
+    .from("documents")
+    .insert({
+      user_id: user.id,
+      doc_type: c.doc_type,
+      file_path: path,
+      file_name: `${c.doc_type}.${ext}`,
+      mime_type: mime,
+      holder_name: c.holder_name,
+      document_number: c.document_number,
+      issued_on: c.issued_on,
+      expires_on: c.expires_on,
+      insurer: c.insurer,
+      coverage_amount: c.coverage_amount,
+      ai_summary: c.summary || null,
+      ai_warnings: c.warnings ?? [],
+      ai_status: "done",
+    })
+    .select("id")
+    .single();
+  if (error || !doc) {
+    console.error("staff: document insert failed", error?.message);
+    await supabase.storage.from("documents").remove([path]);
+    return { error: "failed" };
+  }
+  // Never overwrite what the worker typed.
+  const fill: Record<string, string> = {};
+  for (const f of ["company_name", "kvk_number", "btw_number"] as const) if (c.profile?.[f] && !p?.[f]) fill[f] = c.profile[f]!;
+  if (Object.keys(fill).length) await supabase.from("profiles").update(fill).eq("id", user.id);
+  if (c.expires_on) {
+    const due = dutchLocalToDate(`${new Date(new Date(c.expires_on).getTime() - 30 * 86400000).toISOString().slice(0, 10)} 09:00`);
+    if (due && due.getTime() > Date.now()) {
+      const kind = getDict(lang)[`docType_${c.doc_type}`];
+      await supabase.from("staff_reminders").insert({ user_id: user.id, text: getStaffDocDict(lang).remindText.replace("{doc}", kind).slice(0, 300), due_at: due.toISOString() });
+    }
+  }
+  await supabase.from("staff_messages").update({ action_status: "done", action_ref: doc.id }).eq("id", m.id).eq("user_id", user.id);
+  revalidatePath("/dashboard", "layout");
+  return { ok: true };
 }
