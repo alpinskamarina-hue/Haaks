@@ -9,6 +9,8 @@ export type Order = {
   status: "open" | "closed";
   created_at: string;
   hourly_rate?: number | null;
+  fixed_price?: number | null;
+  fixed_invoice_id?: string | null;
 };
 
 export type VatLine = { rate: number; base: number | null; vat: number };

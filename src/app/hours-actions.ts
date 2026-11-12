@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createOrderInvoice } from "@/lib/order-invoice";
-import { addDays } from "@/lib/quotes";
+import { addDays, parseAmount } from "@/lib/quotes";
 
 const refresh = (orderId: string) => {
   revalidatePath(`/dashboard/orders/${orderId}`);
@@ -54,6 +54,34 @@ export async function deleteHours(id: string) {
     .select("order_id")
     .maybeSingle();
   if (data) refresh(data.order_id);
+}
+
+// The fixed price for the whole job (aanneemsom); empty removes it. Only while it is not billed yet.
+export async function setOrderFixedPrice(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const orderId = String(formData.get("order_id") ?? "");
+  const raw = String(formData.get("fixed_price") ?? "").trim();
+  // "5.000" is five thousand here, not five.
+  const plain = /^€?\s*\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(raw) ? raw.replace(/\./g, "") : raw;
+  const amount = raw ? parseAmount(plain) : null;
+  if (!orderId || (amount !== null && !(amount > 0 && amount < 10000000))) return;
+  await supabase
+    .from("orders")
+    .update({ fixed_price: amount === null ? null : Math.round(amount * 100) / 100 })
+    .eq("id", orderId)
+    .eq("user_id", user.id)
+    .is("fixed_invoice_id", null);
+  refresh(orderId);
+}
+
+// A draft invoice for a fixed-price order: the job price plus the receipts not on an invoice yet.
+export async function invoiceFixedPrice(orderId: string) {
+  const { supabase, user } = await requireUser();
+  const id = await createOrderInvoice(supabase, user.id, orderId, { receipts: true });
+  if (!id) return;
+  revalidatePath("/dashboard/invoices", "layout");
+  refresh(orderId);
+  redirect(`/dashboard/invoices/${id}`);
 }
 
 // A draft invoice from all hours of this order that are not on an invoice yet (see createOrderInvoice).

@@ -149,7 +149,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </span>
                 ) : s.price !== null ? (
                   <span>
-                    {s.priceKind === "offered" ? p.offered : s.priceKind === "invoiced" ? p.invoiced : p.price}{" "}
+                    {s.priceKind === "offered" ? p.offered : s.priceKind === "invoiced" ? p.invoiced : s.priceKind === "fixed" ? p.mFixed : p.price}{" "}
                     <b className="text-slate-900">{euro(s.price)}</b>
                   </span>
                 ) : null}

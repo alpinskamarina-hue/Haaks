@@ -40,6 +40,7 @@ export function StaffOrderCard({ messageId, card, doneHref, d }: { messageId: st
       {card.kind === "invoice" && (
         <ul className="mt-2 space-y-1">
           {card.client_name && <Row label={d.client} value={card.client_name} />}
+          {card.fixed_price ? <Row label={d.fixed} value={euro(card.fixed_price)} /> : null}
           {card.hours > 0 && <Row label={d.hoursLine} value={`${card.hours} ${d.h} × ${euro(card.rate ?? 0)} = ${euro(card.hours * (card.rate ?? 0))}`} />}
           {card.receipts > 0 && <Row label={`${d.materials} (${card.receipts})`} value={euro(card.materials * (1 + card.markup_percent / 100))} />}
           {card.markup_percent > 0 && <Row label={d.markup} value={`${card.markup_percent}%`} />}

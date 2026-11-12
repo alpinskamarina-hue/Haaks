@@ -23,7 +23,7 @@ import { fillP, getProjectDict } from "@/lib/project-i18n";
 import { loadProjectParts } from "@/lib/project-server";
 import { OrderPhotos, type OrderPhoto } from "@/components/OrderPhotos";
 import { addOrderNote, deleteOrderNote } from "@/app/project-actions";
-import { addHours, deleteHours, invoiceFromHours, sendHoursForApproval, setOrderRate } from "@/app/hours-actions";
+import { addHours, deleteHours, invoiceFixedPrice, invoiceFromHours, sendHoursForApproval, setOrderFixedPrice, setOrderRate } from "@/app/hours-actions";
 import { SendHours } from "@/components/SendHours";
 import { siteUrl } from "@/lib/lang";
 import { groupByWeek, hoursMessage, isoWeek, type HourApproval, type HourRow } from "@/lib/hours";
@@ -217,7 +217,9 @@ export default async function OrderPage({
                       ? p.mOffered
                       : s.priceKind === "invoiced"
                         ? p.mInvoiced
-                        : p.mPrice
+                        : s.priceKind === "fixed"
+                          ? p.mFixed
+                          : p.mPrice
                     : p.mAll}
               </span>
               <span className={`text-lg font-bold ${s.earned !== null ? "text-green-700" : ""}`}>
@@ -321,7 +323,7 @@ export default async function OrderPage({
             {s.price !== null ? (
               <dl className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-slate-600">{s.priceKind === "offered" ? p.mOffered : s.priceKind === "invoiced" ? p.mInvoiced : p.mPrice}</dt>
+                  <dt className="text-slate-600">{s.priceKind === "offered" ? p.mOffered : s.priceKind === "invoiced" ? p.mInvoiced : s.priceKind === "fixed" ? p.mFixed : p.mPrice}</dt>
                   <dd>{euro(s.price)}</dd>
                 </div>
                 {s.receiptCount > 0 && (
@@ -362,6 +364,48 @@ export default async function OrderPage({
               </dl>
             ) : (
               <p className="text-sm text-slate-600">{p.mNoPrice}</p>
+            )}
+          </section>
+          <section id="fixed" className={`${card} scroll-mt-4 space-y-3`}>
+            <h2 className="font-semibold">{p.fxTitle}</h2>
+            {order.fixed_invoice_id ? (
+              <p className="text-sm text-slate-600">
+                {euro(Number(order.fixed_price))} ·{" "}
+                <Link href={`/dashboard/invoices/${order.fixed_invoice_id}`} className="text-orange-700 underline">
+                  {p.fxInvoiced}
+                </Link>
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600">{p.fxHint}</p>
+                <form action={setOrderFixedPrice} className="flex items-end gap-2">
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <label className="text-sm font-medium">
+                    €
+                    <input
+                      name="fixed_price"
+                      inputMode="decimal"
+                      defaultValue={order.fixed_price ?? ""}
+                      className="mt-1 block w-36 rounded-lg border border-slate-300 px-3 py-2 text-base"
+                    />
+                  </label>
+                  <SubmitButton className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-60">{p.fxSave}</SubmitButton>
+                </form>
+                {Number(order.fixed_price) > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form action={invoiceFixedPrice.bind(null, order.id)} className="grow">
+                      <SubmitButton className="w-full rounded-xl bg-orange-500 px-4 py-3 font-semibold text-white disabled:opacity-60">
+                        {fillP(p.fxInvoice, { sum: euro(Number(order.fixed_price)) })}
+                      </SubmitButton>
+                    </form>
+                    <form action={setOrderFixedPrice}>
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <input type="hidden" name="fixed_price" value="" />
+                      <SubmitButton className="rounded-lg px-3 py-2 text-sm text-slate-500 underline disabled:opacity-60">{p.fxClear}</SubmitButton>
+                    </form>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </>
@@ -658,7 +702,9 @@ export default async function OrderPage({
             </div>
           ))}
           {hourList.length > 0 &&
-            (openHours === 0 ? (
+            (Number(order.fixed_price) > 0 ? (
+              <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{p.fxHours}</p>
+            ) : openHours === 0 ? (
               <p className="text-sm text-slate-600">{hw.allInvoiced}</p>
             ) : !rate ? (
               <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{hw.noRate}</p>

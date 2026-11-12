@@ -42,7 +42,7 @@ export const STAFF_ORDER_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "prepare_order_invoice",
-    description: "Prepare a DRAFT invoice from an EXISTING order (find it with find_orders first): all hours not invoiced yet (per week × the order's rate) and, if wanted, the receipts not invoiced yet as materials. Shown as a card with a «Create draft» button; the worker checks and sends the invoice themselves.",
+    description: "Prepare a DRAFT invoice from an EXISTING order (find it with find_orders first): the order's fixed job price (aanneemsom) if it has one and it is not billed yet, otherwise all hours not invoiced yet (per week × the order's rate); and, if wanted, the receipts not invoiced yet as materials. Shown as a card with a «Create draft» button; the worker checks and sends the invoice themselves.",
     input_schema: {
       type: "object",
       properties: {
@@ -64,7 +64,7 @@ export type StaffOrderChange =
   | { type: "order"; kind: "new"; title: string; client_name: string | null; address: string | null; hourly_rate: number | null }
   | { type: "order"; kind: "hours"; order_id: string; order_title: string; entries: { work_date: string; hours: number; note: string | null }[] }
   | { type: "order"; kind: "receipt"; order_id: string; order_title: string; image_path: string }
-  | { type: "order"; kind: "invoice"; order_id: string; order_title: string; client_name: string | null; hours: number; rate: number | null; receipts: number; materials: number; include_receipts: boolean; markup_percent: number };
+  | { type: "order"; kind: "invoice"; order_id: string; order_title: string; client_name: string | null; hours: number; rate: number | null; receipts: number; materials: number; include_receipts: boolean; markup_percent: number; fixed_price?: number | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.replace(/\s+/g, " ").trim().slice(0, max) : null);
@@ -118,25 +118,28 @@ export async function runOrderTool(
     const include = a.include_receipts !== false;
     const markup = Number(a.markup_percent);
     const [{ data: full }, { data: hours }, { data: receipts }] = await Promise.all([
-      supabase.from("orders").select("client_name, hourly_rate").eq("id", order.id).single(),
+      supabase.from("orders").select("client_name, hourly_rate, fixed_price, fixed_invoice_id").eq("id", order.id).single(),
       supabase.from("order_hours").select("hours").eq("order_id", order.id).is("invoice_id", null),
       supabase.from("receipts").select("total_excl_vat").eq("order_id", order.id).is("invoice_id", null),
     ]);
-    const h = (hours ?? []).reduce((s, r) => s + Number(r.hours), 0);
+    const fixedOrder = Number(full?.fixed_price) > 0;
+    const fixed = fixedOrder && !full?.fixed_invoice_id ? Number(full?.fixed_price) : null;
+    // A fixed-price order bills its price, not the hours (those are only for the worker's records).
+    const h = fixedOrder ? 0 : (hours ?? []).reduce((s, r) => s + Number(r.hours), 0);
     const rec = include ? (receipts ?? []).filter((r) => Number(r.total_excl_vat) > 0) : [];
     const rate = Number(full?.hourly_rate) > 0 ? Number(full?.hourly_rate) : null;
-    if (!h && !rec.length) return { text: "This order has no hours or receipts that are not invoiced yet. Ask what to bill, or use prepare_invoice with lines." };
+    if (!fixed && !h && !rec.length) return { text: fixedOrder ? "The fixed job price of this order is already on an invoice and there are no new receipts. Ask what else to bill, or use prepare_invoice with lines." : "This order has no hours or receipts that are not invoiced yet. Ask what to bill, or use prepare_invoice with lines." };
     if (h && !rate) return { text: "The order has no hourly rate. Ask the worker for the rate (€ per hour), then use prepare_order_invoice again after they set it on the order page /dashboard/orders/" + order.id };
     const card: StaffOrderChange = {
       type: "order", kind: "invoice", order_id: order.id, order_title: order.title, client_name: full?.client_name ?? null,
       hours: h, rate, receipts: rec.length, materials: Math.round(rec.reduce((s, r) => s + Number(r.total_excl_vat), 0) * 100) / 100,
-      include_receipts: include, markup_percent: markup > 0 && markup <= 100 ? markup : 0,
+      include_receipts: include, markup_percent: markup > 0 && markup <= 100 ? markup : 0, fixed_price: fixed,
     };
-    return { text: `Invoice card prepared: ${h} hours × € ${rate ?? 0}, ${rec.length} receipts as materials € ${card.materials} excl. btw${card.markup_percent ? ` + ${card.markup_percent}%` : ""}. The worker taps «Create draft», then checks and sends it themselves.`, card };
+    return { text: `Invoice card prepared: ${fixed ? `fixed job price € ${fixed}` : `${h} hours × € ${rate ?? 0}`}, ${rec.length} receipts as materials € ${card.materials} excl. btw${card.markup_percent ? ` + ${card.markup_percent}%` : ""}. The worker taps «Create draft», then checks and sends it themselves.`, card };
   }
   if (name === "order_details") {
     const [{ data: full }, { data: hours }, { data: receipts }, { data: quotes }, { data: invoices }] = await Promise.all([
-      supabase.from("orders").select("title, client_name, address, status, hourly_rate, created_at").eq("id", order.id).single(),
+      supabase.from("orders").select("title, client_name, address, status, hourly_rate, fixed_price, fixed_invoice_id, created_at").eq("id", order.id).single(),
       supabase.from("order_hours").select("hours, invoice_id").eq("order_id", order.id),
       supabase.from("receipts").select("store_name, total_incl_vat, purchased_on").eq("order_id", order.id),
       supabase.from("quotes").select("id, number, status, lines").eq("order_id", order.id),
@@ -147,7 +150,7 @@ export async function runOrderTool(
     const rec = receipts ?? [];
     return {
       text: [
-        `Order «${full?.title}»${full?.client_name ? ` for ${full.client_name}` : ""}${full?.address ? `, ${full.address}` : ""}, ${full?.status}, rate ${full?.hourly_rate ? `€ ${full.hourly_rate}/h` : "not set"} → /dashboard/orders/${order.id}`,
+        `Order «${full?.title}»${full?.client_name ? ` for ${full.client_name}` : ""}${full?.address ? `, ${full.address}` : ""}, ${full?.status}, rate ${full?.hourly_rate ? `€ ${full.hourly_rate}/h` : "not set"}, fixed job price ${full?.fixed_price ? `€ ${full.fixed_price}${full.fixed_invoice_id ? " (already invoiced)" : ""}` : "not set"} → /dashboard/orders/${order.id}`,
         `Hours: ${sum(h)} total, ${sum(h.filter((r) => !r.invoice_id))} not invoiced yet.`,
         `Receipts: ${rec.length}, € ${rec.reduce((s, r) => s + (Number(r.total_incl_vat) || 0), 0).toFixed(2)} incl. btw${rec.length ? ": " + rec.slice(0, 8).map((r) => `${r.store_name ?? "?"} ${r.purchased_on ?? ""} € ${r.total_incl_vat ?? "?"}`).join("; ") : ""}.`,
         `Quotes: ${(quotes ?? []).map((q) => `#${q.number} ${q.status} € ${quoteTotals(q.lines).incl.toFixed(2)} → /dashboard/quotes/${q.id}`).join("; ") || "none"}.`,

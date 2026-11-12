@@ -88,7 +88,7 @@ export default async function StaffPage() {
     docView: m.action?.type === "document" ? docView(m.action, lang, profileDict) : null,
     profileRows: m.action?.type === "profile" ? profileRows(m.action, lang, profileDict) : null,
     profileDone: m.action_status === "done",
-    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "prices" ? (m.action.target === "order_rate" ? "orders" : m.action.target === "quote" ? "quotes" : "invoices") : m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
+    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "prices" ? (m.action.target === "order_rate" || m.action.target === "order_amount" ? "orders" : m.action.target === "quote" ? "quotes" : "invoices") : m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (
