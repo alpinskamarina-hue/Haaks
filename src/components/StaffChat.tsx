@@ -165,6 +165,16 @@ export function StaffChat({
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<Recognition | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // The text box grows with the text (typed or dictated), up to about half the screen.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+    el.scrollTop = el.scrollHeight;
+  }, [text]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -371,12 +381,13 @@ export function StaffChat({
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
           <textarea
+            ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={1}
             maxLength={4000}
             placeholder={listening ? d.listening : d.placeholder}
-            className="max-h-32 min-h-[42px] flex-1 resize-none rounded-2xl bg-slate-100 px-4 py-2.5 text-sm"
+            className="max-h-[45vh] min-h-[42px] flex-1 resize-none overflow-y-auto rounded-2xl bg-slate-100 px-4 py-2.5 text-sm leading-5"
           />
           {text.trim() || photo ? (
             <button type="button" onClick={send} disabled={Boolean(sending)} className="h-11 rounded-full bg-orange-600 px-4 font-semibold text-white disabled:opacity-60">
