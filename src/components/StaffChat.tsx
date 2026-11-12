@@ -193,7 +193,6 @@ export function StaffChat({
   const [checkNote, setCheckNote] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<Recognition | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -206,9 +205,44 @@ export function StaffChat({
     el.scrollTop = el.scrollHeight;
   }, [text]);
 
+  // The page itself scrolls; its true bottom shows the last message right above the input panel
+  // (scrollIntoView on the last line would hide it under the sticky panel).
+  const toBottom = () => window.scrollTo({ top: document.documentElement.scrollHeight });
+  const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+
+  // A new answer is «typed» on screen in about two seconds while the page follows it, so the
+  // worker sees her writing without scrolling. Cards and buttons appear when the text is done.
+  const [typing, setTyping] = useState<{ id: string; shown: number } | null>(null);
+  const waitingFor = useRef<Set<string> | null>(null);
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, sending]);
+    toBottom();
+  }, [messages.length, sending, checking]);
+
+  useEffect(() => {
+    const before = waitingFor.current;
+    if (!before) return;
+    const fresh = [...messages].reverse().find((m) => m.role === "staff" && !m.job && !before.has(m.id));
+    if (!fresh) return;
+    waitingFor.current = null;
+    if (fresh.body.length > 40) setTyping({ id: fresh.id, shown: 0 });
+  }, [messages]);
+
+  const typingLen = typing ? (messages.find((m) => m.id === typing.id)?.body.length ?? 0) : 0;
+  useEffect(() => {
+    if (!typing) return;
+    if (typing.shown >= typingLen) {
+      setTyping(null);
+      requestAnimationFrame(toBottom);
+      return;
+    }
+    const follow = nearBottom();
+    const t = window.setTimeout(() => {
+      setTyping({ id: typing.id, shown: typing.shown + Math.max(3, Math.ceil(typingLen / 70)) });
+      if (follow) requestAnimationFrame(toBottom);
+    }, 30);
+    return () => window.clearTimeout(t);
+  }, [typing, typingLen]);
 
   function pickPhoto(file: File | undefined) {
     if (!file) return;
@@ -257,6 +291,8 @@ export function StaffChat({
     setError(null);
     const shown = { text: preset ?? text.trim(), preview: preset ? null : (photo?.preview ?? null) };
     setSending(shown);
+    setTyping(null);
+    waitingFor.current = new Set(messages.map((m) => m.id));
     let imagePath: string | null = null;
     let mimeType: string | null = null;
     if (photo && !preset) {
@@ -347,6 +383,13 @@ export function StaffChat({
             <div key={m.id} className="flex items-end gap-2">
               <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
               <div className={bubbleStaff}>
+                {typing?.id === m.id ? (
+                  <>
+                    <Linked text={m.body.slice(0, typing.shown)} />
+                    <span className="ml-0.5 inline-block animate-pulse text-orange-600">▍</span>
+                  </>
+                ) : (
+                  <>
                 <Linked text={m.body} />
                 {m.tips && m.tips.length > 0 && (
                   <div className="mt-3 flex flex-col gap-2">
@@ -366,6 +409,8 @@ export function StaffChat({
                   📋 {copied === m.id ? d.copied : d.copy}
                 </button>
                 <StaffRate messageId={m.id} initial={m.rating ?? null} d={rate} />
+                  </>
+                )}
               </div>
             </div>
           ),
@@ -390,7 +435,6 @@ export function StaffChat({
         )}
         {checkNote && !checking && <p className="text-center text-xs text-slate-500">{checkNote}</p>}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <div ref={endRef} />
       </div>
 
       <div className="sticky bottom-[calc(58px+env(safe-area-inset-bottom))] z-10 border-t bg-white p-3 lg:bottom-0">
