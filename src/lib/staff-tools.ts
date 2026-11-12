@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { invoiceTotals, VAT_MODES, type Invoice, type VatMode } from "@/lib/invoices";
 import { cleanLines, dutchToday, quoteTotals, type QuoteLine } from "@/lib/quotes";
+import { dutchLocalToDate, dutchTime } from "@/lib/staff-reminders";
 
 // Step 5a: the digital employee looks things up in the worker's own invoices, quotes and orders.
 // Step 5b: it prepares a draft invoice or quote as a card; only the worker's tap creates it.
@@ -101,6 +102,35 @@ export const STAFF_DRAFT_TOOLS: Anthropic.Tool[] = [
   },
 ];
 
+// Step 5c: reminders. Setting one only reminds the worker themselves, so it needs no extra tap.
+export const STAFF_REMINDER_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "set_reminder",
+    description:
+      "Set a reminder for the worker («напомни в пятницу в 9 позвонить Jansen»). It arrives as a phone notification, in Telegram if connected, and in this chat, roughly at that time (up to 30 minutes earlier or later), between 07:00 and 23:00 Dutch time.",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "What to remind, short, in the worker's language, e.g. «Позвонить Jansen про плитку»" },
+        when: { type: "string", description: "Dutch local date and time, YYYY-MM-DDTHH:MM, in the future. If no time is given, use 09:00." },
+      },
+      required: ["text", "when"],
+    },
+  },
+  {
+    name: "list_reminders",
+    description: "List the worker's upcoming reminders (with their ids).",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "cancel_reminder",
+    description: "Cancel one upcoming reminder by its id (get ids with list_reminders).",
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+  },
+];
+
+export const REMINDER_MAX = 50;
+
 export type StaffDraft = {
   type: "invoice" | "quote";
   title: string | null;
@@ -196,6 +226,33 @@ export async function runStaffTool(supabase: SupabaseClient, userId: string, nam
       `${rows.length} order(s):`,
       ...rows.map((o) => `- ${o.title} for ${o.client_name ?? "?"}${o.address ? `, ${o.address}` : ""}, ${o.status}, since ${String(o.created_at).slice(0, 10)} → /dashboard/orders/${o.id}`),
     ].join("\n");
+  }
+
+  if (name === "set_reminder") {
+    const r = (raw ?? {}) as { text?: string; when?: string };
+    const text = (r.text ?? "").trim().slice(0, 300);
+    const due = dutchLocalToDate(r.when ?? "");
+    if (!text || !due) return "Could not read the reminder text or time. Ask the worker again.";
+    if (due.getTime() < Date.now() - 60_000) return "That time is in the past. Ask the worker for a future time.";
+    if (due.getTime() > Date.now() + 366 * 24 * 3600 * 1000) return "Reminders can be at most a year ahead.";
+    const { count } = await supabase.from("staff_reminders").select("id", { count: "exact", head: true }).eq("user_id", userId).is("sent_at", null);
+    if ((count ?? 0) >= REMINDER_MAX) return `The worker already has ${REMINDER_MAX} upcoming reminders; ask them to cancel some first.`;
+    const { error } = await supabase.from("staff_reminders").insert({ user_id: userId, text, due_at: due.toISOString() });
+    if (error) return "Saving the reminder failed.";
+    return `Reminder saved for ${dutchTime(due.toISOString())} (Dutch time): «${text}». Confirm the day and time to the worker; they can see and delete reminders at /dashboard/staff/settings#reminders.`;
+  }
+
+  if (name === "list_reminders") {
+    const { data } = await supabase.from("staff_reminders").select("id, text, due_at").eq("user_id", userId).is("sent_at", null).order("due_at").limit(REMINDER_MAX);
+    if (!data?.length) return "No upcoming reminders.";
+    return data.map((r) => `- ${dutchTime(r.due_at as string)} «${r.text}» (id ${r.id})`).join("\n");
+  }
+
+  if (name === "cancel_reminder") {
+    const id = String(((raw ?? {}) as { id?: string }).id ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return "Unknown reminder id.";
+    const { data } = await supabase.from("staff_reminders").delete().eq("id", id).eq("user_id", userId).select("id");
+    return data?.length ? "Reminder cancelled." : "Reminder not found.";
   }
 
   return "Unknown tool.";
