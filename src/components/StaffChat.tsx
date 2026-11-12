@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendStaffMessage, staffSendJob, staffSkipJob } from "@/app/staff-actions";
 import { createClient } from "@/lib/supabase/client";
+import { StaffWorkCard, type StaffWorkView } from "@/components/StaffWorkCard";
+import type { StaffWorkDict } from "@/lib/staff-profile-i18n";
 import { prepareUpload } from "@/lib/prepare-upload";
 import type { StaffJob } from "@/lib/staff-feed";
 import type { StaffDict, StaffFeedDict } from "@/lib/staff-i18n";
@@ -29,6 +31,8 @@ export type ShownStaffMessage = {
   role: "user" | "staff";
   body: string;
   imageUrl: string | null;
+  imageUrls?: string[];
+  workCard?: StaffWorkView | null;
   job?: StaffJob | null;
   draft?: string | null;
   jobStatus?: "new" | "sent" | "skipped" | null;
@@ -151,6 +155,8 @@ const SPEECH: Record<string, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", 
 
 type Recognition = { lang: string; interimResults: boolean; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: (e: { error: string }) => void; start: () => void; stop: () => void };
 
+const MAX_PHOTOS = 6;
+
 const fillName = (text: string, name: string) => text.replace("{name}", name);
 
 export function StaffChat({
@@ -167,6 +173,7 @@ export function StaffChat({
   docDict,
   orderDict,
   priceDict,
+  workDict,
 }: {
   d: StaffDict;
   f: StaffFeedDict;
@@ -181,11 +188,12 @@ export function StaffChat({
   docDict: StaffDocDict;
   orderDict: StaffOrderDict;
   priceDict: StaffPriceDict;
+  workDict: StaffWorkDict;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
-  const [sending, setSending] = useState<{ text: string; preview: string | null } | null>(null);
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [sending, setSending] = useState<{ text: string; previews: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -242,10 +250,14 @@ export function StaffChat({
     return () => window.clearTimeout(t);
   }, [typing, typingLen]);
 
-  function pickPhoto(file: File | undefined) {
-    if (!file) return;
-    setPhoto({ file, preview: URL.createObjectURL(file) });
-    if (!text.trim()) setText(d.prompts.letter);
+  // Up to 6 photos per message (e.g. a finished job for «Мои работы»).
+  function pickPhotos(list: FileList | null) {
+    const files = Array.from(list ?? []).filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    const next = [...photos, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, MAX_PHOTOS);
+    setPhotos(next);
+    if (!text.trim() && next.length === 1) setText(d.prompts.letter);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   function mic() {
@@ -285,15 +297,14 @@ export function StaffChat({
 
   // preset: a tip button asks the employee with a ready text (no photo).
   async function send(preset?: string) {
-    if (sending || (!preset && !text.trim() && !photo)) return;
+    if (sending || (!preset && !text.trim() && !photos.length)) return;
     setError(null);
-    const shown = { text: preset ?? text.trim(), preview: preset ? null : (photo?.preview ?? null) };
+    const shown = { text: preset ?? text.trim(), previews: preset ? [] : photos.map((p) => p.preview) };
     setSending(shown);
     setTyping(null);
     waitingFor.current = new Set(messages.map((m) => m.id));
-    let imagePath: string | null = null;
-    let mimeType: string | null = null;
-    if (photo && !preset) {
+    const images: { path: string; mimeType: string }[] = [];
+    for (const photo of preset ? [] : photos) {
       const prepared = await prepareUpload(photo.file);
       if ("error" in prepared || prepared.mimeType === "application/pdf") {
         setSending(null);
@@ -305,14 +316,13 @@ export function StaffChat({
         setSending(null);
         return setError(d.errors.photo);
       }
-      imagePath = path;
-      mimeType = prepared.mimeType;
+      images.push({ path, mimeType: prepared.mimeType });
     }
     if (!preset) {
       setText("");
-      setPhoto(null);
+      setPhotos([]);
     }
-    const res = await sendStaffMessage({ text: shown.text, imagePath, mimeType });
+    const res = await sendStaffMessage({ text: shown.text, images });
     if ("error" in res) setError(d.errors[res.error]);
     startTransition(() => {
       router.refresh();
@@ -362,7 +372,15 @@ export function StaffChat({
             </div>
           ) : m.role === "user" ? (
             <div key={m.id} className={bubbleUser}>
-              {m.imageUrl && <img src={m.imageUrl} alt="" className="mb-2 max-h-48 rounded-xl" />}
+              {m.imageUrls && m.imageUrls.length > 1 ? (
+                <div className="mb-2 grid grid-cols-3 gap-1">
+                  {m.imageUrls.map((u) => (
+                    <img key={u} src={u} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                  ))}
+                </div>
+              ) : (
+                m.imageUrl && <img src={m.imageUrl} alt="" className="mb-2 max-h-48 rounded-xl" />
+              )}
               {m.body}
             </div>
           ) : (
@@ -386,6 +404,7 @@ export function StaffChat({
                     ))}
                   </div>
                 )}
+                {m.workCard && <StaffWorkCard messageId={m.id} view={m.workCard} d={workDict} />}
                 {m.priceCard && <StaffPriceCard messageId={m.id} card={m.priceCard} doneHref={m.actionHref ?? null} d={priceDict} />}
                 {m.orderCard && <StaffOrderCard messageId={m.id} card={m.orderCard} doneHref={m.actionHref ?? null} d={orderDict} />}
                 {m.docView && <StaffDocCard messageId={m.id} view={m.docView} done={!!m.profileDone} d={docDict} />}
@@ -404,7 +423,15 @@ export function StaffChat({
         {sending && (
           <>
             <div className={bubbleUser}>
-              {sending.preview && <img src={sending.preview} alt="" className="mb-2 max-h-48 rounded-xl" />}
+              {sending.previews.length > 1 ? (
+                <div className="mb-2 grid grid-cols-3 gap-1">
+                  {sending.previews.map((u) => (
+                    <img key={u} src={u} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                  ))}
+                </div>
+              ) : (
+                sending.previews[0] && <img src={sending.previews[0]} alt="" className="mb-2 max-h-48 rounded-xl" />
+              )}
               {sending.text}
             </div>
             <div className="flex items-end gap-2">
@@ -429,19 +456,33 @@ export function StaffChat({
             ))}
           </div>
         )}
-        {photo && (
-          <div className="mb-2 flex items-center gap-2">
-            <img src={photo.preview} alt="" className="h-14 w-14 rounded-lg object-cover" />
-            <button type="button" onClick={() => setPhoto(null)} className="text-sm text-slate-500">
-              ✕
-            </button>
+        {photos.length > 0 && (
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            {photos.map((p, i) => (
+              <div key={p.preview} className="relative">
+                <img src={p.preview} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                  aria-label="✕"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px] text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {photos.length < MAX_PHOTOS && (
+              <button type="button" onClick={() => fileRef.current?.click()} className="flex h-14 w-14 items-center justify-center rounded-lg border-2 border-dashed border-slate-300 text-xl text-slate-400">
+                +
+              </button>
+            )}
           </div>
         )}
         <div className="flex items-end gap-2">
           <button type="button" onClick={() => fileRef.current?.click()} aria-label={d.photo} className="pb-2 text-2xl">
             📷
           </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => pickPhotos(e.target.files)} />
           <textarea
             ref={inputRef}
             value={text}
@@ -451,7 +492,7 @@ export function StaffChat({
             placeholder={listening ? d.listening : d.placeholder}
             className="max-h-[45vh] min-h-[42px] flex-1 resize-none overflow-y-auto rounded-2xl bg-slate-100 px-4 py-2.5 text-sm leading-5"
           />
-          {text.trim() || photo ? (
+          {text.trim() || photos.length ? (
             <button type="button" onClick={() => send()} disabled={Boolean(sending)} className="h-11 rounded-full bg-orange-600 px-4 font-semibold text-white disabled:opacity-60">
               ➤
             </button>

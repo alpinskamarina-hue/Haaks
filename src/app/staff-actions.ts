@@ -23,6 +23,8 @@ import { cleanEntries, runOrderTool, type StaffOrderChange } from "@/lib/staff-o
 import { addReceipt } from "./orders-actions";
 import { createOrderInvoice } from "@/lib/order-invoice";
 import { runPriceTool, type StaffPriceChange } from "@/lib/staff-prices";
+import { runWorkTool, type StaffWorkChange } from "@/lib/staff-works";
+import { cleanWorkInput } from "@/lib/works";
 import { dutchLocalToDate } from "@/lib/staff-reminders";
 import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
@@ -37,11 +39,13 @@ export type StaffReply = { ok: true } | { error: "plan" | "off" | "limit" | "fai
 const IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"];
 
 // One message from the worker to their digital employee, and the employee's answer.
-export async function sendStaffMessage(input: { text: string; imagePath: string | null; mimeType: string | null }): Promise<StaffReply> {
+export async function sendStaffMessage(input: { text: string; images: { path: string; mimeType: string }[] }): Promise<StaffReply> {
   const { supabase, user } = await requireUser();
   const text = input.text.trim().slice(0, 4000);
-  if (!text && !input.imagePath) return { error: "failed" };
-  if (input.imagePath && (!input.imagePath.startsWith(`${user.id}/staff/`) || !IMAGE_MIME.includes(input.mimeType ?? ""))) return { error: "photo" };
+  const images = (Array.isArray(input.images) ? input.images : []).slice(0, 6);
+  if (!text && !images.length) return { error: "failed" };
+  if (images.some((i) => typeof i?.path !== "string" || !i.path.startsWith(`${user.id}/staff/`) || i.path.includes("..") || !IMAGE_MIME.includes(i.mimeType))) return { error: "photo" };
+  const imagePaths = images.map((i) => i.path);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -52,31 +56,37 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
   if (!claudeEnabled()) return { error: "off" };
 
   if (!(await aiAllowed(supabase))) return { error: "limit" };
-  const { error: insertError } = await supabase.from("staff_messages").insert({ user_id: user.id, role: "user", body: text, image_path: input.imagePath });
+  const { error: insertError } = await supabase.from("staff_messages").insert({ user_id: user.id, role: "user", body: text, image_path: imagePaths[0] ?? null, image_paths: imagePaths });
   if (insertError) return { error: "failed" };
 
   try {
     const settings = staffOf(profile);
     const appLang = isLang(profile.language) ? profile.language : "en";
-    const [{ data: history }, facts, memory, image] = await Promise.all([
-      supabase.from("staff_messages").select("id, role, body, image_path, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20).returns<StaffMessage[]>(),
+    const [{ data: history }, facts, memory, downloaded] = await Promise.all([
+      supabase.from("staff_messages").select("id, role, body, image_path, image_paths, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20).returns<StaffMessage[]>(),
       staffFacts(supabase, user.id, profile),
       loadMemory(supabase, user.id),
-      input.imagePath
-        ? supabase.storage
+      Promise.all(
+        images.map((img) =>
+          supabase.storage
             .from("documents")
-            .download(input.imagePath)
-            .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
-        : Promise.resolve(null),
+            .download(img.path)
+            .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: img.mimeType } : null)),
+        ),
+      ),
     ]);
-    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffPriceChange | null = null;
+    const sent = downloaded.filter((x): x is { base64: string; mimeType: string } => !!x);
+    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffPriceChange | StaffWorkChange | null = null;
     // Step 2: the photo a passport card refers to (this message's, or the latest one in the talk).
-    const latestPhoto = input.imagePath ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
+    const latestPhoto = imagePaths[0] ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
+    // All photos of this message, or of the latest message with photos (for «Мои работы»).
+    const lastWithPhotos = (history ?? []).find((m) => m.role === "user" && (m.image_paths?.length || m.image_path));
+    const latestPhotos = imagePaths.length ? imagePaths : lastWithPhotos ? (lastWithPhotos.image_paths?.length ? lastWithPhotos.image_paths : [lastWithPhotos.image_path as string]) : [];
     const lang = staffLang(settings, appLang);
     let serverClient: ReturnType<typeof createServerAccountClient> | null = null;
     const getServer = () => (serverClient ??= createServerAccountClient());
     const feedTools = staffFeedTools(getServer, user.id, lang, await siteUrl());
-    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image, runTool: async (name, args) => {
+    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), images: sent, runTool: async (name, args) => {
       if (name === "prepare_invoice" || name === "prepare_quote") {
         if (draft) return "Only one draft per answer; a draft card is already prepared.";
         draft = toStaffDraft(name, args);
@@ -108,6 +118,12 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
       if (name === "get_lines" || name === "prepare_price_change") {
         if (name === "prepare_price_change" && draft) return "Only one card per answer; a card is already prepared.";
         const res = await runPriceTool(supabase, user.id, name, args);
+        if (res.card) draft = res.card;
+        return res.text;
+      }
+      if (name === "add_work") {
+        if (draft) return "Only one card per answer; a card is already prepared.";
+        const res = await runWorkTool(supabase, user.id, args, latestPhotos);
         if (res.card) draft = res.card;
         return res.text;
       }
@@ -159,8 +175,8 @@ export async function saveStaffSettings(formData: FormData) {
 
 export async function clearStaffChat() {
   const { supabase, user } = await requireUser();
-  const { data } = await supabase.from("staff_messages").select("image_path").eq("user_id", user.id).not("image_path", "is", null);
-  const paths = (data ?? []).flatMap((r) => (r.image_path ? [r.image_path as string] : []));
+  const { data } = await supabase.from("staff_messages").select("image_path, image_paths").eq("user_id", user.id).not("image_path", "is", null);
+  const paths = [...new Set((data ?? []).flatMap((r) => [...((r.image_paths as string[] | null) ?? []), ...(r.image_path ? [r.image_path as string] : [])]))];
   if (paths.length) await supabase.storage.from("documents").remove(paths);
   await supabase.from("staff_messages").delete().eq("user_id", user.id);
   revalidatePath("/dashboard/staff");
@@ -602,4 +618,46 @@ export async function saveStaffPrices(messageId: string): Promise<{ ok: true; hr
   await supabase.from("staff_messages").update({ action_status: "done", action_ref: c.id }).eq("id", m.id).eq("user_id", user.id);
   revalidatePath("/dashboard", "layout");
   return { ok: true, href };
+}
+
+// The worker taps «Добавить в мои работы» on a work card: the chat photos are copied to
+// <uid>/work/ and the work is saved like one made on the «Мои работы» page.
+export async function saveStaffWork(messageId: string): Promise<{ ok: true; href: string } | { error: "failed" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status, action_ref")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffWorkChange | null; action_status: string | null; action_ref: string | null }>();
+  const c = m?.action;
+  if (!m || !c || c.type !== "work") return { error: "failed" };
+  if (m.action_status === "done" && m.action_ref) return { ok: true, href: `/dashboard/works/${m.action_ref}` };
+  const own = (p: string) => p.startsWith(`${user.id}/staff/`) && !p.includes("..");
+  if (![...c.before, ...c.after].every(own) || !c.after.length) return { error: "failed" };
+  const copied: string[] = [];
+  const copy = async (p: string) => {
+    const ext = (p.split(".").pop() ?? "jpg").toLowerCase();
+    const to = `${user.id}/work/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("documents").copy(p, to);
+    if (error) throw new Error(error.message);
+    copied.push(to);
+    return to;
+  };
+  try {
+    const before = [];
+    for (const p of c.before) before.push(await copy(p));
+    const after = [];
+    for (const p of c.after) after.push(await copy(p));
+    const row = cleanWorkInput({ title: c.title, description: c.description ?? "", trade: c.trade ?? "", city: c.city ?? "", month: c.month ?? "", photos_before: before, photos_after: after }, user.id);
+    const { data, error } = await supabase.from("works").insert({ ...row, user_id: user.id, order_id: c.order_id }).select("id").single<{ id: string }>();
+    if (error || !data) throw new Error(error?.message ?? "insert failed");
+    await supabase.from("staff_messages").update({ action_status: "done", action_ref: data.id }).eq("id", m.id).eq("user_id", user.id);
+    revalidatePath("/dashboard", "layout");
+    return { ok: true, href: `/dashboard/works/${data.id}` };
+  } catch (err) {
+    console.error("staff: work failed", err instanceof Error ? err.message : err);
+    if (copied.length) await supabase.storage.from("documents").remove(copied);
+    return { error: "failed" };
+  }
 }

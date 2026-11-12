@@ -5,7 +5,9 @@ import { StaffChat, type ShownStaffMessage } from "@/components/StaffChat";
 import { getStaffDraftDict } from "@/lib/staff-draft-i18n";
 import type { StaffDraft } from "@/lib/staff-tools";
 import type { StaffProfileChange } from "@/lib/staff-profile";
-import { getStaffDocDict, getStaffOrderDict, getStaffPriceDict, getStaffProfileDict } from "@/lib/staff-profile-i18n";
+import { getStaffDocDict, getStaffOrderDict, getStaffPriceDict, getStaffProfileDict, getStaffWorkDict } from "@/lib/staff-profile-i18n";
+import type { StaffWorkChange } from "@/lib/staff-works";
+import { monthLabel } from "@/lib/works";
 import type { StaffOrderChange } from "@/lib/staff-orders";
 import type { StaffTips } from "@/lib/staff-tips";
 import type { StaffPriceChange } from "@/lib/staff-prices";
@@ -56,15 +58,15 @@ export default async function StaffPage() {
 
   const { data } = await supabase
     .from("staff_messages")
-    .select("id, role, body, image_path, created_at, feed_item_id, draft, job, job_status, action, action_status, action_ref")
+    .select("id, role, body, image_path, image_paths, created_at, feed_item_id, draft, job, job_status, action, action_status, action_ref")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(60)
-    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffTips | StaffPriceChange | null; action_status: string | null; action_ref: string | null })[]>();
+    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffTips | StaffPriceChange | StaffWorkChange | null; action_status: string | null; action_ref: string | null })[]>();
   const rows = (data ?? []).reverse();
   const answerIds = rows.filter((m) => m.role === "staff" && !m.job).map((m) => m.id);
   const [urls, { data: ratings }] = await Promise.all([
-    signedUrls(supabase, rows.flatMap((m) => (m.image_path ? [m.image_path] : []))),
+    signedUrls(supabase, rows.flatMap((m) => [...(m.image_path ? [m.image_path] : []), ...(m.image_paths ?? []), ...(m.action?.type === "work" ? [...m.action.before, ...m.action.after] : [])])),
     answerIds.length
       ? supabase.from("staff_feedback").select("message_id, rating").in("message_id", answerIds).returns<{ message_id: string; rating: 1 | -1 }[]>()
       : Promise.resolve({ data: [] as { message_id: string; rating: 1 | -1 }[] }),
@@ -76,6 +78,19 @@ export default async function StaffPage() {
     role: m.role,
     body: m.body,
     imageUrl: m.image_path ? (urls.get(m.image_path) ?? null) : null,
+    imageUrls: (m.image_paths ?? []).flatMap((p) => urls.get(p) ?? []),
+    workCard:
+      m.action?.type === "work"
+        ? {
+            title: m.action.title,
+            description: m.action.description,
+            meta: [m.action.city, m.action.month ? monthLabel(`${m.action.month}-01`, lang) : ""].filter(Boolean).join(" · "),
+            orderTitle: m.action.order_title,
+            before: m.action.before.flatMap((p) => urls.get(p) ?? []),
+            after: m.action.after.flatMap((p) => urls.get(p) ?? []),
+            doneHref: m.action_status === "done" && m.action_ref ? `/dashboard/works/${m.action_ref}` : null,
+          }
+        : null,
     job: m.job,
     draft: m.draft,
     jobStatus: m.job_status,
@@ -88,12 +103,12 @@ export default async function StaffPage() {
     docView: m.action?.type === "document" ? docView(m.action, lang, profileDict) : null,
     profileRows: m.action?.type === "profile" ? profileRows(m.action, lang, profileDict) : null,
     profileDone: m.action_status === "done",
-    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "prices" ? (m.action.target === "order_rate" || m.action.target === "order_amount" ? "orders" : m.action.target === "quote" ? "quotes" : "invoices") : m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
+    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" && m.action.type !== "work" ? `/dashboard/${m.action.type === "prices" ? (m.action.target === "order_rate" || m.action.target === "order_amount" ? "orders" : m.action.target === "quote" ? "quotes" : "invoices") : m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (
     <main className="mx-auto max-w-2xl">
-      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} profileDict={profileDict} docDict={getStaffDocDict(lang)} orderDict={getStaffOrderDict(lang)} priceDict={getStaffPriceDict(lang)} />
+      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} profileDict={profileDict} docDict={getStaffDocDict(lang)} orderDict={getStaffOrderDict(lang)} priceDict={getStaffPriceDict(lang)} workDict={getStaffWorkDict(lang)} />
       {messages.length > 0 && (
         <form action={clearStaffChat} className="py-4 text-center">
           <ConfirmButton message={d.clearConfirm} className="text-sm text-slate-500 underline">

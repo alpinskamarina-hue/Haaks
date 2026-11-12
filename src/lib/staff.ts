@@ -19,4 +19,4 @@ export function staffOf(p: ProfileStaff): StaffSettings {
   return { face, name: p.staff_name?.trim() || DEFAULT_NAMES[face], formal: Boolean(p.staff_formal), style, lang: p.staff_lang ?? null };
 }
 
-export type StaffMessage = { id: string; role: "user" | "staff"; body: string; image_path: string | null; created_at: string };
+export type StaffMessage = { id: string; role: "user" | "staff"; body: string; image_path: string | null; image_paths?: string[] | null; created_at: string };
