@@ -14,6 +14,7 @@ import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
 import { runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
+import { staffFeedTools } from "@/lib/staff-feed-tools";
 import { nextInvoiceNumber } from "@/lib/invoices";
 import { nextQuoteNumber } from "@/lib/quote-draft";
 import { addDays, cleanLines, DEFAULT_TERMS_NL } from "@/lib/quotes";
@@ -58,6 +59,10 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
         : Promise.resolve(null),
     ]);
     let draft: StaffDraft | null = null;
+    const lang = staffLang(settings, appLang);
+    let serverClient: ReturnType<typeof createServerAccountClient> | null = null;
+    const getServer = () => (serverClient ??= createServerAccountClient());
+    const feedTools = staffFeedTools(getServer, user.id, lang, await siteUrl());
     const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image, runTool: async (name, args) => {
       if (name === "prepare_invoice" || name === "prepare_quote") {
         if (draft) return "Only one draft per answer; a draft card is already prepared.";
@@ -66,10 +71,17 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
           ? "Draft prepared. It is shown to the worker as a card with a «Create» button under your answer. Nothing is created until they tap it."
           : "The draft had no usable lines (description, quantity and price). Ask the worker for the missing details.";
       }
+      if (name === "find_feed_jobs" || name === "prepare_job_reply") return feedTools.run(name, args);
       return runStaffTool(supabase, user.id, name, args);
     } });
     if (!answer) return { error: "failed" };
     await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: answer.slice(0, 8000), action: draft });
+    // Step 5d: reply cards for feed jobs go under the answer, with the usual «Отправить» button.
+    for (const c of feedTools.cards) {
+      const { error: cardError } = await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: c.body, draft: c.draft, feed_item_id: c.feed_item_id, job: c.job, job_status: "new" });
+      if (cardError) console.error("staff: job card failed", cardError.message);
+      else await (await getServer()).from("feed_notifications").insert({ user_id: user.id, item_id: c.feed_item_id, channel: "staff" });
+    }
     // Long memory: pick lasting facts from this talk after the answer is shown.
     after(async () => {
       try {
