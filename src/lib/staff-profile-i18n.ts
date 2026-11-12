@@ -116,3 +116,18 @@ const ORDER: Record<Lang, StaffOrderDict> = {
 };
 
 export const getStaffOrderDict = (lang: Lang): StaffOrderDict => ORDER[lang] ?? ORDER.en;
+
+// Price changes the employee prepares (order rate, quote or draft invoice lines).
+export type StaffPriceDict = { title: string; change: string; changed: string; open: string; removed: string; added: string; note: string; failed: string; stale: string };
+
+const PRICE: Record<Lang, StaffPriceDict> = {
+  ru: { title: "Изменить цены", change: "Изменить", changed: "Изменено", open: "Открыть", removed: "удалить", added: "новая строка", note: "Ничего не изменится, пока вы не нажмёте «Изменить».", failed: "Не получилось изменить. Попробуйте ещё раз.", stale: "Документ уже изменился или отправлен. Попросите сотрудника подготовить заново." },
+  uk: { title: "Змінити ціни", change: "Змінити", changed: "Змінено", open: "Відкрити", removed: "видалити", added: "новий рядок", note: "Нічого не зміниться, поки ви не натиснете «Змінити».", failed: "Не вдалося змінити. Спробуйте ще раз.", stale: "Документ уже змінився або надісланий. Попросіть співробітника підготувати знову." },
+  pl: { title: "Zmień ceny", change: "Zmień", changed: "Zmieniono", open: "Otwórz", removed: "usuń", added: "nowa pozycja", note: "Nic się nie zmieni, dopóki nie naciśniesz «Zmień».", failed: "Nie udało się zmienić. Spróbuj jeszcze raz.", stale: "Dokument już się zmienił lub został wysłany. Poproś asystenta o nową wersję." },
+  ro: { title: "Schimbă prețurile", change: "Schimbă", changed: "Schimbat", open: "Deschide", removed: "șterge", added: "rând nou", note: "Nimic nu se schimbă până nu apeși «Schimbă».", failed: "Nu s-a putut schimba. Încearcă din nou.", stale: "Documentul s-a schimbat deja sau a fost trimis. Cere asistentului să pregătească din nou." },
+  tr: { title: "Fiyatları değiştir", change: "Değiştir", changed: "Değiştirildi", open: "Aç", removed: "sil", added: "yeni satır", note: "«Değiştir»e basana kadar hiçbir şey değişmez.", failed: "Değiştirilemedi. Tekrar deneyin.", stale: "Belge zaten değişti veya gönderildi. Asistandan yeniden hazırlamasını isteyin." },
+  en: { title: "Change prices", change: "Change", changed: "Changed", open: "Open", removed: "remove", added: "new line", note: "Nothing changes until you tap «Change».", failed: "Could not change it. Please try again.", stale: "The document has changed or was sent already. Ask the assistant to prepare it again." },
+  nl: { title: "Prijzen wijzigen", change: "Wijzigen", changed: "Gewijzigd", open: "Openen", removed: "verwijderen", added: "nieuwe regel", note: "Er verandert niets tot je op «Wijzigen» tikt.", failed: "Wijzigen lukte niet. Probeer het opnieuw.", stale: "Het document is al gewijzigd of verstuurd. Vraag de assistent het opnieuw klaar te zetten." },
+};
+
+export const getStaffPriceDict = (lang: Lang): StaffPriceDict => PRICE[lang] ?? PRICE.en;

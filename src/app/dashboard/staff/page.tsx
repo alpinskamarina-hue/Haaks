@@ -5,9 +5,10 @@ import { StaffChat, type ShownStaffMessage } from "@/components/StaffChat";
 import { getStaffDraftDict } from "@/lib/staff-draft-i18n";
 import type { StaffDraft } from "@/lib/staff-tools";
 import type { StaffProfileChange } from "@/lib/staff-profile";
-import { getStaffDocDict, getStaffOrderDict, getStaffProfileDict } from "@/lib/staff-profile-i18n";
+import { getStaffDocDict, getStaffOrderDict, getStaffPriceDict, getStaffProfileDict } from "@/lib/staff-profile-i18n";
 import type { StaffOrderChange } from "@/lib/staff-orders";
 import type { StaffTips } from "@/lib/staff-tips";
+import type { StaffPriceChange } from "@/lib/staff-prices";
 import { docView, profileRows } from "@/lib/staff-profile-view";
 import type { StaffDocChange } from "@/lib/staff-passport";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -59,7 +60,7 @@ export default async function StaffPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(60)
-    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffTips | null; action_status: string | null; action_ref: string | null })[]>();
+    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffTips | StaffPriceChange | null; action_status: string | null; action_ref: string | null })[]>();
   const rows = (data ?? []).reverse();
   const answerIds = rows.filter((m) => m.role === "staff" && !m.job).map((m) => m.id);
   const [urls, { data: ratings }] = await Promise.all([
@@ -82,16 +83,17 @@ export default async function StaffPage() {
     rating: ratingOf.get(m.id) ?? null,
     action: m.action?.type === "invoice" || m.action?.type === "quote" ? m.action : null,
     tips: m.action?.type === "tips" ? m.action.items : null,
+    priceCard: m.action?.type === "prices" ? m.action : null,
     orderCard: m.action?.type === "order" ? m.action : null,
     docView: m.action?.type === "document" ? docView(m.action, lang, profileDict) : null,
     profileRows: m.action?.type === "profile" ? profileRows(m.action, lang, profileDict) : null,
     profileDone: m.action_status === "done",
-    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
+    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "prices" ? (m.action.target === "order_rate" ? "orders" : m.action.target === "quote" ? "quotes" : "invoices") : m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (
     <main className="mx-auto max-w-2xl">
-      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} profileDict={profileDict} docDict={getStaffDocDict(lang)} orderDict={getStaffOrderDict(lang)} />
+      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} profileDict={profileDict} docDict={getStaffDocDict(lang)} orderDict={getStaffOrderDict(lang)} priceDict={getStaffPriceDict(lang)} />
       {messages.length > 0 && (
         <form action={clearStaffChat} className="py-4 text-center">
           <ConfirmButton message={d.clearConfirm} className="text-sm text-slate-500 underline">

@@ -12,6 +12,7 @@ import { STAFF_FEED_TOOLS } from "@/lib/staff-feed-tools";
 import { profileState, STAFF_PROFILE_TOOL } from "@/lib/staff-profile";
 import { passportState, STAFF_PASSPORT_TOOL } from "@/lib/staff-passport";
 import { STAFF_ORDER_TOOLS } from "@/lib/staff-orders";
+import { STAFF_PRICE_TOOLS } from "@/lib/staff-prices";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
 const MODEL = "claude-opus-5-5";
@@ -87,6 +88,7 @@ function system(s: StaffSettings, lang: Lang, facts: string, memory: string[]) {
     "When the worker tells you about themselves (name, phone, trade, experience, town, how far they travel, languages, car, tools, rate, KvK, btw-id, IBAN, company address), use update_profile with exactly what they said (one card per answer) and say in one line that the card is below and nothing is saved until they tap «Save». Trades, languages and the other lists use the given ids; the town in Dutch spelling. Write «about» in Dutch only from what they said, never invented. Then ask for the next one or two missing profile items (see «Still missing in the profile»), one short question at a time; most important first: name, phone, trades, town and travel distance, languages, then KvK, btw-id, IBAN and company address (needed on invoices). If they do not have something (e.g. no KvK yet), accept it and move on. Never ask for a BSN, passwords or card numbers.",
     "When the worker sends a photo of a KvK extract, VCA certificate, or AVB or CAR insurance policy (or asks to add it to the passport), read it carefully and use add_to_passport with only what is printed (dates YYYY-MM-DD). Warn when it is expired, a KvK extract older than 3 months, or unreadable. Then say in one line which documents are still missing for a full passport (see «Missing for a full passport»). For an ID card, passport, driving licence or bank card: do not add it and do not repeat its numbers; say the passport only takes KvK, VCA, AVB and CAR.",
     "Orders (jobs): when the worker tells about a new job («новый заказ: Jansen, ванная, Kerkstraat 5 Rotterdam, 45 в час»), use prepare_order. To add worked hours («добавь 8 часов к Jansen», «вчера 6 часов»), first find_orders, then prepare_order_hours with that order's id and Dutch dates worked out from Now. To add a receipt photo to an order, find_orders, then prepare_order_receipt. To answer «что у меня по заказу Jansen?», find_orders then order_details. When the worker says an order is done or asks for an invoice for an order («заказ Jansen готов, сделай счёт»), find_orders, then prepare_order_invoice (hours not invoiced yet + receipts as materials; add a markup only if they say so); prefer it over prepare_invoice when the job is an order in Haaks. If several orders match, ask which one. In your text, say in one line what the card under your answer will do; nothing is saved until they tap it.",
+    "When the worker asks to change a price, amount, quantity or line text («поменяй ставку в заказе Almere на 50», «в предложении Jansen плитку по 40»): find the item (find_orders / find_quotes / find_invoices / order_details), read the lines with get_lines, then use prepare_price_change: target order_rate for an order's hourly rate, quote or invoice for lines. If it is unclear which line or which document, ask first. Sent or paid invoices cannot be changed (tell them to use «Corrigeren» on the invoice page); accepted quotes cannot be changed. Never say you cannot change prices: you prepare the change as a card and they tap «Change».",
     "Write plain text for a phone screen: short paragraphs, simple • bullets, no tables, no headings with #.",
     "",
     "Facts from Haaks:",
@@ -130,7 +132,7 @@ export async function askStaff(input: {
     { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}\n\nHaaks app map (pages, plans and how-to guides):\n${STAFF_APP_GUIDE}`, cache_control: { type: "ephemeral" } },
     { type: "text", text: system(input.settings, input.lang, input.facts, input.memory) },
   ];
-  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS, STAFF_PROFILE_TOOL, STAFF_PASSPORT_TOOL, ...STAFF_ORDER_TOOLS] : undefined;
+  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS, STAFF_PROFILE_TOOL, STAFF_PASSPORT_TOOL, ...STAFF_ORDER_TOOLS, ...STAFF_PRICE_TOOLS] : undefined;
   let response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: systemBlocks, tools, messages });
   // Look-ups: let the employee search the worker's invoices, quotes and orders (a few rounds at most).
   for (let round = 0; round < 4 && response.stop_reason === "tool_use" && input.runTool; round++) {
