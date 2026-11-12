@@ -22,6 +22,7 @@ import { toDocChange, type StaffDocChange } from "@/lib/staff-passport";
 import { cleanEntries, runOrderTool, type StaffOrderChange } from "@/lib/staff-orders";
 import { addReceipt } from "./orders-actions";
 import { createOrderInvoice } from "@/lib/order-invoice";
+import { runPriceTool, type StaffPriceChange } from "@/lib/staff-prices";
 import { dutchLocalToDate } from "@/lib/staff-reminders";
 import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
@@ -68,7 +69,7 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | null = null;
+    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffPriceChange | null = null;
     // Step 2: the photo a passport card refers to (this message's, or the latest one in the talk).
     const latestPhoto = input.imagePath ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
     const lang = staffLang(settings, appLang);
@@ -101,6 +102,12 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
       if (name === "prepare_order" || name === "prepare_order_hours" || name === "prepare_order_receipt" || name === "prepare_order_invoice" || name === "order_details") {
         if (name !== "order_details" && draft) return "Only one card per answer; a card is already prepared.";
         const res = await runOrderTool(supabase, user.id, name, args, latestPhoto);
+        if (res.card) draft = res.card;
+        return res.text;
+      }
+      if (name === "get_lines" || name === "prepare_price_change") {
+        if (name === "prepare_price_change" && draft) return "Only one card per answer; a card is already prepared.";
+        const res = await runPriceTool(supabase, user.id, name, args);
         if (res.card) draft = res.card;
         return res.text;
       }
@@ -552,4 +559,40 @@ export async function saveStaffOrder(messageId: string): Promise<{ ok: true; hre
   await supabase.from("staff_messages").update({ action_status: "done", action_ref: orderId }).eq("id", m.id).eq("user_id", user.id);
   revalidatePath("/dashboard", "layout");
   return { ok: true, href: `/dashboard/orders/${orderId}` };
+}
+
+// The worker taps «Изменить» on a price card. The quote/invoice must still have the same lines
+// (and still be changeable) as when the card was made, so nothing newer is overwritten.
+export async function saveStaffPrices(messageId: string): Promise<{ ok: true; href: string } | { error: "failed" | "stale" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffPriceChange | null; action_status: string | null }>();
+  const c = m?.action;
+  if (!m || !c || c.type !== "prices") return { error: "failed" };
+  const href = `/dashboard/${c.target === "order_rate" ? "orders" : c.target === "quote" ? "quotes" : "invoices"}/${c.id}`;
+  if (m.action_status === "done") return { ok: true, href };
+  if (c.target === "order_rate") {
+    const { data, error } = await supabase.from("orders").update({ hourly_rate: c.new_rate }).eq("id", c.id).eq("user_id", user.id).select("id");
+    if (error || !data?.length) return { error: "failed" };
+  } else {
+    const table = c.target === "quote" ? "quotes" : "invoices";
+    const { data: doc } = await supabase.from(table).select("status, lines").eq("id", c.id).eq("user_id", user.id).maybeSingle<{ status: string; lines: unknown }>();
+    if (!doc) return { error: "failed" };
+    const ok = c.target === "quote" ? doc.status === "draft" || doc.status === "sent" : doc.status === "draft";
+    if (!ok || JSON.stringify(cleanLines(doc.lines)) !== JSON.stringify(cleanLines(c.old_lines))) return { error: "stale" };
+    const lines = cleanLines(c.new_lines);
+    if (!lines.length) return { error: "failed" };
+    const { error } = await supabase.from(table).update({ lines, updated_at: new Date().toISOString() }).eq("id", c.id).eq("user_id", user.id);
+    if (error) {
+      console.error("staff: price change failed", error.message);
+      return { error: "failed" };
+    }
+  }
+  await supabase.from("staff_messages").update({ action_status: "done", action_ref: c.id }).eq("id", m.id).eq("user_id", user.id);
+  revalidatePath("/dashboard", "layout");
+  return { ok: true, href };
 }
