@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { StaffChat, type ShownStaffMessage } from "@/components/StaffChat";
+import { getStaffDraftDict } from "@/lib/staff-draft-i18n";
+import type { StaffDraft } from "@/lib/staff-tools";
 import { SubmitButton } from "@/components/SubmitButton";
 import { planOf } from "@/lib/plans";
 import { faceUrl, staffOf, type StaffMessage } from "@/lib/staff";
@@ -47,11 +49,11 @@ export default async function StaffPage() {
 
   const { data } = await supabase
     .from("staff_messages")
-    .select("id, role, body, image_path, created_at, feed_item_id, draft, job, job_status")
+    .select("id, role, body, image_path, created_at, feed_item_id, draft, job, job_status, action, action_status, action_ref")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(60)
-    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"] })[]>();
+    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | null; action_status: string | null; action_ref: string | null })[]>();
   const rows = (data ?? []).reverse();
   const answerIds = rows.filter((m) => m.role === "staff" && !m.job).map((m) => m.id);
   const [urls, { data: ratings }] = await Promise.all([
@@ -71,11 +73,13 @@ export default async function StaffPage() {
     jobStatus: m.job_status,
     feedItemId: m.feed_item_id,
     rating: ratingOf.get(m.id) ?? null,
+    action: m.action,
+    actionHref: m.action_status === "done" && m.action_ref && m.action ? `/dashboard/${m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (
     <main className="mx-auto max-w-2xl">
-      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} />
+      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} />
       {messages.length > 0 && (
         <form action={clearStaffChat} className="py-4 text-center">
           <ConfirmButton message={d.clearConfirm} className="text-sm text-slate-500 underline">

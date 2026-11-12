@@ -6,7 +6,7 @@ import { dutchToday } from "@/lib/quotes";
 import type { StaffMessage, StaffSettings } from "@/lib/staff";
 import { STAFF_KNOWLEDGE } from "@/lib/staff-knowledge";
 import { STAFF_APP_GUIDE } from "@/lib/staff-app-guide";
-import { STAFF_TOOLS } from "@/lib/staff-tools";
+import { STAFF_DRAFT_TOOLS, STAFF_TOOLS } from "@/lib/staff-tools";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
 const MODEL = "claude-opus-5-5";
@@ -72,7 +72,8 @@ function system(s: StaffSettings, lang: Lang, facts: string, memory: string[]) {
     "Use the facts below when they help. Do not invent numbers or deadlines that are not in a document or in the facts; say what you are unsure about and where to check (for example Mijn Belastingdienst Zakelijk).",
     "For Dutch rules, rates, deadlines and amounts, rely on the reference «NL ZZP reference» above, not on your general memory. When you use figures from it, add ONE short source line at the very end of the answer (not after each paragraph), in the worker's language, e.g. «Источник: belastingdienst.nl, проверено 11.2026»; list each site once. Never present an item marked NOT VERIFIED as fact: say it is not confirmed and where to check. Mention changes from 1 January 2027 when they matter to the question. For a personal tax case, end with a tip to check with the Belastingdienst (BelastingTelefoon 0800-0543) or a bookkeeper.",
     "When the worker asks how to do something in Haaks (make an invoice, find the passport, connect notifications, why a contact is hidden), use the «Haaks app map» above: answer in 2-5 short numbered steps and put the exact page path on its own line, e.g. /dashboard/quotes/new, so the worker can tap it. Only use paths that are in the map; never invent buttons or pages. If a feature needs Pro or Ultra, say so and give /dashboard/plan.",
-    "To answer questions about the worker's own invoices, quotes or orders (unpaid, overdue, what a client was billed, which quotes got no answer), use the find_invoices, find_quotes and find_orders tools instead of guessing. List the results briefly and put each item's page path (e.g. /dashboard/invoices/…) at the end of its line so the worker can tap it. These tools only read; you cannot change or send anything yet.",
+    "To answer questions about the worker's own invoices, quotes or orders (unpaid, overdue, what a client was billed, which quotes got no answer), use the find_invoices, find_quotes and find_orders tools instead of guessing. List the results briefly and put each item's page path (e.g. /dashboard/invoices/…) at the end of its line so the worker can tap it. These tools only read.",
+    "When the worker asks you to make an invoice or a quote, use prepare_invoice or prepare_quote (one per answer). Use the worker's memory and earlier invoices for the client's details, rate and btw choice (reverse = btw verlegd when they work as a subcontractor for a construction company). Write line descriptions in Dutch. The draft is shown as a card under your answer with a «Create» button: in your text, say in one or two lines what you prepared and that nothing is created or sent until they tap it and check it. If the client or the price is unclear, ask first instead of guessing. You cannot send anything to clients yourself.",
     "Write plain text for a phone screen: short paragraphs, simple • bullets, no tables, no headings with #.",
     "",
     "Facts from Haaks:",
@@ -116,7 +117,7 @@ export async function askStaff(input: {
     { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}\n\nHaaks app map (pages, plans and how-to guides):\n${STAFF_APP_GUIDE}`, cache_control: { type: "ephemeral" } },
     { type: "text", text: system(input.settings, input.lang, input.facts, input.memory) },
   ];
-  const tools = input.runTool ? STAFF_TOOLS : undefined;
+  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS] : undefined;
   let response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: systemBlocks, tools, messages });
   // Look-ups: let the employee search the worker's invoices, quotes and orders (a few rounds at most).
   for (let round = 0; round < 4 && response.stop_reason === "tool_use" && input.runTool; round++) {

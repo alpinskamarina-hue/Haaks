@@ -11,6 +11,9 @@ import type { StaffJob } from "@/lib/staff-feed";
 import type { StaffDict, StaffFeedDict } from "@/lib/staff-i18n";
 import type { StaffRateDict } from "@/lib/staff-rate-i18n";
 import { StaffRate } from "@/components/StaffRate";
+import { StaffDraftCard } from "@/components/StaffDraftCard";
+import type { StaffDraftDict } from "@/lib/staff-draft-i18n";
+import type { StaffDraft } from "@/lib/staff-tools";
 
 export type ShownStaffMessage = {
   id: string;
@@ -22,6 +25,8 @@ export type ShownStaffMessage = {
   jobStatus?: "new" | "sent" | "skipped" | null;
   feedItemId?: string | null;
   rating?: 1 | -1 | null;
+  action?: StaffDraft | null;
+  actionHref?: string | null;
 };
 
 const KIND_STYLE: Record<StaffJob["kind"], string> = {
@@ -142,6 +147,7 @@ export function StaffChat({
   lang,
   messages,
   rate,
+  draftDict,
 }: {
   d: StaffDict;
   f: StaffFeedDict;
@@ -151,6 +157,7 @@ export function StaffChat({
   lang: string;
   messages: ShownStaffMessage[];
   rate: StaffRateDict;
+  draftDict: StaffDraftDict;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -315,6 +322,7 @@ export function StaffChat({
               <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
               <div className={bubbleStaff}>
                 <Linked text={m.body} />
+                {m.action && <StaffDraftCard messageId={m.id} draft={m.action} doneHref={m.actionHref ?? null} d={draftDict} />}
                 <button type="button" onClick={() => copy(m)} className="mt-2 block text-xs font-medium text-orange-700">
                   📋 {copied === m.id ? d.copied : d.copy}
                 </button>
