@@ -56,6 +56,7 @@ const privacyNl: LegalDoc = {
       p: [
         "Om documenten, bonnetjes en klusberichten automatisch te lezen en teksten in het Nederlands op te stellen, sturen wij de betreffende inhoud naar de AI-dienst van Anthropic (Claude). Anthropic gebruikt deze gegevens volgens zijn zakelijke voorwaarden niet om zijn modellen te trainen.",
         "AI kan fouten maken. Controleer de uitkomst altijd zelf. De score die laat zien of een klus bij u past, is alleen een advies. Er worden geen besluiten met rechtsgevolgen automatisch over u genomen.",
+        "Als u een antwoord van uw digitale medewerker beoordeelt (duim omhoog of omlaag), ziet het Haaks-team die vraag, dat antwoord en uw opmerking, om de medewerker te verbeteren. Gesprekken die u niet beoordeelt, bekijken wij niet. Als u het gesprek wist, worden ook de beoordelingen gewist.",
       ],
     },
     {
@@ -141,6 +142,7 @@ const privacyEn: LegalDoc = {
       p: [
         "To read documents, receipts and job posts automatically and to write texts in Dutch, we send the relevant content to the AI service of Anthropic (Claude). Under its commercial terms, Anthropic does not use this data to train its models.",
         "AI can make mistakes. Always check the result yourself. The score that shows whether a job fits you is only advice. No decisions with legal effects are made about you automatically.",
+        "When you rate an answer of your digital employee (thumb up or down), the Haaks team sees that question, that answer and your comment, to improve the employee. We do not look at conversations you do not rate. Clearing the chat also deletes the ratings.",
       ],
     },
     {

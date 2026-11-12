@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 import { prepareUpload } from "@/lib/prepare-upload";
 import type { StaffJob } from "@/lib/staff-feed";
 import type { StaffDict, StaffFeedDict } from "@/lib/staff-i18n";
+import type { StaffRateDict } from "@/lib/staff-rate-i18n";
+import { StaffRate } from "@/components/StaffRate";
 
 export type ShownStaffMessage = {
   id: string;
@@ -19,6 +21,7 @@ export type ShownStaffMessage = {
   draft?: string | null;
   jobStatus?: "new" | "sent" | "skipped" | null;
   feedItemId?: string | null;
+  rating?: 1 | -1 | null;
 };
 
 const KIND_STYLE: Record<StaffJob["kind"], string> = {
@@ -138,6 +141,7 @@ export function StaffChat({
   userId,
   lang,
   messages,
+  rate,
 }: {
   d: StaffDict;
   f: StaffFeedDict;
@@ -146,6 +150,7 @@ export function StaffChat({
   userId: string;
   lang: string;
   messages: ShownStaffMessage[];
+  rate: StaffRateDict;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -283,6 +288,7 @@ export function StaffChat({
                 <button type="button" onClick={() => copy(m)} className="mt-2 block text-xs font-medium text-orange-700">
                   📋 {copied === m.id ? d.copied : d.copy}
                 </button>
+                <StaffRate messageId={m.id} initial={m.rating ?? null} d={rate} />
               </div>
             </div>
           ),
