@@ -6,7 +6,7 @@ import { dutchToday } from "@/lib/quotes";
 import type { StaffMessage, StaffSettings } from "@/lib/staff";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
-const MODEL = "claude-sonnet-5-5";
+const MODEL = "claude-opus-5-5";
 const HISTORY = 20;
 let client: Anthropic | null = null;
 
@@ -91,7 +91,7 @@ export async function askStaff(input: {
   });
   // The API wants the talk to start with the worker.
   while (messages.length && messages[0].role !== "user") messages.shift();
-  const response = await client.messages.create({ model: MODEL, max_tokens: 2000, system: system(input.settings, input.lang, input.facts), messages });
+  const response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: system(input.settings, input.lang, input.facts), messages });
   if (response.stop_reason === "refusal") return null;
   const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
   return text || null;
