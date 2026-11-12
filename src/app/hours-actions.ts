@@ -3,11 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { dutchRange, groupByWeek, type HourRow } from "@/lib/hours";
-import { nextInvoiceNumber } from "@/lib/invoices";
-import { addDays, cleanLines, type QuoteLine } from "@/lib/quotes";
+import { createOrderInvoice } from "@/lib/order-invoice";
+import { addDays } from "@/lib/quotes";
 
-const PAYMENT_DAYS = 14;
 const refresh = (orderId: string) => {
   revalidatePath(`/dashboard/orders/${orderId}`);
   revalidatePath("/dashboard");
@@ -58,81 +56,14 @@ export async function deleteHours(id: string) {
   if (data) refresh(data.order_id);
 }
 
-// A draft invoice from all hours of this order that are not on an invoice yet: one line per week,
-// "Werkzaamheden week 45 (3–7 nov): <order>", hours × the order's rate.
+// A draft invoice from all hours of this order that are not on an invoice yet (see createOrderInvoice).
 export async function invoiceFromHours(orderId: string) {
   const { supabase, user } = await requireUser();
-  const [{ data: order }, { data: rows }, { data: numbers }] = await Promise.all([
-    supabase.from("orders").select("id, title, client_name, address, hourly_rate").eq("id", orderId).eq("user_id", user.id).maybeSingle(),
-    supabase.from("order_hours").select("id, work_date, hours, note, invoice_id, approval_id").eq("order_id", orderId).is("invoice_id", null).returns<HourRow[]>(),
-    supabase.from("invoices").select("number").eq("user_id", user.id),
-  ]);
-  const rate = Number(order?.hourly_rate);
-  if (!order || !rows?.length || !(rate > 0)) return;
-
-  const weeks = groupByWeek(rows).reverse();
-  // Weeks the company fully approved say so on the invoice line: "(akkoord P. de Vries)".
-  const approvalIds = [...new Set(rows.map((r) => r.approval_id).filter((x): x is string => !!x))];
-  const { data: approved } = approvalIds.length
-    ? await supabase.from("hour_approvals").select("id, decided_name").in("id", approvalIds).eq("status", "approved")
-    : { data: [] as { id: string; decided_name: string | null }[] };
-  const approver = new Map((approved ?? []).map((a) => [a.id, a.decided_name]));
-  const akkoord = (w: (typeof weeks)[number]) => {
-    const names = new Set(w.rows.map((r) => (r.approval_id ? approver.get(r.approval_id) : undefined)));
-    const [only] = [...names];
-    return names.size === 1 && only ? ` (akkoord ${only})` : "";
-  };
-  const lines: QuoteLine[] = cleanLines(
-    weeks.map((w) => ({
-      kind: "labour",
-      description: `Werkzaamheden week ${w.week} (${dutchRange(w.from, w.to)}): ${order.title}${akkoord(w)}`,
-      quantity: w.hours,
-      unit: "uur",
-      unit_price: rate,
-      vat_rate: 21,
-    })),
-  );
-
-  // A repeat client: take over their company details and the btw choice (often btw verlegd).
-  const { data: previous } = order.client_name
-    ? await supabase
-        .from("invoices")
-        .select("client_address, client_kvk, client_btw, client_email, vat_mode")
-        .eq("user_id", user.id)
-        .eq("client_name", order.client_name)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-
-  const first = weeks[0].from;
-  const last = weeks[weeks.length - 1].to;
-  const { data: invoice, error } = await supabase
-    .from("invoices")
-    .insert({
-      user_id: user.id,
-      order_id: order.id,
-      number: nextInvoiceNumber((numbers ?? []).map((n) => n.number)),
-      vat_mode: previous?.vat_mode ?? "normal",
-      invoice_date: addDays(0),
-      due_date: addDays(PAYMENT_DAYS),
-      work_period: dutchRange(first, last),
-      project_address: order.address,
-      client_name: order.client_name,
-      client_address: previous?.client_address ?? null,
-      client_kvk: previous?.client_kvk ?? null,
-      client_btw: previous?.client_btw ?? null,
-      client_email: previous?.client_email ?? null,
-      lines,
-    })
-    .select("id")
-    .single();
-  if (error || !invoice) throw new Error(error?.message ?? "Insert failed");
-
-  await supabase.from("order_hours").update({ invoice_id: invoice.id }).in("id", rows.map((r) => r.id)).eq("user_id", user.id);
+  const id = await createOrderInvoice(supabase, user.id, orderId);
+  if (!id) return;
   revalidatePath("/dashboard/invoices", "layout");
   refresh(orderId);
-  redirect(`/dashboard/invoices/${invoice.id}`);
+  redirect(`/dashboard/invoices/${id}`);
 }
 
 // Sends the not yet approved hours of one week (Monday..Sunday) to the company: a request with a

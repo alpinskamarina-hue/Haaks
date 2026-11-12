@@ -41,6 +41,19 @@ export const STAFF_ORDER_TOOLS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: { order_id: { type: "string" } }, required: ["order_id"] },
   },
   {
+    name: "prepare_order_invoice",
+    description: "Prepare a DRAFT invoice from an EXISTING order (find it with find_orders first): all hours not invoiced yet (per week × the order's rate) and, if wanted, the receipts not invoiced yet as materials. Shown as a card with a «Create draft» button; the worker checks and sends the invoice themselves.",
+    input_schema: {
+      type: "object",
+      properties: {
+        order_id: { type: "string" },
+        include_receipts: { type: "boolean", description: "Bill the order's receipts as materials (default true)" },
+        markup_percent: { type: ["number", "null"], description: "Only if the worker says so: % added to material costs" },
+      },
+      required: ["order_id"],
+    },
+  },
+  {
     name: "order_details",
     description: "Read one order: hours (total and not yet invoiced), receipts, quotes and invoices linked to it. Read-only.",
     input_schema: { type: "object", properties: { order_id: { type: "string" } }, required: ["order_id"] },
@@ -50,7 +63,8 @@ export const STAFF_ORDER_TOOLS: Anthropic.Tool[] = [
 export type StaffOrderChange =
   | { type: "order"; kind: "new"; title: string; client_name: string | null; address: string | null; hourly_rate: number | null }
   | { type: "order"; kind: "hours"; order_id: string; order_title: string; entries: { work_date: string; hours: number; note: string | null }[] }
-  | { type: "order"; kind: "receipt"; order_id: string; order_title: string; image_path: string };
+  | { type: "order"; kind: "receipt"; order_id: string; order_title: string; image_path: string }
+  | { type: "order"; kind: "invoice"; order_id: string; order_title: string; client_name: string | null; hours: number; rate: number | null; receipts: number; materials: number; include_receipts: boolean; markup_percent: number };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.replace(/\s+/g, " ").trim().slice(0, max) : null);
@@ -99,6 +113,26 @@ export async function runOrderTool(
   if (name === "prepare_order_receipt") {
     if (!photo) return { text: "There is no photo in this talk. Ask the worker to send a photo of the receipt here (📎)." };
     return { text: `Receipt card for «${order.title}» prepared with an «Add» button; Haaks reads the amounts after they tap it.`, card: { type: "order", kind: "receipt", order_id: order.id, order_title: order.title, image_path: photo } };
+  }
+  if (name === "prepare_order_invoice") {
+    const include = a.include_receipts !== false;
+    const markup = Number(a.markup_percent);
+    const [{ data: full }, { data: hours }, { data: receipts }] = await Promise.all([
+      supabase.from("orders").select("client_name, hourly_rate").eq("id", order.id).single(),
+      supabase.from("order_hours").select("hours").eq("order_id", order.id).is("invoice_id", null),
+      supabase.from("receipts").select("total_excl_vat").eq("order_id", order.id).is("invoice_id", null),
+    ]);
+    const h = (hours ?? []).reduce((s, r) => s + Number(r.hours), 0);
+    const rec = include ? (receipts ?? []).filter((r) => Number(r.total_excl_vat) > 0) : [];
+    const rate = Number(full?.hourly_rate) > 0 ? Number(full?.hourly_rate) : null;
+    if (!h && !rec.length) return { text: "This order has no hours or receipts that are not invoiced yet. Ask what to bill, or use prepare_invoice with lines." };
+    if (h && !rate) return { text: "The order has no hourly rate. Ask the worker for the rate (€ per hour), then use prepare_order_invoice again after they set it on the order page /dashboard/orders/" + order.id };
+    const card: StaffOrderChange = {
+      type: "order", kind: "invoice", order_id: order.id, order_title: order.title, client_name: full?.client_name ?? null,
+      hours: h, rate, receipts: rec.length, materials: Math.round(rec.reduce((s, r) => s + Number(r.total_excl_vat), 0) * 100) / 100,
+      include_receipts: include, markup_percent: markup > 0 && markup <= 100 ? markup : 0,
+    };
+    return { text: `Invoice card prepared: ${h} hours × € ${rate ?? 0}, ${rec.length} receipts as materials € ${card.materials} excl. btw${card.markup_percent ? ` + ${card.markup_percent}%` : ""}. The worker taps «Create draft», then checks and sends it themselves.`, card };
   }
   if (name === "order_details") {
     const [{ data: full }, { data: hours }, { data: receipts }, { data: quotes }, { data: invoices }] = await Promise.all([

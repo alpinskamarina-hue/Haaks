@@ -21,6 +21,7 @@ import { fillName, getStaffDocDict, getStaffFillDict } from "@/lib/staff-profile
 import { toDocChange, type StaffDocChange } from "@/lib/staff-passport";
 import { cleanEntries, runOrderTool, type StaffOrderChange } from "@/lib/staff-orders";
 import { addReceipt } from "./orders-actions";
+import { createOrderInvoice } from "@/lib/order-invoice";
 import { dutchLocalToDate } from "@/lib/staff-reminders";
 import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
@@ -97,7 +98,7 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
           ? "Passport card prepared under your answer with an «Add to passport» button; nothing is saved until they tap it. In one line say what you read and what is still missing for a full passport."
           : "Unknown document type. Ask the worker what document it is.";
       }
-      if (name === "prepare_order" || name === "prepare_order_hours" || name === "prepare_order_receipt" || name === "order_details") {
+      if (name === "prepare_order" || name === "prepare_order_hours" || name === "prepare_order_receipt" || name === "prepare_order_invoice" || name === "order_details") {
         if (name !== "order_details" && draft) return "Only one card per answer; a card is already prepared.";
         const res = await runOrderTool(supabase, user.id, name, args, latestPhoto);
         if (res.card) draft = res.card;
@@ -492,7 +493,7 @@ export async function saveStaffOrder(messageId: string): Promise<{ ok: true; hre
     .maybeSingle<{ id: string; action: StaffOrderChange | null; action_status: string | null; action_ref: string | null }>();
   const c = m?.action;
   if (!m || !c || c.type !== "order") return { error: "failed" };
-  if (m.action_status === "done" && m.action_ref) return { ok: true, href: `/dashboard/orders/${m.action_ref}` };
+  if (m.action_status === "done" && m.action_ref) return { ok: true, href: `/dashboard/${c.kind === "invoice" ? "invoices" : "orders"}/${m.action_ref}` };
 
   let orderId: string | null = null;
   if (c.kind === "new") {
@@ -518,6 +519,17 @@ export async function saveStaffOrder(messageId: string): Promise<{ ok: true; hre
       const { error } = await supabase.from("order_hours").insert(entries.map((e) => ({ ...e, user_id: user.id, order_id: order.id })));
       if (error) {
         console.error("staff: hours failed", error.message);
+        return { error: "failed" };
+      }
+    } else if (c.kind === "invoice") {
+      try {
+        const invoiceId = await createOrderInvoice(supabase, user.id, order.id, { receipts: c.include_receipts, markupPercent: c.markup_percent });
+        if (!invoiceId) return { error: "failed" };
+        await supabase.from("staff_messages").update({ action_status: "done", action_ref: invoiceId }).eq("id", m.id).eq("user_id", user.id);
+        revalidatePath("/dashboard", "layout");
+        return { ok: true, href: `/dashboard/invoices/${invoiceId}` };
+      } catch (err) {
+        console.error("staff: order invoice failed", err instanceof Error ? err.message : err);
         return { error: "failed" };
       }
     } else {
