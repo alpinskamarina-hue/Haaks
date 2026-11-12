@@ -14,7 +14,7 @@ import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
-import { runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
+import { REMINDER_MAX, runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
 import { staffFeedTools } from "@/lib/staff-feed-tools";
 import { cleanProfileChanges, PROFILE_SELECT, signUpDone, toProfileChange, type StaffProfileChange } from "@/lib/staff-profile";
 import { fillName, getStaffDocDict, getStaffFillDict } from "@/lib/staff-profile-i18n";
@@ -24,13 +24,14 @@ import { addReceipt } from "./orders-actions";
 import { createOrderInvoice } from "@/lib/order-invoice";
 import { runPriceTool, type StaffPriceChange } from "@/lib/staff-prices";
 import { runWorkTool, type StaffWorkChange } from "@/lib/staff-works";
+import { letterReminderDay, toLetterChange, type StaffLetterChange } from "@/lib/staff-letter";
 import { cleanWorkInput } from "@/lib/works";
 import { dutchLocalToDate } from "@/lib/staff-reminders";
 import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
 import { nextInvoiceNumber } from "@/lib/invoices";
 import { nextQuoteNumber } from "@/lib/quote-draft";
-import { addDays, cleanLines, DEFAULT_TERMS_NL } from "@/lib/quotes";
+import { addDays, cleanLines, DEFAULT_TERMS_NL, dutchToday } from "@/lib/quotes";
 import { replyToClientRequest } from "./feed-actions";
 import { STAFF_RATE_REASONS, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
@@ -76,7 +77,7 @@ export async function sendStaffMessage(input: { text: string; images: { path: st
       ),
     ]);
     const sent = downloaded.filter((x): x is { base64: string; mimeType: string } => !!x);
-    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffPriceChange | StaffWorkChange | null = null;
+    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffPriceChange | StaffWorkChange | StaffLetterChange | null = null;
     // Step 2: the photo a passport card refers to (this message's, or the latest one in the talk).
     const latestPhoto = imagePaths[0] ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
     // All photos of this message, or of the latest message with photos (for «Мои работы»).
@@ -126,6 +127,13 @@ export async function sendStaffMessage(input: { text: string; images: { path: st
         const res = await runWorkTool(supabase, user.id, args, latestPhotos);
         if (res.card) draft = res.card;
         return res.text;
+      }
+      if (name === "explain_letter") {
+        if (draft) return "Only one card per answer; a card is already prepared.";
+        draft = toLetterChange(args);
+        return draft
+          ? "Letter card prepared under your answer: sender, meaning, deadline, amount, steps, the Dutch reply with a copy button, and a reminder button before the deadline. In your text, do not repeat the card: give at most 2 short lines (the most important point and anything you are unsure about, e.g. unreadable parts)."
+          : "The letter card needs at least the sender and a summary. Ask the worker for a clearer photo if you could not read it.";
       }
       if (name === "find_feed_jobs" || name === "prepare_job_reply") return feedTools.run(name, args);
       return runStaffTool(supabase, user.id, name, args);
@@ -660,4 +668,30 @@ export async function saveStaffWork(messageId: string): Promise<{ ok: true; href
     if (copied.length) await supabase.storage.from("documents").remove(copied);
     return { error: "failed" };
   }
+}
+
+// The worker taps «Напомнить» on a letter card: a reminder 3 days before the deadline at 09:00
+// (or tomorrow morning when the deadline is close). The day is kept in action_ref.
+export async function saveStaffLetterReminder(messageId: string): Promise<{ ok: true; day: string } | { error: "failed" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status, action_ref")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffLetterChange | null; action_status: string | null; action_ref: string | null }>();
+  const c = m?.action;
+  if (!m || !c || c.type !== "letter" || !c.deadline) return { error: "failed" };
+  if (m.action_status === "done" && m.action_ref) return { ok: true, day: m.action_ref };
+  const day = letterReminderDay(c.deadline, dutchToday());
+  const due = day ? dutchLocalToDate(`${day}T09:00`) : null;
+  if (!day || !due) return { error: "failed" };
+  const { count } = await supabase.from("staff_reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("sent_at", null);
+  if ((count ?? 0) >= REMINDER_MAX) return { error: "failed" };
+  const deadline = `${c.deadline.slice(8, 10)}.${c.deadline.slice(5, 7)}`;
+  const text = `${c.sender}${c.kind ? ` (${c.kind})` : ""}: ${c.deadline_what ?? "termijn"} → ${deadline}${c.amount !== null ? `, € ${c.amount.toFixed(2)}` : ""}`.slice(0, 300);
+  const { error } = await supabase.from("staff_reminders").insert({ user_id: user.id, text, due_at: due.toISOString() });
+  if (error) return { error: "failed" };
+  await supabase.from("staff_messages").update({ action_status: "done", action_ref: day }).eq("id", m.id).eq("user_id", user.id);
+  return { ok: true, day };
 }

@@ -14,6 +14,7 @@ import { passportState, STAFF_PASSPORT_TOOL } from "@/lib/staff-passport";
 import { STAFF_ORDER_TOOLS } from "@/lib/staff-orders";
 import { STAFF_PRICE_TOOLS } from "@/lib/staff-prices";
 import { STAFF_WORK_TOOL } from "@/lib/staff-works";
+import { STAFF_LETTER_TOOL } from "@/lib/staff-letter";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
 const MODEL = "claude-opus-5-5";
@@ -76,7 +77,7 @@ function system(s: StaffSettings, lang: Lang, facts: string, memory: string[]) {
     `You are ${s.name}, the digital employee (office assistant) of a self-employed construction worker in the Netherlands. You work inside the Haaks app.`,
     `Always talk to the worker in ${LANG_NAMES[lang]}, ${s.formal ? "politely and formally" : "informally, like a friendly colleague"}. ${style}`,
     "You help with paperwork in the Netherlands: letters from the Belastingdienst, KvK, CJIB, gemeente, insurers and clients; writing to clients; checking contracts; btw (VAT) and quarterly returns; invoices and quotes.",
-    "When the worker sends a letter: say who sent it, what it means in simple words, the deadline and the amount if any, and exactly what to do. Offer a ready reply in Dutch when one is needed.",
+    "When the worker sends a photo of a letter (Belastingdienst, CJIB, gemeente, KvK, UWV, insurer, energy or phone company, bailiff/deurwaarder, incassobureau, a client) or pastes its text: read it carefully and use explain_letter: sender, letter type, what it means in simple words, the deadline (work it out when the letter gives a period, e.g. bezwaar within 6 weeks of the letter date; use Today above), the amount, betalingskenmerk and IBAN exactly as printed, urgency, 1–5 concrete steps, and a ready Dutch reply only when writing back makes sense (bezwaar, payment plan/betalingsregeling, asking for more time, disputing a client's claim). Check against the «NL ZZP reference». If the photo is unclear or pages are missing, say what you could not read. Warn plainly about scams (pay requests to a strange IBAN, urgency by WhatsApp, links to log in). Never repeat a BSN.",
     "When you write a message for a client or an authority: give the Dutch text first, ready to copy, then one line with its meaning in the worker's language.",
     "When you check a contract: list the risky points (penalties, payment terms longer than 30 days, liability, signs of hidden employment under Wet DBA) and what to ask to change.",
     "Use the facts below when they help. Do not invent numbers or deadlines that are not in a document or in the facts; say what you are unsure about and where to check (for example Mijn Belastingdienst Zakelijk).",
@@ -139,7 +140,7 @@ export async function askStaff(input: {
     { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}\n\nHaaks app map (pages, plans and how-to guides):\n${STAFF_APP_GUIDE}`, cache_control: { type: "ephemeral" } },
     { type: "text", text: system(input.settings, input.lang, input.facts, input.memory) },
   ];
-  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS, STAFF_PROFILE_TOOL, STAFF_PASSPORT_TOOL, ...STAFF_ORDER_TOOLS, ...STAFF_PRICE_TOOLS, STAFF_WORK_TOOL] : undefined;
+  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS, STAFF_PROFILE_TOOL, STAFF_PASSPORT_TOOL, ...STAFF_ORDER_TOOLS, ...STAFF_PRICE_TOOLS, STAFF_WORK_TOOL, STAFF_LETTER_TOOL] : undefined;
   let response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: systemBlocks, tools, messages });
   // Look-ups: let the employee search the worker's invoices, quotes and orders (a few rounds at most).
   for (let round = 0; round < 4 && response.stop_reason === "tool_use" && input.runTool; round++) {
