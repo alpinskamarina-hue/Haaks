@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { claudeEnabled } from "@/lib/env";
 import { aiAllowed } from "@/lib/free-limits";
@@ -11,6 +12,7 @@ import { siteUrl } from "@/lib/lang";
 import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
+import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
 import { replyToClientRequest } from "./feed-actions";
 import { STAFF_RATE_REASONS, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
@@ -40,9 +42,10 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
   try {
     const settings = staffOf(profile);
     const appLang = isLang(profile.language) ? profile.language : "en";
-    const [{ data: history }, facts, image] = await Promise.all([
+    const [{ data: history }, facts, memory, image] = await Promise.all([
       supabase.from("staff_messages").select("id, role, body, image_path, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20).returns<StaffMessage[]>(),
       staffFacts(supabase, user.id, profile),
+      loadMemory(supabase, user.id),
       input.imagePath
         ? supabase.storage
             .from("documents")
@@ -50,9 +53,17 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, history: (history ?? []).reverse(), image });
+    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image });
     if (!answer) return { error: "failed" };
     await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: answer.slice(0, 8000) });
+    // Long memory: pick lasting facts from this talk after the answer is shown.
+    after(async () => {
+      try {
+        await rememberFromTalk(await createServerAccountClient(), { userId: user.id, question: text, answer });
+      } catch (err) {
+        console.error("staff: memory failed", err instanceof Error ? err.message : err);
+      }
+    });
     revalidatePath("/dashboard/staff");
     return { ok: true };
   } catch (e) {
@@ -191,4 +202,18 @@ export async function rateStaffAnswer(input: { messageId: string; rating: 1 | -1
     updated_at: new Date().toISOString(),
   });
   return error ? { error: "failed" as const } : { ok: true as const };
+}
+
+// «Что помнит сотрудник»: the worker deletes one fact or the whole memory.
+export async function forgetStaffFact(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (id) await supabase.from("staff_memory").delete().eq("id", id).eq("user_id", user.id);
+  revalidatePath("/dashboard/staff/settings");
+}
+
+export async function forgetStaffMemory() {
+  const { supabase, user } = await requireUser();
+  await supabase.from("staff_memory").delete().eq("user_id", user.id);
+  revalidatePath("/dashboard/staff/settings");
 }

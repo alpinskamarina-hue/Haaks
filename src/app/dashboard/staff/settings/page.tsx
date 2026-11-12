@@ -1,17 +1,20 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { LANG_NAMES, LANGS } from "@/lib/i18n";
 import { DEFAULT_NAMES, STAFF_FACES, STAFF_STYLES, faceUrl, staffOf } from "@/lib/staff";
 import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
+import { loadMemory } from "@/lib/staff-memory";
+import { getStaffMemoryDict } from "@/lib/staff-memory-i18n";
 import { loadWorkspace } from "@/lib/workspace";
-import { saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
+import { forgetStaffFact, forgetStaffMemory, saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
 
 // Face, name and manner of the worker's digital employee.
 export default async function StaffSettingsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const fromSettings = (await searchParams).from === "settings";
-  const { profile, lang, t } = await loadWorkspace();
+  const { supabase, user, profile, lang, t } = await loadWorkspace();
   const d = getStaffDict(lang);
   const s = staffOf(profile as Parameters<typeof staffOf>[0]);
   const ownName = (profile as { staff_name?: string | null }).staff_name ?? "";
@@ -20,6 +23,8 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
   const feedOn = rules.staff_feed ?? true;
   const feedMax = rules.staff_feed_max ?? 5;
   const feedKinds = rules.staff_feed_kinds ?? ["private", "business", "permit", "tender"];
+  const md = getStaffMemoryDict(lang);
+  const memory = await loadMemory(supabase, user.id);
 
   async function save(formData: FormData) {
     "use server";
@@ -126,6 +131,34 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
         </fieldset>
         <SubmitButton className="w-full rounded-xl bg-orange-600 py-3 font-semibold text-white">{d.save}</SubmitButton>
       </form>
+      <section id="memory" className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 text-sm">
+        <h2 className="font-semibold">🧠 {md.title}</h2>
+        <p className="text-xs text-slate-500">{md.note}</p>
+        {memory.length ? (
+          <ul className="divide-y divide-slate-100">
+            {memory.map((m) => (
+              <li key={m.id} className="flex items-start justify-between gap-3 py-2">
+                <span>{m.fact}</span>
+                <form action={forgetStaffFact}>
+                  <input type="hidden" name="id" value={m.id} />
+                  <button aria-label={md.forget} title={md.forget} className="shrink-0 rounded-full px-2 text-slate-400 hover:bg-red-50 hover:text-red-600">
+                    ✕
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-slate-500">{md.empty}</p>
+        )}
+        {memory.length > 0 && (
+          <form action={forgetStaffMemory}>
+            <ConfirmButton message={md.clearConfirm} className="text-xs font-medium text-red-700">
+              {md.clear}
+            </ConfirmButton>
+          </form>
+        )}
+      </section>
     </main>
   );
 }

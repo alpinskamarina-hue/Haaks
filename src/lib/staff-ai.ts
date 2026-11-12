@@ -15,13 +15,15 @@ let client: Anthropic | null = null;
 type Profile = { full_name?: string | null; company_name?: string | null; trades?: string[] | null; city?: string | null; language?: string | null };
 
 const euro = (n: number) => `€ ${n.toFixed(2)}`;
+const recentInvoiceClients = (inv: { client_name: string | null; invoice_date: string }[] | null) =>
+  [...(inv ?? [])].sort((a, b) => b.invoice_date.localeCompare(a.invoice_date)).map((i) => i.client_name);
 
 // A short fact sheet: who the worker is, unpaid invoices and this quarter's btw.
 export async function staffFacts(supabase: SupabaseClient, userId: string, profile: Profile) {
   const today = dutchToday();
   const q = Math.floor((Number(today.slice(5, 7)) - 1) / 3);
   const quarterStart = `${today.slice(0, 4)}-${String(q * 3 + 1).padStart(2, "0")}-01`;
-  const [{ data: invoices }, { data: receipts }, { count: openQuotes }] = await Promise.all([
+  const [{ data: invoices }, { data: receipts }, { count: openQuotes }, { data: orders }, { data: quotes }] = await Promise.all([
     supabase
       .from("invoices")
       .select("number, status, lines, vat_mode, invoice_date, due_date, client_name")
@@ -30,7 +32,10 @@ export async function staffFacts(supabase: SupabaseClient, userId: string, profi
       .returns<Pick<Invoice, "number" | "status" | "lines" | "vat_mode" | "invoice_date" | "due_date" | "client_name">[]>(),
     supabase.from("receipts").select("vat_total, purchased_on, created_at").eq("user_id", userId).returns<{ vat_total: number | null; purchased_on: string | null; created_at: string }[]>(),
     supabase.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "sent"),
+    supabase.from("orders").select("title, client_name, address").eq("user_id", userId).eq("status", "open").order("created_at", { ascending: false }).limit(8),
+    supabase.from("quotes").select("client_name, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
   ]);
+  const clients = [...new Set([...recentInvoiceClients(invoices), ...(quotes ?? []).map((q) => q.client_name as string | null)].filter((c): c is string => !!c && !!c.trim()))].slice(0, 10);
   const rows = invoices ?? [];
   const unpaid = rows.filter((i) => i.status === "sent");
   const quarterInvoices = rows.filter((i) => i.invoice_date >= quarterStart);
@@ -47,12 +52,14 @@ export async function staffFacts(supabase: SupabaseClient, userId: string, profi
     `Unpaid sent invoices: ${unpaid.length}${unpaid.length ? ": " + unpaid.slice(0, 8).map((i) => `#${i.number} ${i.client_name ?? ""} ${euro(invoiceTotals(i.lines, i.vat_mode).incl)}${i.due_date ? ` due ${i.due_date}` : ""}`).join("; ") : ""}.`,
     `This quarter in Haaks: turnover excl. btw ${euro(turnover)}, btw charged on invoices ${euro(vatOut)}, btw on receipts ${euro(vatIn)}, so roughly ${euro(vatOut - vatIn)} to pay (only what is entered in Haaks).`,
     `Quotes sent and waiting for an answer: ${openQuotes ?? 0}.`,
+    `Open orders (jobs in progress): ${orders?.length ? orders.map((o) => `${o.title}${o.client_name ? ` for ${o.client_name}` : ""}${o.address ? `, ${o.address}` : ""}`).join("; ") : "none"}.`,
+    clients.length ? `Recent clients (from invoices and quotes): ${clients.join(", ")}.` : "",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-function system(s: StaffSettings, lang: Lang, facts: string) {
+function system(s: StaffSettings, lang: Lang, facts: string, memory: string[]) {
   const style = { short: "Answer short and to the point.", detailed: "Explain step by step, in more detail.", humor: "Be warm, with a little light humour, but stay useful." }[s.style];
   return [
     `You are ${s.name}, the digital employee (office assistant) of a self-employed construction worker in the Netherlands. You work inside the Haaks app.`,
@@ -68,6 +75,10 @@ function system(s: StaffSettings, lang: Lang, facts: string) {
     "",
     "Facts from Haaks:",
     facts,
+    "",
+    "What you remember about the worker from earlier talks (they told you this; newer first):",
+    memory.length ? memory.map((m) => `- ${m}`).join("\n") : "(nothing yet)",
+    "Use these memories naturally when they matter. When the worker asks you to remember something, confirm in one short line that you will remember it. Never ask for or repeat passwords, card numbers or BSN. If asked what you remember, say they can see and delete the list in the employee settings: /dashboard/staff/settings#memory",
   ].join("\n");
 }
 
@@ -75,6 +86,7 @@ export async function askStaff(input: {
   settings: StaffSettings;
   lang: Lang;
   facts: string;
+  memory: string[];
   history: StaffMessage[];
   image: { base64: string; mimeType: string } | null;
 }): Promise<string | null> {
@@ -98,7 +110,7 @@ export async function askStaff(input: {
   const response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: [
       // Fixed reference first and cached, so every question pays for it only once in a while.
       { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}\n\nHaaks app map (pages, plans and how-to guides):\n${STAFF_APP_GUIDE}`, cache_control: { type: "ephemeral" } },
-      { type: "text", text: system(input.settings, input.lang, input.facts) },
+      { type: "text", text: system(input.settings, input.lang, input.facts, input.memory) },
     ],
     messages });
   if (response.stop_reason === "refusal") return null;
