@@ -12,6 +12,7 @@ import { workType, type ClientRequest } from "@/lib/client-requests";
 import { ReviewCard } from "@/components/ReviewCard";
 import type { Review } from "@/lib/reviews";
 import { getReviewsDict } from "@/lib/reviews-i18n";
+import { getStaffRateDict, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
 // Haaks checks a company's first jobs before they go into the feed. Admin only, in Russian.
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
@@ -95,6 +96,20 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const reqUrl = new Map((reqSigned ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl as string]));
   const kvkOpen = kvkList.filter((c) => !c.kvk_checked_at).length;
 
+  // Ratings of the digital employee's answers: the last 7 days in numbers, the last 30 in full.
+  type StaffRating = { message_id: string; rating: 1 | -1; reason: StaffRateReason | null; comment: string | null; question: string | null; answer: string; updated_at: string };
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [{ count: weekLikes }, { count: weekDislikes }, { data: staffRatings }] = await Promise.all([
+    server.from("staff_feedback").select("message_id", { count: "exact", head: true }).eq("rating", 1).gte("updated_at", weekAgo),
+    server.from("staff_feedback").select("message_id", { count: "exact", head: true }).eq("rating", -1).gte("updated_at", weekAgo),
+    server
+      .from("staff_feedback")
+      .select("message_id, rating, reason, comment, question, answer, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(30)
+      .returns<StaffRating[]>(),
+  ]);
+  const rateRu = getStaffRateDict("ru");
   const jobByItem = new Map((reportedJobs ?? []).map((j) => [j.feed_item_id as string, j]));
   const workerById = new Map((reportedWorkers ?? []).map((w) => [w.id as string, w]));
 
@@ -355,6 +370,38 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
                   <SubmitButton className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-60">Оставить отзыв</SubmitButton>
                 </form>
               </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 id="staff-ratings" className="pt-4 text-xl font-bold">
+        Оценки сотрудника
+      </h2>
+      <p className="text-sm text-slate-600">
+        За 7 дней: 👍 {weekLikes ?? 0} · 👎 {weekDislikes ?? 0}. Ниже последние 30 оценок. Видны только ответы, которые пользователь сам оценил.
+      </p>
+      {(staffRatings ?? []).length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-slate-500">Оценок пока нет.</p>
+      ) : (
+        <ul className="space-y-3">
+          {(staffRatings ?? []).map((r) => (
+            <li key={r.message_id} className={`space-y-2 rounded-xl border bg-white p-4 text-sm ${r.rating === -1 ? "border-red-200" : "border-slate-200"}`}>
+              <p className={`text-xs font-semibold uppercase ${r.rating === -1 ? "text-red-700" : "text-emerald-700"}`}>
+                {r.rating === -1 ? "👎 Плохой ответ" : "👍 Хороший ответ"}
+                {r.reason ? ` · ${rateRu.reasons[r.reason]}` : ""} · {dayMonthYear(r.updated_at.slice(0, 10))}
+              </p>
+              {r.comment && <p className="text-slate-800">«{r.comment}»</p>}
+              {r.question && (
+                <p className="whitespace-pre-wrap rounded-lg bg-orange-50 p-2 text-slate-700">
+                  <span className="font-semibold">Вопрос: </span>
+                  {r.question}
+                </p>
+              )}
+              <details>
+                <summary className="cursor-pointer text-slate-600">Ответ сотрудника</summary>
+                <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-slate-700">{r.answer}</p>
+              </details>
             </li>
           ))}
         </ul>

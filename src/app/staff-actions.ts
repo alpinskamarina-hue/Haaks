@@ -12,6 +12,7 @@ import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { replyToClientRequest } from "./feed-actions";
+import { STAFF_RATE_REASONS, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
 export type StaffReply = { ok: true } | { error: "plan" | "off" | "limit" | "failed" | "photo" };
 
@@ -154,4 +155,40 @@ export async function saveStaffFeedRules(formData: FormData) {
     .from("profiles")
     .update({ staff_feed: formData.get("feed_on") === "1", staff_feed_max: max, staff_feed_kinds: kinds.length ? kinds : ["private", "business"] })
     .eq("id", user.id);
+}
+
+// The worker rates one answer of the employee. A copy of the answer and the question
+// before it goes with the rating, so the moderation page can show it.
+export async function rateStaffAnswer(input: { messageId: string; rating: 1 | -1; reason?: StaffRateReason | null; comment?: string | null }) {
+  const { supabase, user } = await requireUser();
+  if (input.rating !== 1 && input.rating !== -1) return { error: "failed" as const };
+  const reason = input.rating === -1 && input.reason && STAFF_RATE_REASONS.includes(input.reason) ? input.reason : null;
+  const comment = input.rating === -1 ? input.comment?.trim().slice(0, 500) || null : null;
+  const { data: answer } = await supabase
+    .from("staff_messages")
+    .select("id, role, body, created_at, job")
+    .eq("id", input.messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; role: string; body: string; created_at: string; job: unknown }>();
+  if (!answer || answer.role !== "staff" || answer.job) return { error: "failed" as const };
+  const { data: question } = await supabase
+    .from("staff_messages")
+    .select("body")
+    .eq("user_id", user.id)
+    .eq("role", "user")
+    .lt("created_at", answer.created_at)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ body: string }>();
+  const { error } = await supabase.from("staff_feedback").upsert({
+    message_id: answer.id,
+    user_id: user.id,
+    rating: input.rating,
+    reason,
+    comment,
+    question: question?.body.slice(0, 4000) ?? null,
+    answer: answer.body.slice(0, 8000),
+    updated_at: new Date().toISOString(),
+  });
+  return error ? { error: "failed" as const } : { ok: true as const };
 }
