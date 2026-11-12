@@ -57,6 +57,7 @@ const privacyNl: LegalDoc = {
         "Om documenten, bonnetjes en klusberichten automatisch te lezen en teksten in het Nederlands op te stellen, sturen wij de betreffende inhoud naar de AI-dienst van Anthropic (Claude). Anthropic gebruikt deze gegevens volgens zijn zakelijke voorwaarden niet om zijn modellen te trainen.",
         "AI kan fouten maken. Controleer de uitkomst altijd zelf. De score die laat zien of een klus bij u past, is alleen een advies. Er worden geen besluiten met rechtsgevolgen automatisch over u genomen.",
         "Als u een antwoord van uw digitale medewerker beoordeelt (duim omhoog of omlaag), ziet het Haaks-team die vraag, dat antwoord en uw opmerking, om de medewerker te verbeteren. Gesprekken die u niet beoordeelt, bekijken wij niet. Als u het gesprek wist, worden ook de beoordelingen gewist.",
+        "Uw digitale medewerker onthoudt een paar belangrijke feiten uit uw gesprekken (zoals klanten, tarieven en afspraken) om u later beter te helpen. U ziet en verwijdert deze feiten in de instellingen van de medewerker. Wachtwoorden, kaartnummers en BSN worden niet bewaard.",
       ],
     },
     {
@@ -143,6 +144,7 @@ const privacyEn: LegalDoc = {
         "To read documents, receipts and job posts automatically and to write texts in Dutch, we send the relevant content to the AI service of Anthropic (Claude). Under its commercial terms, Anthropic does not use this data to train its models.",
         "AI can make mistakes. Always check the result yourself. The score that shows whether a job fits you is only advice. No decisions with legal effects are made about you automatically.",
         "When you rate an answer of your digital employee (thumb up or down), the Haaks team sees that question, that answer and your comment, to improve the employee. We do not look at conversations you do not rate. Clearing the chat also deletes the ratings.",
+        "Your digital employee remembers a few important facts from your talks (such as clients, rates and agreements) to help you better later. You can see and delete these facts in the employee settings. Passwords, card numbers and BSN are not kept.",
       ],
     },
     {
