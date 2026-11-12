@@ -101,3 +101,18 @@ const DOC: Record<Lang, StaffDocDict> = {
 };
 
 export const getStaffDocDict = (lang: Lang): StaffDocDict => DOC[lang] ?? DOC.en;
+
+// Step 3: order cards (new order, hours, receipt).
+export type StaffOrderDict = { newTitle: string; hoursTitle: string; receiptTitle: string; client: string; address: string; rate: string; create: string; add: string; done: string; open: string; note: string; failed: string; h: string; total: string; receiptHint: string };
+
+const ORDER: Record<Lang, StaffOrderDict> = {
+  ru: { newTitle: "Новый заказ", hoursTitle: "Часы к заказу", receiptTitle: "Чек к заказу", client: "Клиент", address: "Адрес", rate: "Ставка в час", create: "Создать заказ", add: "Добавить", done: "Готово", open: "Открыть заказ", note: "Ничего не сохранится, пока вы не нажмёте кнопку.", failed: "Не получилось. Попробуйте ещё раз.", h: "ч", total: "Всего", receiptHint: "После добавления Haaks сам прочитает сумму и btw." },
+  uk: { newTitle: "Нове замовлення", hoursTitle: "Години до замовлення", receiptTitle: "Чек до замовлення", client: "Клієнт", address: "Адреса", rate: "Ставка за годину", create: "Створити замовлення", add: "Додати", done: "Готово", open: "Відкрити замовлення", note: "Нічого не збережеться, поки ви не натиснете кнопку.", failed: "Не вдалося. Спробуйте ще раз.", h: "год", total: "Всього", receiptHint: "Після додавання Haaks сам прочитає суму і btw." },
+  pl: { newTitle: "Nowe zlecenie", hoursTitle: "Godziny do zlecenia", receiptTitle: "Paragon do zlecenia", client: "Klient", address: "Adres", rate: "Stawka za godzinę", create: "Utwórz zlecenie", add: "Dodaj", done: "Gotowe", open: "Otwórz zlecenie", note: "Nic się nie zapisze, dopóki nie naciśniesz przycisku.", failed: "Nie udało się. Spróbuj jeszcze raz.", h: "godz.", total: "Razem", receiptHint: "Po dodaniu Haaks sam odczyta kwotę i btw." },
+  ro: { newTitle: "Comandă nouă", hoursTitle: "Ore la comandă", receiptTitle: "Bon la comandă", client: "Client", address: "Adresă", rate: "Tarif pe oră", create: "Creează comanda", add: "Adaugă", done: "Gata", open: "Deschide comanda", note: "Nimic nu se salvează până nu apeși butonul.", failed: "Nu a mers. Încearcă din nou.", h: "h", total: "Total", receiptHint: "După adăugare, Haaks citește singur suma și btw." },
+  tr: { newTitle: "Yeni iş", hoursTitle: "İşe saatler", receiptTitle: "İşe fiş", client: "Müşteri", address: "Adres", rate: "Saatlik ücret", create: "İşi oluştur", add: "Ekle", done: "Tamam", open: "İşi aç", note: "Butona basana kadar hiçbir şey kaydedilmez.", failed: "Olmadı. Tekrar deneyin.", h: "sa", total: "Toplam", receiptHint: "Ekledikten sonra Haaks tutarı ve btw'yi kendisi okur." },
+  en: { newTitle: "New order", hoursTitle: "Hours for the order", receiptTitle: "Receipt for the order", client: "Client", address: "Address", rate: "Hourly rate", create: "Create order", add: "Add", done: "Done", open: "Open order", note: "Nothing is saved until you tap the button.", failed: "That did not work. Please try again.", h: "h", total: "Total", receiptHint: "After adding, Haaks reads the amount and btw itself." },
+  nl: { newTitle: "Nieuwe klus", hoursTitle: "Uren bij de klus", receiptTitle: "Bon bij de klus", client: "Klant", address: "Adres", rate: "Uurtarief", create: "Klus maken", add: "Toevoegen", done: "Klaar", open: "Klus openen", note: "Er wordt niets opgeslagen tot je op de knop tikt.", failed: "Dat lukte niet. Probeer het opnieuw.", h: "u", total: "Totaal", receiptHint: "Na toevoegen leest Haaks zelf het bedrag en de btw." },
+};
+
+export const getStaffOrderDict = (lang: Lang): StaffOrderDict => ORDER[lang] ?? ORDER.en;

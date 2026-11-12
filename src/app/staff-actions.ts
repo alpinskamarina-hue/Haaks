@@ -19,6 +19,8 @@ import { staffFeedTools } from "@/lib/staff-feed-tools";
 import { cleanProfileChanges, PROFILE_SELECT, signUpDone, toProfileChange, type StaffProfileChange } from "@/lib/staff-profile";
 import { fillName, getStaffDocDict, getStaffFillDict } from "@/lib/staff-profile-i18n";
 import { toDocChange, type StaffDocChange } from "@/lib/staff-passport";
+import { cleanEntries, runOrderTool, type StaffOrderChange } from "@/lib/staff-orders";
+import { addReceipt } from "./orders-actions";
 import { dutchLocalToDate } from "@/lib/staff-reminders";
 import { getDict } from "@/lib/i18n";
 import { getWorkerDict } from "@/lib/worker-profile-text";
@@ -65,7 +67,7 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    let draft: StaffDraft | StaffProfileChange | StaffDocChange | null = null;
+    let draft: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | null = null;
     // Step 2: the photo a passport card refers to (this message's, or the latest one in the talk).
     const latestPhoto = input.imagePath ?? (history ?? []).find((m) => m.role === "user" && m.image_path)?.image_path ?? null;
     const lang = staffLang(settings, appLang);
@@ -94,6 +96,12 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
         return draft
           ? "Passport card prepared under your answer with an «Add to passport» button; nothing is saved until they tap it. In one line say what you read and what is still missing for a full passport."
           : "Unknown document type. Ask the worker what document it is.";
+      }
+      if (name === "prepare_order" || name === "prepare_order_hours" || name === "prepare_order_receipt" || name === "order_details") {
+        if (name !== "order_details" && draft) return "Only one card per answer; a card is already prepared.";
+        const res = await runOrderTool(supabase, user.id, name, args, latestPhoto);
+        if (res.card) draft = res.card;
+        return res.text;
       }
       if (name === "find_feed_jobs" || name === "prepare_job_reply") return feedTools.run(name, args);
       return runStaffTool(supabase, user.id, name, args);
@@ -470,4 +478,66 @@ export async function saveStaffDocument(messageId: string): Promise<{ ok: true }
   await supabase.from("staff_messages").update({ action_status: "done", action_ref: doc.id }).eq("id", m.id).eq("user_id", user.id);
   revalidatePath("/dashboard", "layout");
   return { ok: true };
+}
+
+// Step 3: the worker taps the button on an order card: create the order, add hours, or add the
+// chat photo as a receipt to the order (Haaks then reads the receipt as usual).
+export async function saveStaffOrder(messageId: string): Promise<{ ok: true; href: string } | { error: "failed" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status, action_ref")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffOrderChange | null; action_status: string | null; action_ref: string | null }>();
+  const c = m?.action;
+  if (!m || !c || c.type !== "order") return { error: "failed" };
+  if (m.action_status === "done" && m.action_ref) return { ok: true, href: `/dashboard/orders/${m.action_ref}` };
+
+  let orderId: string | null = null;
+  if (c.kind === "new") {
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({ user_id: user.id, title: c.title, client_name: c.client_name, address: c.address, ...(c.hourly_rate ? { hourly_rate: c.hourly_rate } : {}) })
+      .select("id")
+      .single();
+    if (error || !data) {
+      console.error("staff: order create failed", error?.message);
+      return { error: "failed" };
+    }
+    orderId = data.id;
+    // A new order becomes the current one, like on the orders page.
+    await supabase.from("profiles").update({ current_order_id: orderId }).eq("id", user.id);
+  } else {
+    const { data: order } = await supabase.from("orders").select("id").eq("id", c.order_id).eq("user_id", user.id).maybeSingle();
+    if (!order) return { error: "failed" };
+    orderId = order.id;
+    if (c.kind === "hours") {
+      const entries = cleanEntries(c.entries);
+      if (!entries.length) return { error: "failed" };
+      const { error } = await supabase.from("order_hours").insert(entries.map((e) => ({ ...e, user_id: user.id, order_id: order.id })));
+      if (error) {
+        console.error("staff: hours failed", error.message);
+        return { error: "failed" };
+      }
+    } else {
+      if (!c.image_path.startsWith(`${user.id}/staff/`)) return { error: "failed" };
+      const ext = (c.image_path.split(".").pop() ?? "jpg").toLowerCase();
+      const path = `${user.id}/receipts/${crypto.randomUUID()}.${ext}`;
+      const { error: copyError } = await supabase.storage.from("documents").copy(c.image_path, path);
+      if (copyError) {
+        console.error("staff: receipt copy failed", copyError.message);
+        return { error: "failed" };
+      }
+      try {
+        await addReceipt({ path, fileName: `bon.${ext}`, mimeType: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg", orderId: order.id });
+      } catch (err) {
+        console.error("staff: receipt failed", err instanceof Error ? err.message : err);
+        return { error: "failed" };
+      }
+    }
+  }
+  await supabase.from("staff_messages").update({ action_status: "done", action_ref: orderId }).eq("id", m.id).eq("user_id", user.id);
+  revalidatePath("/dashboard", "layout");
+  return { ok: true, href: `/dashboard/orders/${orderId}` };
 }
