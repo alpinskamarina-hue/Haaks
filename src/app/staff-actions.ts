@@ -13,6 +13,7 @@ import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
+import { runStaffTool } from "@/lib/staff-tools";
 import { replyToClientRequest } from "./feed-actions";
 import { STAFF_RATE_REASONS, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
@@ -53,7 +54,7 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image });
+    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image, runTool: (name, args) => runStaffTool(supabase, user.id, name, args) });
     if (!answer) return { error: "failed" };
     await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: answer.slice(0, 8000) });
     // Long memory: pick lasting facts from this talk after the answer is shown.
