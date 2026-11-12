@@ -104,6 +104,7 @@ export function ProfileWizard({
   must = false,
   backTo = "/dashboard/profile",
   contact,
+  staffSlot,
 }: {
   w: WorkerDict;
   lang: Lang;
@@ -113,6 +114,7 @@ export function ProfileWizard({
   must?: boolean; // name/phone missing after sign-up: no way around this step
   backTo?: string; // where an edit returns: profile or settings
   contact: { firstName: string; lastName: string; phone: string };
+  staffSlot?: React.ReactNode; // first sign-up screen: «Заполнить с сотрудником»
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startStep);
@@ -226,6 +228,7 @@ export function ProfileWizard({
               <h1 className="text-2xl font-bold">{w.s0Title}</h1>
               <p className="mt-1 text-slate-600">{w.s0Hint}</p>
             </div>
+            {!edit && staffSlot}
             <label className="block text-sm font-medium">
               {w.firstName}
               <input

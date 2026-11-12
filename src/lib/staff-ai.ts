@@ -9,6 +9,7 @@ import { STAFF_APP_GUIDE } from "@/lib/staff-app-guide";
 import { STAFF_DRAFT_TOOLS, STAFF_REMINDER_TOOLS, STAFF_TOOLS } from "@/lib/staff-tools";
 import { dutchNow } from "@/lib/staff-reminders";
 import { STAFF_FEED_TOOLS } from "@/lib/staff-feed-tools";
+import { profileState, STAFF_PROFILE_TOOL } from "@/lib/staff-profile";
 
 // The brain of «Цифровой сотрудник»: one answer to the worker, with what Haaks knows about them.
 const MODEL = "claude-opus-5-5";
@@ -57,6 +58,7 @@ export async function staffFacts(supabase: SupabaseClient, userId: string, profi
     `Quotes sent and waiting for an answer: ${openQuotes ?? 0}.`,
     `Open orders (jobs in progress): ${orders?.length ? orders.map((o) => `${o.title}${o.client_name ? ` for ${o.client_name}` : ""}${o.address ? `, ${o.address}` : ""}`).join("; ") : "none"}.`,
     clients.length ? `Recent clients (from invoices and quotes): ${clients.join(", ")}.` : "",
+    profileState(profile as Record<string, unknown>),
   ]
     .filter(Boolean)
     .join("\n");
@@ -78,6 +80,7 @@ function system(s: StaffSettings, lang: Lang, facts: string, memory: string[]) {
     "When the worker asks you to make an invoice or a quote, use prepare_invoice or prepare_quote (one per answer). Use the worker's memory and earlier invoices for the client's details, rate and btw choice (reverse = btw verlegd when they work as a subcontractor for a construction company). Write line descriptions in Dutch. The draft is shown as a card under your answer with a «Create» button: in your text, say in one or two lines what you prepared and that nothing is created or sent until they tap it and check it. If the client or the price is unclear, ask first instead of guessing. You cannot send anything to clients yourself.",
     "When the worker asks to be reminded of something, use set_reminder with the Dutch local date and time (work out «завтра», «в пятницу» from Now above; if no time is given use 09:00). Then confirm the day and time in one line and say it comes as a phone notification roughly at that time. Use list_reminders and cancel_reminder when they ask about their reminders.",
     "When the worker asks you to find jobs or to answer a job from the feed, use find_feed_jobs, then prepare_job_reply for the job(s) they want (max 3). The Dutch reply: short, polite, first person, greet, what they can do, offer to come and look or call, at most two questions, sign with their first name, add their passport link when given; never a price, rate or start date, never invented experience. In your text, list what you found briefly and say the reply cards are below with a «Send» button; nothing is sent until they tap it.",
+    "When the worker tells you about themselves (name, phone, trade, experience, town, how far they travel, languages, car, tools, rate, KvK, btw-id, IBAN, company address), use update_profile with exactly what they said (one card per answer) and say in one line that the card is below and nothing is saved until they tap «Save». Trades, languages and the other lists use the given ids; the town in Dutch spelling. Write «about» in Dutch only from what they said, never invented. Then ask for the next one or two missing profile items (see «Still missing in the profile»), one short question at a time; most important first: name, phone, trades, town and travel distance, languages, then KvK, btw-id, IBAN and company address (needed on invoices). If they do not have something (e.g. no KvK yet), accept it and move on. Never ask for a BSN, passwords or card numbers.",
     "Write plain text for a phone screen: short paragraphs, simple • bullets, no tables, no headings with #.",
     "",
     "Facts from Haaks:",
@@ -121,7 +124,7 @@ export async function askStaff(input: {
     { type: "text", text: `NL ZZP reference (checked Dutch rules with sources):\n${STAFF_KNOWLEDGE}\n\nHaaks app map (pages, plans and how-to guides):\n${STAFF_APP_GUIDE}`, cache_control: { type: "ephemeral" } },
     { type: "text", text: system(input.settings, input.lang, input.facts, input.memory) },
   ];
-  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS] : undefined;
+  const tools = input.runTool ? [...STAFF_TOOLS, ...STAFF_DRAFT_TOOLS, ...STAFF_REMINDER_TOOLS, ...STAFF_FEED_TOOLS, STAFF_PROFILE_TOOL] : undefined;
   let response = await client.messages.create({ model: MODEL, max_tokens: 16000, output_config: { effort: "medium" }, system: systemBlocks, tools, messages });
   // Look-ups: let the employee search the worker's invoices, quotes and orders (a few rounds at most).
   for (let round = 0; round < 4 && response.stop_reason === "tool_use" && input.runTool; round++) {

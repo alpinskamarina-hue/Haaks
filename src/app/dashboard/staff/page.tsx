@@ -4,6 +4,9 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { StaffChat, type ShownStaffMessage } from "@/components/StaffChat";
 import { getStaffDraftDict } from "@/lib/staff-draft-i18n";
 import type { StaffDraft } from "@/lib/staff-tools";
+import type { StaffProfileChange } from "@/lib/staff-profile";
+import { getStaffProfileDict } from "@/lib/staff-profile-i18n";
+import { profileRows } from "@/lib/staff-profile-view";
 import { SubmitButton } from "@/components/SubmitButton";
 import { planOf } from "@/lib/plans";
 import { faceUrl, staffOf, type StaffMessage } from "@/lib/staff";
@@ -53,7 +56,7 @@ export default async function StaffPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(60)
-    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | null; action_status: string | null; action_ref: string | null })[]>();
+    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | null; action_status: string | null; action_ref: string | null })[]>();
   const rows = (data ?? []).reverse();
   const answerIds = rows.filter((m) => m.role === "staff" && !m.job).map((m) => m.id);
   const [urls, { data: ratings }] = await Promise.all([
@@ -62,6 +65,7 @@ export default async function StaffPage() {
       ? supabase.from("staff_feedback").select("message_id, rating").in("message_id", answerIds).returns<{ message_id: string; rating: 1 | -1 }[]>()
       : Promise.resolve({ data: [] as { message_id: string; rating: 1 | -1 }[] }),
   ]);
+  const profileDict = getStaffProfileDict(lang);
   const ratingOf = new Map((ratings ?? []).map((r) => [r.message_id, r.rating]));
   const messages: ShownStaffMessage[] = rows.map((m) => ({
     id: m.id,
@@ -73,13 +77,15 @@ export default async function StaffPage() {
     jobStatus: m.job_status,
     feedItemId: m.feed_item_id,
     rating: ratingOf.get(m.id) ?? null,
-    action: m.action,
-    actionHref: m.action_status === "done" && m.action_ref && m.action ? `/dashboard/${m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
+    action: m.action?.type === "profile" ? null : m.action,
+    profileRows: m.action?.type === "profile" ? profileRows(m.action, lang, profileDict) : null,
+    profileDone: m.action_status === "done",
+    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" ? `/dashboard/${m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (
     <main className="mx-auto max-w-2xl">
-      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} />
+      <StaffChat d={d} f={getStaffFeedDict(lang)} name={staff.name} face={face} userId={user.id} lang={staff.lang ?? lang} messages={messages} rate={getStaffRateDict(lang)} draftDict={getStaffDraftDict(lang)} profileDict={profileDict} />
       {messages.length > 0 && (
         <form action={clearStaffChat} className="py-4 text-center">
           <ConfirmButton message={d.clearConfirm} className="text-sm text-slate-500 underline">
