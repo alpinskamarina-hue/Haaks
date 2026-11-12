@@ -307,3 +307,11 @@ export async function createFromStaffDraft(messageId: string): Promise<StaffDraf
   revalidatePath(d.type === "quote" ? "/dashboard/quotes" : "/dashboard/invoices", "layout");
   return { ok: true, href: base + id };
 }
+
+// «Напоминания» in the employee settings: the worker deletes an upcoming reminder.
+export async function cancelStaffReminder(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (id) await supabase.from("staff_reminders").delete().eq("id", id).eq("user_id", user.id);
+  revalidatePath("/dashboard/staff/settings");
+}

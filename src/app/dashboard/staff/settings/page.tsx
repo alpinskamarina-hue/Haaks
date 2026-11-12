@@ -7,9 +7,10 @@ import { LANG_NAMES, LANGS } from "@/lib/i18n";
 import { DEFAULT_NAMES, STAFF_FACES, STAFF_STYLES, faceUrl, staffOf } from "@/lib/staff";
 import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
 import { loadMemory } from "@/lib/staff-memory";
+import { dutchTime } from "@/lib/staff-reminders";
 import { getStaffMemoryDict } from "@/lib/staff-memory-i18n";
 import { loadWorkspace } from "@/lib/workspace";
-import { forgetStaffFact, forgetStaffMemory, saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
+import { cancelStaffReminder, forgetStaffFact, forgetStaffMemory, saveStaffFeedRules, saveStaffSettings } from "../../../staff-actions";
 
 // Face, name and manner of the worker's digital employee.
 export default async function StaffSettingsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
@@ -24,7 +25,10 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
   const feedMax = rules.staff_feed_max ?? 5;
   const feedKinds = rules.staff_feed_kinds ?? ["private", "business", "permit", "tender"];
   const md = getStaffMemoryDict(lang);
-  const memory = await loadMemory(supabase, user.id);
+  const [memory, { data: reminders }] = await Promise.all([
+    loadMemory(supabase, user.id),
+    supabase.from("staff_reminders").select("id, text, due_at").eq("user_id", user.id).is("sent_at", null).order("due_at").limit(50).returns<{ id: string; text: string; due_at: string }[]>(),
+  ]);
 
   async function save(formData: FormData) {
     "use server";
@@ -131,6 +135,29 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
         </fieldset>
         <SubmitButton className="w-full rounded-xl bg-orange-600 py-3 font-semibold text-white">{d.save}</SubmitButton>
       </form>
+      <section id="reminders" className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 text-sm">
+        <h2 className="font-semibold">⏰ {md.remTitle}</h2>
+        <p className="text-xs text-slate-500">{md.remNote}</p>
+        {reminders?.length ? (
+          <ul className="divide-y divide-slate-100">
+            {reminders.map((r) => (
+              <li key={r.id} className="flex items-start justify-between gap-3 py-2">
+                <span>
+                  <b>{dutchTime(r.due_at)}</b> · {r.text}
+                </span>
+                <form action={cancelStaffReminder}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <button aria-label={md.forget} title={md.forget} className="shrink-0 rounded-full px-2 text-slate-400 hover:bg-red-50 hover:text-red-600">
+                    ✕
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-slate-500">{md.remEmpty}</p>
+        )}
+      </section>
       <section id="memory" className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 text-sm">
         <h2 className="font-semibold">🧠 {md.title}</h2>
         <p className="text-xs text-slate-500">{md.note}</p>
