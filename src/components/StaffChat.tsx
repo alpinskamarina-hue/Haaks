@@ -129,7 +129,7 @@ function JobCard({ m, d, f, onDone }: { m: ShownStaffMessage; d: StaffDict; f: S
 
 const SPEECH: Record<string, string> = { ru: "ru-RU", uk: "uk-UA", pl: "pl-PL", ro: "ro-RO", tr: "tr-TR", en: "en-GB", nl: "nl-NL" };
 
-type Recognition = { lang: string; interimResults: boolean; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; start: () => void; stop: () => void };
+type Recognition = { lang: string; interimResults: boolean; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: (e: { error: string }) => void; start: () => void; stop: () => void };
 
 const fillName = (text: string, name: string) => text.replace("{name}", name);
 
@@ -179,16 +179,36 @@ export function StaffChat({
   function mic() {
     const W = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
     const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!Ctor) return;
-    if (listening) return recRef.current?.stop();
+    if (!Ctor) return setError(d.errors.mic);
+    if (listening) {
+      recRef.current?.stop();
+      return setListening(false);
+    }
+    setError(null);
     const rec = new Ctor();
     rec.lang = SPEECH[lang] ?? "en-GB";
     rec.interimResults = false;
     rec.onresult = (e) => setText((t) => (t ? t + " " : "") + Array.from(e.results).map((r) => r[0].transcript).join(" "));
+    rec.onerror = (e) => {
+      setListening(false);
+      if (e.error !== "no-speech" && e.error !== "aborted") setError(d.errors.mic);
+    };
     rec.onend = () => setListening(false);
     recRef.current = rec;
-    setListening(true);
-    rec.start();
+    try {
+      rec.start();
+      setListening(true);
+      // Some phone browsers never fire onend: stop waiting after 30 seconds.
+      window.setTimeout(() => {
+        if (recRef.current === rec) {
+          rec.stop();
+          setListening(false);
+        }
+      }, 30000);
+    } catch {
+      setListening(false);
+      setError(d.errors.mic);
+    }
   }
 
   async function send() {
