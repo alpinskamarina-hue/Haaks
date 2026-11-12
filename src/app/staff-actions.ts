@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { claudeEnabled } from "@/lib/env";
@@ -15,6 +16,9 @@ import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
 import { runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
 import { staffFeedTools } from "@/lib/staff-feed-tools";
+import { cleanProfileChanges, PROFILE_SELECT, signUpDone, toProfileChange, type StaffProfileChange } from "@/lib/staff-profile";
+import { fillName, getStaffFillDict } from "@/lib/staff-profile-i18n";
+import { getWorkerDict } from "@/lib/worker-profile-text";
 import { nextInvoiceNumber } from "@/lib/invoices";
 import { nextQuoteNumber } from "@/lib/quote-draft";
 import { addDays, cleanLines, DEFAULT_TERMS_NL } from "@/lib/quotes";
@@ -34,9 +38,9 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, plan_until, language, full_name, company_name, trades, city, staff_face, staff_name, staff_formal, staff_style, staff_lang")
+    .select(`plan, plan_until, language, staff_face, staff_name, staff_formal, staff_style, staff_lang, ${PROFILE_SELECT}`)
     .eq("id", user.id)
-    .single();
+    .single<Record<string, unknown> & Parameters<typeof staffOf>[0] & { plan: string | null; plan_until: string | null; language: string | null; full_name: string | null; company_name: string | null; trades: string[] | null; city: string | null }>();
   if (!profile || planOf(profile) !== "ultra") return { error: "plan" };
   if (!claudeEnabled()) return { error: "off" };
 
@@ -58,7 +62,7 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    let draft: StaffDraft | null = null;
+    let draft: StaffDraft | StaffProfileChange | null = null;
     const lang = staffLang(settings, appLang);
     let serverClient: ReturnType<typeof createServerAccountClient> | null = null;
     const getServer = () => (serverClient ??= createServerAccountClient());
@@ -70,6 +74,13 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
         return draft
           ? "Draft prepared. It is shown to the worker as a card with a «Create» button under your answer. Nothing is created until they tap it."
           : "The draft had no usable lines (description, quantity and price). Ask the worker for the missing details.";
+      }
+      if (name === "update_profile") {
+        if (draft) return "Only one card per answer; a card is already prepared.";
+        draft = toProfileChange(args, profile);
+        return draft
+          ? "Profile card prepared. It is shown under your answer with old → new values and a «Save» button. Nothing is saved until they tap it."
+          : "Nothing new or usable for the profile (values already there, or not valid: KvK = 8 digits, btw-id NL123456789B01, IBAN). Ask again for what was unclear.";
       }
       if (name === "find_feed_jobs" || name === "prepare_job_reply") return feedTools.run(name, args);
       return runStaffTool(supabase, user.id, name, args);
@@ -326,4 +337,58 @@ export async function cancelStaffReminder(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (id) await supabase.from("staff_reminders").delete().eq("id", id).eq("user_id", user.id);
   revalidatePath("/dashboard/staff/settings");
+}
+
+// Step 1 of «Сотрудник заполняет данные»: the worker taps «Сохранить» on a profile card.
+// Writes only the fields on the card; once name, phone, trades and town are there, sign-up is done.
+export async function saveStaffProfile(messageId: string): Promise<{ ok: true } | { error: "failed" }> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffProfileChange | StaffDraft | null; action_status: string | null }>();
+  const a = m?.action;
+  if (!m || !a || a.type !== "profile") return { error: "failed" };
+  if (m.action_status === "done") return { ok: true };
+  const update = cleanProfileChanges(a.changes);
+  if (Array.isArray(update.trades)) {
+    const nl = getWorkerDict("nl").trades;
+    const names = (update.trades as string[]).map((id) => nl[id as keyof typeof nl]).filter(Boolean);
+    update.trade = names.length ? names.join(", ").slice(0, 120) : null;
+  }
+  const { data: current } = await supabase.from("profiles").select(PROFILE_SELECT).eq("id", user.id).single<Record<string, unknown>>();
+  if (current && !current.onboarded_at && signUpDone({ ...current, ...update })) update.onboarded_at = new Date().toISOString();
+  if (Object.keys(update).length) {
+    const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+    if (error) {
+      console.error("staff: profile save failed", error.message);
+      return { error: "failed" };
+    }
+  }
+  await supabase.from("staff_messages").update({ action_status: "done" }).eq("id", m.id).eq("user_id", user.id);
+  revalidatePath("/dashboard", "layout");
+  return { ok: true };
+}
+
+// First sign-up screen: «Заполнить с сотрудником». Starts the 3 free Ultra days when needed,
+// leaves a greeting from the employee and opens the chat.
+export async function fillWithStaff() {
+  const { supabase, user } = await requireUser();
+  const { data: p } = await supabase.from("profiles").select("plan, plan_until, language, staff_name, staff_lang, staff_face, staff_formal, staff_style").eq("id", user.id).single();
+  if (!p) redirect("/dashboard/onboarding");
+  if (planOf(p) !== "ultra") {
+    const { error } = await supabase.rpc("start_ultra_trial");
+    if (error) {
+      const used = /trial_used|already_paid/.test(error.message);
+      if (!used) console.error("Ultra trial failed", error);
+      redirect(`/dashboard/plan?trial=${used ? "used" : "error"}`);
+    }
+  }
+  const settings = staffOf(p);
+  const lang = staffLang(settings, isLang(p.language) ? p.language : "en");
+  await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: fillName(getStaffFillDict(lang).greeting, settings.name) });
+  revalidatePath("/dashboard", "layout");
+  redirect("/dashboard/staff");
 }
