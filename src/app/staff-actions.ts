@@ -223,7 +223,7 @@ export async function saveStaffFeedRules(formData: FormData) {
   const kinds = formData.getAll("feed_kind").map(String).filter((k) => ["private", "business", "permit", "tender"].includes(k));
   await supabase
     .from("profiles")
-    .update({ staff_feed: formData.get("feed_on") === "1", staff_feed_max: max, staff_feed_kinds: kinds.length ? kinds : ["private", "business"] })
+    .update({ staff_tips: formData.get("tips_on") === "1", staff_feed: formData.get("feed_on") === "1", staff_feed_max: max, staff_feed_kinds: kinds.length ? kinds : ["private", "business"] })
     .eq("id", user.id);
 }
 
@@ -289,7 +289,7 @@ export async function createFromStaffDraft(messageId: string): Promise<StaffDraf
     .eq("user_id", user.id)
     .maybeSingle<{ id: string; action: StaffDraft | null; action_status: string | null; action_ref: string | null }>();
   const d = m?.action;
-  if (!m || !d) return { error: "failed" };
+  if (!m || !d || (d.type !== "invoice" && d.type !== "quote")) return { error: "failed" };
   const base = d.type === "quote" ? "/dashboard/quotes/" : "/dashboard/invoices/";
   if (m.action_status === "done" && m.action_ref) return { ok: true, href: base + m.action_ref };
 

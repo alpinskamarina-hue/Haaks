@@ -7,6 +7,7 @@ import type { StaffDraft } from "@/lib/staff-tools";
 import type { StaffProfileChange } from "@/lib/staff-profile";
 import { getStaffDocDict, getStaffOrderDict, getStaffProfileDict } from "@/lib/staff-profile-i18n";
 import type { StaffOrderChange } from "@/lib/staff-orders";
+import type { StaffTips } from "@/lib/staff-tips";
 import { docView, profileRows } from "@/lib/staff-profile-view";
 import type { StaffDocChange } from "@/lib/staff-passport";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -58,7 +59,7 @@ export default async function StaffPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(60)
-    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | null; action_status: string | null; action_ref: string | null })[]>();
+    .returns<(StaffMessage & { feed_item_id: string | null; draft: string | null; job: StaffJob | null; job_status: ShownStaffMessage["jobStatus"]; action: StaffDraft | StaffProfileChange | StaffDocChange | StaffOrderChange | StaffTips | null; action_status: string | null; action_ref: string | null })[]>();
   const rows = (data ?? []).reverse();
   const answerIds = rows.filter((m) => m.role === "staff" && !m.job).map((m) => m.id);
   const [urls, { data: ratings }] = await Promise.all([
@@ -79,12 +80,13 @@ export default async function StaffPage() {
     jobStatus: m.job_status,
     feedItemId: m.feed_item_id,
     rating: ratingOf.get(m.id) ?? null,
-    action: m.action?.type === "profile" || m.action?.type === "document" || m.action?.type === "order" ? null : m.action,
+    action: m.action?.type === "invoice" || m.action?.type === "quote" ? m.action : null,
+    tips: m.action?.type === "tips" ? m.action.items : null,
     orderCard: m.action?.type === "order" ? m.action : null,
     docView: m.action?.type === "document" ? docView(m.action, lang, profileDict) : null,
     profileRows: m.action?.type === "profile" ? profileRows(m.action, lang, profileDict) : null,
     profileDone: m.action_status === "done",
-    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" ? `/dashboard/${m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
+    actionHref: m.action_status === "done" && m.action_ref && m.action && m.action.type !== "profile" && m.action.type !== "document" && m.action.type !== "tips" ? `/dashboard/${m.action.type === "order" ? (m.action.kind === "invoice" ? "invoices" : "orders") : m.action.type === "quote" ? "quotes" : "invoices"}/${m.action_ref}` : null,
   }));
 
   return (

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { TIPS_LABEL } from "@/lib/staff-tips";
 import { redirect } from "next/navigation";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -22,6 +23,8 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
   const f = getStaffFeedDict(lang);
   const rules = profile as { staff_feed?: boolean | null; staff_feed_max?: number | null; staff_feed_kinds?: string[] | null };
   const feedOn = rules.staff_feed ?? true;
+  const tipsOn = (profile as { staff_tips?: boolean | null }).staff_tips ?? true;
+  const tl = TIPS_LABEL[lang] ?? TIPS_LABEL.en;
   const feedMax = rules.staff_feed_max ?? 5;
   const feedKinds = rules.staff_feed_kinds ?? ["private", "business", "permit", "tender"];
   const md = getStaffMemoryDict(lang);
@@ -132,6 +135,13 @@ export default async function StaffSettingsPage({ searchParams }: { searchParams
             </div>
           </div>
           <p className="text-xs text-slate-500">🔒 {f.rulesNote}</p>
+        </fieldset>
+        <fieldset id="tips" className="space-y-2 rounded-xl border border-orange-200 bg-orange-50 p-3">
+          <legend className="px-1 font-semibold">💡 {tl.title}</legend>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="tips_on" value="1" defaultChecked={tipsOn} className="h-5 w-5 accent-orange-600" />
+            {tl.on}
+          </label>
         </fieldset>
         <SubmitButton className="w-full rounded-xl bg-orange-600 py-3 font-semibold text-white">{d.save}</SubmitButton>
       </form>

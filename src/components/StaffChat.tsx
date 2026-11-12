@@ -20,6 +20,7 @@ import type { DocView, ProfileRow } from "@/lib/staff-profile-view";
 import { StaffDocCard } from "@/components/StaffDocCard";
 import { StaffOrderCard } from "@/components/StaffOrderCard";
 import type { StaffOrderChange } from "@/lib/staff-orders";
+import type { StaffTip } from "@/lib/staff-tips";
 
 export type ShownStaffMessage = {
   id: string;
@@ -37,6 +38,7 @@ export type ShownStaffMessage = {
   profileDone?: boolean;
   docView?: DocView | null;
   orderCard?: StaffOrderChange | null;
+  tips?: StaffTip[] | null;
 };
 
 const KIND_STYLE: Record<StaffJob["kind"], string> = {
@@ -244,14 +246,15 @@ export function StaffChat({
     }
   }
 
-  async function send() {
-    if (sending || (!text.trim() && !photo)) return;
+  // preset: a tip button asks the employee with a ready text (no photo).
+  async function send(preset?: string) {
+    if (sending || (!preset && !text.trim() && !photo)) return;
     setError(null);
-    const shown = { text: text.trim(), preview: photo?.preview ?? null };
+    const shown = { text: preset ?? text.trim(), preview: preset ? null : (photo?.preview ?? null) };
     setSending(shown);
     let imagePath: string | null = null;
     let mimeType: string | null = null;
-    if (photo) {
+    if (photo && !preset) {
       const prepared = await prepareUpload(photo.file);
       if ("error" in prepared || prepared.mimeType === "application/pdf") {
         setSending(null);
@@ -266,8 +269,10 @@ export function StaffChat({
       imagePath = path;
       mimeType = prepared.mimeType;
     }
-    setText("");
-    setPhoto(null);
+    if (!preset) {
+      setText("");
+      setPhoto(null);
+    }
     const res = await sendStaffMessage({ text: shown.text, imagePath, mimeType });
     if ("error" in res) setError(d.errors[res.error]);
     startTransition(() => {
@@ -338,6 +343,15 @@ export function StaffChat({
               <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
               <div className={bubbleStaff}>
                 <Linked text={m.body} />
+                {m.tips && m.tips.length > 0 && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    {m.tips.map((tip) => (
+                      <button key={tip.ask} type="button" onClick={() => send(tip.ask)} disabled={Boolean(sending)} className="rounded-xl border border-orange-300 bg-orange-50 px-3 py-2 text-left font-semibold text-orange-800 disabled:opacity-60">
+                        {tip.button}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {m.orderCard && <StaffOrderCard messageId={m.id} card={m.orderCard} doneHref={m.actionHref ?? null} d={orderDict} />}
                 {m.docView && <StaffDocCard messageId={m.id} view={m.docView} done={!!m.profileDone} d={docDict} />}
                 {m.profileRows && <StaffProfileCard messageId={m.id} rows={m.profileRows} done={!!m.profileDone} d={profileDict} />}
@@ -417,7 +431,7 @@ export function StaffChat({
             className="max-h-[45vh] min-h-[42px] flex-1 resize-none overflow-y-auto rounded-2xl bg-slate-100 px-4 py-2.5 text-sm leading-5"
           />
           {text.trim() || photo ? (
-            <button type="button" onClick={send} disabled={Boolean(sending)} className="h-11 rounded-full bg-orange-600 px-4 font-semibold text-white disabled:opacity-60">
+            <button type="button" onClick={() => send()} disabled={Boolean(sending)} className="h-11 rounded-full bg-orange-600 px-4 font-semibold text-white disabled:opacity-60">
               ➤
             </button>
           ) : (
