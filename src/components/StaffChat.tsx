@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { sendStaffMessage, staffCheckFeed, staffSendJob, staffSkipJob } from "@/app/staff-actions";
+import { sendStaffMessage, staffSendJob, staffSkipJob } from "@/app/staff-actions";
 import { createClient } from "@/lib/supabase/client";
 import { prepareUpload } from "@/lib/prepare-upload";
 import type { StaffJob } from "@/lib/staff-feed";
@@ -189,8 +189,6 @@ export function StaffChat({
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [checkNote, setCheckNote] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<Recognition | null>(null);
@@ -217,7 +215,7 @@ export function StaffChat({
 
   useEffect(() => {
     toBottom();
-  }, [messages.length, sending, checking]);
+  }, [messages.length, sending]);
 
   useEffect(() => {
     const before = waitingFor.current;
@@ -322,18 +320,6 @@ export function StaffChat({
     });
   }
 
-  async function checkFeed() {
-    if (checking) return;
-    setChecking(true);
-    setCheckNote(null);
-    const res = await staffCheckFeed();
-    setCheckNote("error" in res ? d.errors[res.error] : res.cards ? f.foundN.replace("{n}", String(res.cards)) : f.none);
-    startTransition(() => {
-      router.refresh();
-      setChecking(false);
-    });
-  }
-
   const refresh = () => startTransition(() => router.refresh());
 
   async function copy(m: ShownStaffMessage) {
@@ -427,25 +413,10 @@ export function StaffChat({
             </div>
           </>
         )}
-        {checking && (
-          <div className="flex items-end gap-2">
-            <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
-            <div className="rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-sm text-slate-500 shadow-sm">{fillName(f.checking, name)}</div>
-          </div>
-        )}
-        {checkNote && !checking && <p className="text-center text-xs text-slate-500">{checkNote}</p>}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       </div>
 
       <div className="sticky bottom-[calc(58px+env(safe-area-inset-bottom))] z-10 border-t bg-white p-3 lg:bottom-0">
-        <button
-          type="button"
-          onClick={checkFeed}
-          disabled={checking}
-          className="mb-2 w-full rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-800 disabled:opacity-60"
-        >
-          {f.checkNow}
-        </button>
         {!messages.length && !sending && (
           <div className="mb-2 flex flex-wrap gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} className="rounded-full border border-orange-200 px-3 py-1 text-xs font-medium text-orange-700">
