@@ -17,7 +17,7 @@ type T = { hello: string; push: string; doc: string; docBtn: string; docAsk: str
 const TEXTS: Record<Lang, T> = {
   ru: {
     hello: "Доброе утро! Что можно сделать сегодня:", push: "Сотрудник: дела на сегодня",
-    doc: "В ZZP-паспорте нет: {doc}. Пришлите фото, я сам всё заполню.", docBtn: "📎 Добавить в паспорт", docAsk: "Хочу добавить в паспорт: {doc}.",
+    doc: "В ZZP-паспорте нет: {doc}. Пришлите фото, я сам всё заполню.", docBtn: "📎 {doc}", docAsk: "Хочу добавить в паспорт: {doc}.",
     hours: "По заказу «{title}» {h} ч ещё не в счёте. Сделать черновик счёта?", hoursBtn: "💶 Сделать счёт", hoursAsk: "Сделай счёт по заказу «{title}».",
     overdue: "Счёт {num} ({client}) просрочен на {days} дн. Подготовить вежливое напоминание клиенту?", overdueBtn: "✉️ Подготовить напоминание", overdueAsk: "Подготовь вежливое напоминание на нидерландском клиенту {client} по счёту {num}.",
     profile: "Для счетов в профиле не хватает: {fields}. Скажите их, я заполню.", profileBtn: "✍️ Заполнить", profileAsk: "Хочу заполнить в профиле: {fields}.",
@@ -25,7 +25,7 @@ const TEXTS: Record<Lang, T> = {
   },
   uk: {
     hello: "Доброго ранку! Що можна зробити сьогодні:", push: "Співробітник: справи на сьогодні",
-    doc: "У ZZP-паспорті немає: {doc}. Надішліть фото, я сам усе заповню.", docBtn: "📎 Додати в паспорт", docAsk: "Хочу додати в паспорт: {doc}.",
+    doc: "У ZZP-паспорті немає: {doc}. Надішліть фото, я сам усе заповню.", docBtn: "📎 {doc}", docAsk: "Хочу додати в паспорт: {doc}.",
     hours: "За замовленням «{title}» {h} год ще не в рахунку. Зробити чернетку рахунку?", hoursBtn: "💶 Зробити рахунок", hoursAsk: "Зроби рахунок за замовленням «{title}».",
     overdue: "Рахунок {num} ({client}) прострочено на {days} дн. Підготувати ввічливе нагадування клієнту?", overdueBtn: "✉️ Підготувати нагадування", overdueAsk: "Підготуй ввічливе нагадування нідерландською клієнту {client} за рахунком {num}.",
     profile: "Для рахунків у профілі бракує: {fields}. Скажіть їх, я заповню.", profileBtn: "✍️ Заповнити", profileAsk: "Хочу заповнити в профілі: {fields}.",
@@ -33,7 +33,7 @@ const TEXTS: Record<Lang, T> = {
   },
   pl: {
     hello: "Dzień dobry! Co można dziś zrobić:", push: "Asystent: sprawy na dziś",
-    doc: "W paszporcie ZZP brakuje: {doc}. Wyślij zdjęcie, wszystko uzupełnię.", docBtn: "📎 Dodaj do paszportu", docAsk: "Chcę dodać do paszportu: {doc}.",
+    doc: "W paszporcie ZZP brakuje: {doc}. Wyślij zdjęcie, wszystko uzupełnię.", docBtn: "📎 {doc}", docAsk: "Chcę dodać do paszportu: {doc}.",
     hours: "Przy zleceniu «{title}» {h} godz. nie jest jeszcze na fakturze. Zrobić szkic faktury?", hoursBtn: "💶 Zrób fakturę", hoursAsk: "Zrób fakturę za zlecenie «{title}».",
     overdue: "Faktura {num} ({client}) jest {days} dni po terminie. Przygotować uprzejme przypomnienie dla klienta?", overdueBtn: "✉️ Przygotuj przypomnienie", overdueAsk: "Przygotuj uprzejme przypomnienie po niderlandzku dla klienta {client} w sprawie faktury {num}.",
     profile: "Do faktur w profilu brakuje: {fields}. Podaj je, uzupełnię.", profileBtn: "✍️ Uzupełnij", profileAsk: "Chcę uzupełnić w profilu: {fields}.",
@@ -41,7 +41,7 @@ const TEXTS: Record<Lang, T> = {
   },
   ro: {
     hello: "Bună dimineața! Ce se poate face azi:", push: "Asistentul: treburi pentru azi",
-    doc: "În pașaportul ZZP lipsește: {doc}. Trimite o poză, completez eu totul.", docBtn: "📎 Adaugă în pașaport", docAsk: "Vreau să adaug în pașaport: {doc}.",
+    doc: "În pașaportul ZZP lipsește: {doc}. Trimite o poză, completez eu totul.", docBtn: "📎 {doc}", docAsk: "Vreau să adaug în pașaport: {doc}.",
     hours: "La comanda «{title}» {h} ore nu sunt încă facturate. Fac o ciornă de factură?", hoursBtn: "💶 Fă factura", hoursAsk: "Fă factura pentru comanda «{title}».",
     overdue: "Factura {num} ({client}) este întârziată cu {days} zile. Pregătesc o amintire politicoasă pentru client?", overdueBtn: "✉️ Pregătește amintirea", overdueAsk: "Pregătește o amintire politicoasă în neerlandeză pentru clientul {client} despre factura {num}.",
     profile: "Pentru facturi, în profil lipsește: {fields}. Spune-mi-le și completez.", profileBtn: "✍️ Completează", profileAsk: "Vreau să completez în profil: {fields}.",
@@ -49,7 +49,7 @@ const TEXTS: Record<Lang, T> = {
   },
   tr: {
     hello: "Günaydın! Bugün yapılabilecekler:", push: "Asistan: bugünün işleri",
-    doc: "ZZP pasaportunda eksik: {doc}. Fotoğrafını gönderin, gerisini ben doldururum.", docBtn: "📎 Pasaporta ekle", docAsk: "Pasaporta eklemek istiyorum: {doc}.",
+    doc: "ZZP pasaportunda eksik: {doc}. Fotoğrafını gönderin, gerisini ben doldururum.", docBtn: "📎 {doc}", docAsk: "Pasaporta eklemek istiyorum: {doc}.",
     hours: "«{title}» işinde {h} saat henüz faturada değil. Fatura taslağı hazırlayayım mı?", hoursBtn: "💶 Fatura yap", hoursAsk: "«{title}» işi için fatura yap.",
     overdue: "{num} numaralı fatura ({client}) {days} gün gecikti. Müşteriye kibar bir hatırlatma hazırlayayım mı?", overdueBtn: "✉️ Hatırlatma hazırla", overdueAsk: "{client} müşterisine {num} numaralı fatura için Hollandaca kibar bir hatırlatma hazırla.",
     profile: "Faturalar için profilde eksik: {fields}. Söyleyin, dolduruyum.", profileBtn: "✍️ Doldur", profileAsk: "Profilde doldurmak istiyorum: {fields}.",
@@ -57,7 +57,7 @@ const TEXTS: Record<Lang, T> = {
   },
   en: {
     hello: "Good morning! What you can do today:", push: "Assistant: today's to-dos",
-    doc: "Your ZZP passport is missing: {doc}. Send a photo and I'll fill it in.", docBtn: "📎 Add to passport", docAsk: "I want to add to my passport: {doc}.",
+    doc: "Your ZZP passport is missing: {doc}. Send a photo and I'll fill it in.", docBtn: "📎 {doc}", docAsk: "I want to add to my passport: {doc}.",
     hours: "Order «{title}» has {h} h not invoiced yet. Make a draft invoice?", hoursBtn: "💶 Make invoice", hoursAsk: "Make an invoice for order «{title}».",
     overdue: "Invoice {num} ({client}) is {days} days overdue. Prepare a polite reminder for the client?", overdueBtn: "✉️ Prepare reminder", overdueAsk: "Prepare a polite reminder in Dutch for client {client} about invoice {num}.",
     profile: "For invoices your profile is missing: {fields}. Tell me and I'll fill them in.", profileBtn: "✍️ Fill in", profileAsk: "I want to fill in my profile: {fields}.",
@@ -65,7 +65,7 @@ const TEXTS: Record<Lang, T> = {
   },
   nl: {
     hello: "Goedemorgen! Wat je vandaag kunt doen:", push: "Assistent: taken voor vandaag",
-    doc: "In je ZZP-paspoort ontbreekt: {doc}. Stuur een foto, dan vul ik het in.", docBtn: "📎 Toevoegen aan paspoort", docAsk: "Ik wil aan mijn paspoort toevoegen: {doc}.",
+    doc: "In je ZZP-paspoort ontbreekt: {doc}. Stuur een foto, dan vul ik het in.", docBtn: "📎 {doc}", docAsk: "Ik wil aan mijn paspoort toevoegen: {doc}.",
     hours: "Bij klus «{title}» staan {h} uur nog niet op een factuur. Conceptfactuur maken?", hoursBtn: "💶 Factuur maken", hoursAsk: "Maak een factuur voor klus «{title}».",
     overdue: "Factuur {num} ({client}) is {days} dagen te laat. Een vriendelijke herinnering voor de klant klaarzetten?", overdueBtn: "✉️ Herinnering klaarzetten", overdueAsk: "Zet een vriendelijke herinnering in het Nederlands klaar voor klant {client} over factuur {num}.",
     profile: "Voor facturen ontbreekt in je profiel: {fields}. Noem ze, dan vul ik ze in.", profileBtn: "✍️ Invullen", profileAsk: "Ik wil in mijn profiel invullen: {fields}.",
