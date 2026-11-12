@@ -284,7 +284,7 @@ export function StaffChat({
             <div key={m.id} className="flex items-end gap-2">
               <img src={face} alt="" className="h-7 w-7 rounded-full object-cover" />
               <div className={bubbleStaff}>
-                {m.body}
+                <Linked text={m.body} />
                 <button type="button" onClick={() => copy(m)} className="mt-2 block text-xs font-medium text-orange-700">
                   📋 {copied === m.id ? d.copied : d.copy}
                 </button>
@@ -376,5 +376,31 @@ export function StaffChat({
         <p className="mt-2 text-center text-[11px] text-slate-400">{d.disclaimer}</p>
       </div>
     </div>
+  );
+}
+
+/** Turns in-app paths (/dashboard/…, /pricing) and https links in an answer into tappable links. */
+const LINK_RE = /(https?:\/\/[^\s<>«»"]+|(?<![\w/])\/(?:dashboard|pricing|company)(?:\/[\w\-\/#?=&.]*)?)/g;
+function Linked({ text }: { text: string }) {
+  const parts = text.split(LINK_RE);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (i % 2 === 0) return part;
+        const href = part.replace(/[.,;:!?)]+$/, "");
+        const tail = part.slice(href.length);
+        const cls = "font-medium text-orange-700 underline break-all";
+        return (
+          <span key={i}>
+            {href.startsWith("/") ? (
+              <Link href={href} className={cls}>{href}</Link>
+            ) : (
+              <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{href}</a>
+            )}
+            {tail}
+          </span>
+        );
+      })}
+    </>
   );
 }
