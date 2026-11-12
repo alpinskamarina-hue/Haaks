@@ -1,10 +1,10 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { invoiceTotals, type Invoice } from "@/lib/invoices";
-import { dutchToday, quoteTotals, type QuoteLine } from "@/lib/quotes";
+import { invoiceTotals, VAT_MODES, type Invoice, type VatMode } from "@/lib/invoices";
+import { cleanLines, dutchToday, quoteTotals, type QuoteLine } from "@/lib/quotes";
 
 // Step 5a: the digital employee looks things up in the worker's own invoices, quotes and orders.
-// Read-only: these tools never change anything.
+// Step 5b: it prepares a draft invoice or quote as a card; only the worker's tap creates it.
 const LIMIT = 15;
 const euro = (n: number) => `€ ${n.toFixed(2)}`;
 const like = (s: string) => `%${s.replace(/[%_,()]/g, " ").trim()}%`;
@@ -47,6 +47,88 @@ export const STAFF_TOOLS: Anthropic.Tool[] = [
     },
   },
 ];
+
+
+const LINE_SCHEMA = {
+  type: "array",
+  description: "Lines for the client, descriptions in Dutch. Prices excl. btw.",
+  items: {
+    type: "object",
+    properties: {
+      description: { type: "string", description: "Dutch, e.g. «Tegels leggen badkamer»" },
+      quantity: { type: "number" },
+      unit: { type: "string", description: "uur, dag, m², m, stuk" },
+      unit_price: { type: "number", description: "Euro per unit, excl. btw" },
+      vat_rate: { type: "number", enum: [21, 9, 0] },
+      kind: { type: "string", enum: ["labour", "material", "other"] },
+    },
+    required: ["description", "quantity", "unit", "unit_price"],
+  },
+} as const;
+
+export const STAFF_DRAFT_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "prepare_invoice",
+    description:
+      "Prepare a DRAFT invoice for the worker to check. It is shown as a card with a «Create» button; nothing is created or sent until the worker taps it. Use when the worker asks to make/write an invoice. Ask first if the client or the amount is unclear.",
+    input_schema: {
+      type: "object",
+      properties: {
+        client_name: { type: "string" },
+        client_email: { type: "string" },
+        client_address: { type: "string" },
+        vat_mode: { type: "string", enum: ["normal", "reverse", "kor"], description: "reverse = btw verlegd (subcontractor for a construction company); kor = small business scheme; else normal" },
+        lines: LINE_SCHEMA,
+      },
+      required: ["client_name", "lines"],
+    },
+  },
+  {
+    name: "prepare_quote",
+    description:
+      "Prepare a DRAFT quote (offerte) for the worker to check. It is shown as a card with a «Create» button; nothing is created or sent until the worker taps it. Use when the worker asks to make a quote/offer.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short Dutch title, e.g. «Badkamer betegelen»" },
+        client_name: { type: "string" },
+        client_address: { type: "string" },
+        intro: { type: "string", description: "One or two Dutch sentences for the client" },
+        lines: LINE_SCHEMA,
+      },
+      required: ["title", "lines"],
+    },
+  },
+];
+
+export type StaffDraft = {
+  type: "invoice" | "quote";
+  title: string | null;
+  client_name: string | null;
+  client_email: string | null;
+  client_address: string | null;
+  intro: string | null;
+  vat_mode: VatMode;
+  lines: QuoteLine[];
+};
+
+// Turns the model's tool input into a clean draft (or null when there is nothing usable).
+export function toStaffDraft(name: string, raw: unknown): StaffDraft | null {
+  const a = (raw ?? {}) as Record<string, unknown>;
+  const lines = cleanLines(a.lines).filter((l) => l.description && l.quantity > 0);
+  if (!lines.length) return null;
+  const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  return {
+    type: name === "prepare_quote" ? "quote" : "invoice",
+    title: text(a.title, 200),
+    client_name: text(a.client_name, 200),
+    client_email: text(a.client_email, 200),
+    client_address: text(a.client_address, 300),
+    intro: text(a.intro, 1500),
+    vat_mode: (VAT_MODES as readonly string[]).includes(String(a.vat_mode)) ? (a.vat_mode as VatMode) : "normal",
+    lines,
+  };
+}
 
 type Args = { status?: string; client?: string; from?: string; to?: string };
 const isDate = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);

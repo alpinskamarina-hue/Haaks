@@ -13,7 +13,10 @@ import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
 import { createServerAccountClient } from "@/lib/supabase/server";
 import { loadMemory, rememberFromTalk } from "@/lib/staff-memory";
-import { runStaffTool } from "@/lib/staff-tools";
+import { runStaffTool, toStaffDraft, type StaffDraft } from "@/lib/staff-tools";
+import { nextInvoiceNumber } from "@/lib/invoices";
+import { nextQuoteNumber } from "@/lib/quote-draft";
+import { addDays, cleanLines, DEFAULT_TERMS_NL } from "@/lib/quotes";
 import { replyToClientRequest } from "./feed-actions";
 import { STAFF_RATE_REASONS, type StaffRateReason } from "@/lib/staff-rate-i18n";
 
@@ -54,9 +57,19 @@ export async function sendStaffMessage(input: { text: string; imagePath: string 
             .then(async ({ data }) => (data ? { base64: Buffer.from(await data.arrayBuffer()).toString("base64"), mimeType: input.mimeType ?? "image/jpeg" } : null))
         : Promise.resolve(null),
     ]);
-    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image, runTool: (name, args) => runStaffTool(supabase, user.id, name, args) });
+    let draft: StaffDraft | null = null;
+    const answer = await askStaff({ settings, lang: staffLang(settings, appLang), facts, memory: memory.map((m) => m.fact), history: (history ?? []).reverse(), image, runTool: async (name, args) => {
+      if (name === "prepare_invoice" || name === "prepare_quote") {
+        if (draft) return "Only one draft per answer; a draft card is already prepared.";
+        draft = toStaffDraft(name, args);
+        return draft
+          ? "Draft prepared. It is shown to the worker as a card with a «Create» button under your answer. Nothing is created until they tap it."
+          : "The draft had no usable lines (description, quantity and price). Ask the worker for the missing details.";
+      }
+      return runStaffTool(supabase, user.id, name, args);
+    } });
     if (!answer) return { error: "failed" };
-    await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: answer.slice(0, 8000) });
+    await supabase.from("staff_messages").insert({ user_id: user.id, role: "staff", body: answer.slice(0, 8000), action: draft });
     // Long memory: pick lasting facts from this talk after the answer is shown.
     after(async () => {
       try {
@@ -217,4 +230,80 @@ export async function forgetStaffMemory() {
   const { supabase, user } = await requireUser();
   await supabase.from("staff_memory").delete().eq("user_id", user.id);
   revalidatePath("/dashboard/staff/settings");
+}
+
+// Step 5b: the worker taps «Создать» on a draft card. Makes a DRAFT invoice or quote in Haaks;
+// nothing is sent to the client. A second tap opens the one already made.
+export type StaffDraftResult = { ok: true; href: string } | { error: "failed" };
+export async function createFromStaffDraft(messageId: string): Promise<StaffDraftResult> {
+  const { supabase, user } = await requireUser();
+  const { data: m } = await supabase
+    .from("staff_messages")
+    .select("id, action, action_status, action_ref")
+    .eq("id", messageId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; action: StaffDraft | null; action_status: string | null; action_ref: string | null }>();
+  const d = m?.action;
+  if (!m || !d) return { error: "failed" };
+  const base = d.type === "quote" ? "/dashboard/quotes/" : "/dashboard/invoices/";
+  if (m.action_status === "done" && m.action_ref) return { ok: true, href: base + m.action_ref };
+
+  let id: string | undefined;
+  if (d.type === "invoice") {
+    const [{ data: numbers }, { data: previous }] = await Promise.all([
+      supabase.from("invoices").select("number").eq("user_id", user.id),
+      d.client_name
+        ? supabase
+            .from("invoices")
+            .select("client_address, client_kvk, client_btw, client_email")
+            .eq("user_id", user.id)
+            .eq("client_name", d.client_name)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    const { data, error } = await supabase
+      .from("invoices")
+      .insert({
+        user_id: user.id,
+        number: nextInvoiceNumber((numbers ?? []).map((n) => n.number)),
+        vat_mode: d.vat_mode,
+        invoice_date: addDays(0),
+        due_date: addDays(14),
+        client_name: d.client_name,
+        client_address: d.client_address ?? previous?.client_address ?? null,
+        client_kvk: previous?.client_kvk ?? null,
+        client_btw: previous?.client_btw ?? null,
+        client_email: d.client_email ?? previous?.client_email ?? null,
+        lines: cleanLines(d.lines),
+      })
+      .select("id")
+      .single();
+    if (error) console.error("staff: invoice draft failed", error.message);
+    id = data?.id;
+  } else {
+    const { data, error } = await supabase
+      .from("quotes")
+      .insert({
+        user_id: user.id,
+        number: await nextQuoteNumber(supabase, user.id),
+        title: d.title ?? "Offerte",
+        client_name: d.client_name,
+        client_address: d.client_address,
+        intro: d.intro,
+        terms: DEFAULT_TERMS_NL,
+        lines: cleanLines(d.lines),
+        valid_until: addDays(30),
+      })
+      .select("id")
+      .single();
+    if (error) console.error("staff: quote draft failed", error.message);
+    id = data?.id;
+  }
+  if (!id) return { error: "failed" };
+  await supabase.from("staff_messages").update({ action_status: "done", action_ref: id }).eq("id", m.id).eq("user_id", user.id);
+  revalidatePath("/dashboard/staff");
+  revalidatePath(d.type === "quote" ? "/dashboard/quotes" : "/dashboard/invoices", "layout");
+  return { ok: true, href: base + id };
 }
