@@ -417,6 +417,13 @@ const cookiesNl: LegalDoc = {
       ],
     },
     {
+      h: "Eigen bezoekersstatistieken",
+      p: [
+        "Haaks telt zelf hoe vaak pagina's worden bekeken, om de website te verbeteren: de pagina, de website waar u vandaan kwam (bijvoorbeeld Google of Facebook) of een campagnecode in de link, land, taal van de browser en soort apparaat. Wij slaan geen IP-adres op; we gebruiken alleen een code die elke dag verandert, zodat u niet over meerdere dagen te volgen bent. Wij delen deze gegevens met niemand en gebruiken geen dienst van derden.",
+        "In de opslag van uw browser (localStorage) bewaren wij alleen de bron van uw eerste bezoek (“haaks_first”) en, zolang het tabblad open is, dat u de site al bezocht (“haaks_visit”). Dit zijn analytische gegevens met geen of geringe gevolgen voor uw privacy, waarvoor geen toestemming nodig is (artikel 11.7a lid 3 Telecommunicatiewet).",
+      ],
+    },
+    {
       h: "Cookies verwijderen",
       p: [
         "U kunt cookies in uw browser verwijderen of blokkeren. Zonder het inlogcookie kunt u niet inloggen.",
@@ -440,6 +447,13 @@ const cookiesEn: LegalDoc = {
       p: [
         "Login cookie (name starts with “sb-”), from Supabase: keeps you signed in. Kept until you sign out.",
         "Language cookie (“lang”): remembers the language you choose. Kept for 1 year.",
+      ],
+    },
+    {
+      h: "Our own visitor statistics",
+      p: [
+        "Haaks itself counts how often pages are viewed, to improve the website: the page, the website you came from (for example Google or Facebook) or a campaign code in the link, country, browser language and type of device. We do not store your IP address; we only use a code that changes every day, so you cannot be followed over several days. We share this data with no one and use no third-party service.",
+        "In your browser's storage (localStorage) we only keep the source of your first visit (“haaks_first”) and, while the tab is open, that you already visited the site (“haaks_visit”). This is analytics data with no or minor impact on your privacy, for which no consent is needed (Article 11.7a(3) of the Dutch Telecommunications Act).",
       ],
     },
     {
