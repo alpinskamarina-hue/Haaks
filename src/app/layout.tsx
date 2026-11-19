@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { requestLang } from "@/lib/lang";
+import { Tracker } from "@/components/Tracker";
 
 export const metadata: Metadata = {
   title: "Haaks",
@@ -18,7 +19,10 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang={await requestLang()}>
-      <body className="bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className="bg-slate-50 text-slate-900 antialiased">
+        {children}
+        <Tracker />
+      </body>
     </html>
   );
 }

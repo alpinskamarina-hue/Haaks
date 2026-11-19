@@ -57,7 +57,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
     { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
     { href: "/dashboard/staff", label: getStaffDict(lang).nav, icon: "sparkle" },
-    ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }] : []),
+    ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }, { href: "/dashboard/analytics", label: "Аналитика", icon: "chart" as const }] : []),
   ];
   const name = profile.company_name || profile.full_name || user.email;
   const so = getSocialDict(lang);
@@ -149,6 +149,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   {pendingJobs > 0 && <span className="rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">{pendingJobs}</span>}
                 </Link>
               )}
+              {isAdmin && (
+                <Link href="/dashboard/analytics" className="block border-t border-slate-100 px-4 py-3">
+                  📊 Аналитика
+                </Link>
+              )}
               <form action={signOut} className="border-t border-slate-100">
                 <button className="block w-full px-4 py-3 text-left">🚪 {t.signOut}</button>
               </form>
@@ -160,7 +165,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* The worker's digital employee, always one tap away in the bottom-right corner. */}
       <StaffFab face={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} label={getStaffDict(lang).nav} />
-      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/helpers", "/dashboard/staff"].includes(i.href))} />
+      <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/analytics", "/dashboard/helpers", "/dashboard/staff"].includes(i.href))} />
     </div>
   );
 }

@@ -25,6 +25,8 @@ import type { StaffOrderChange } from "@/lib/staff-orders";
 import type { StaffTip } from "@/lib/staff-tips";
 import type { StaffPriceChange } from "@/lib/staff-prices";
 import { StaffPriceCard } from "@/components/StaffPriceCard";
+import { StaffLetterCard, type StaffLetterView } from "@/components/StaffLetterCard";
+import type { StaffLetterDict } from "@/lib/staff-letter-i18n";
 
 export type ShownStaffMessage = {
   id: string;
@@ -33,6 +35,7 @@ export type ShownStaffMessage = {
   imageUrl: string | null;
   imageUrls?: string[];
   workCard?: StaffWorkView | null;
+  letterCard?: StaffLetterView | null;
   job?: StaffJob | null;
   draft?: string | null;
   jobStatus?: "new" | "sent" | "skipped" | null;
@@ -174,6 +177,7 @@ export function StaffChat({
   orderDict,
   priceDict,
   workDict,
+  letterDict,
 }: {
   d: StaffDict;
   f: StaffFeedDict;
@@ -189,6 +193,7 @@ export function StaffChat({
   orderDict: StaffOrderDict;
   priceDict: StaffPriceDict;
   workDict: StaffWorkDict;
+  letterDict: StaffLetterDict;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -404,6 +409,7 @@ export function StaffChat({
                     ))}
                   </div>
                 )}
+                {m.letterCard && <StaffLetterCard messageId={m.id} view={m.letterCard} d={letterDict} />}
                 {m.workCard && <StaffWorkCard messageId={m.id} view={m.workCard} d={workDict} />}
                 {m.priceCard && <StaffPriceCard messageId={m.id} card={m.priceCard} doneHref={m.actionHref ?? null} d={priceDict} />}
                 {m.orderCard && <StaffOrderCard messageId={m.id} card={m.orderCard} doneHref={m.actionHref ?? null} d={orderDict} />}
