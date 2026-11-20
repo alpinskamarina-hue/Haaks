@@ -18,7 +18,19 @@ import { docView, profileRows } from "@/lib/staff-profile-view";
 import type { StaffDocChange } from "@/lib/staff-passport";
 import { SubmitButton } from "@/components/SubmitButton";
 import { planOf } from "@/lib/plans";
-import { faceUrl, staffOf, type StaffMessage } from "@/lib/staff";
+import { faceUrl, STAFF_PAUSED, staffOf, type StaffMessage } from "@/lib/staff";
+import type { Lang } from "@/lib/i18n";
+
+// Shown while the employee is switched off (STAFF_PAUSED).
+const PAUSED: Record<Lang, { title: string; text: string; back: string }> = {
+  ru: { title: "Цифровой сотрудник временно недоступен", text: "Мы скоро включим его снова. Все ваши переписки, напоминания и настройки сохранены.", back: "На главную" },
+  uk: { title: "Цифровий співробітник тимчасово недоступний", text: "Ми скоро знову його ввімкнемо. Усі ваші листування, нагадування й налаштування збережені.", back: "На головну" },
+  pl: { title: "Cyfrowy asystent jest chwilowo niedostępny", text: "Wkrótce znów go włączymy. Wszystkie rozmowy, przypomnienia i ustawienia są zapisane.", back: "Na stronę główną" },
+  ro: { title: "Asistentul digital este temporar indisponibil", text: "Îl vom porni din nou în curând. Toate conversațiile, mementourile și setările sunt păstrate.", back: "Acasă" },
+  tr: { title: "Dijital asistan geçici olarak kullanılamıyor", text: "Yakında tekrar açacağız. Tüm yazışmalarınız, hatırlatmalarınız ve ayarlarınız kayıtlı.", back: "Ana sayfa" },
+  en: { title: "The digital employee is temporarily unavailable", text: "We will switch him back on soon. All your chats, reminders and settings are kept.", back: "Home" },
+  nl: { title: "De digitale medewerker is tijdelijk niet beschikbaar", text: "We zetten hem binnenkort weer aan. Al uw gesprekken, herinneringen en instellingen blijven bewaard.", back: "Naar home" },
+};
 import type { StaffJob } from "@/lib/staff-feed";
 import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
 import { getStaffRateDict } from "@/lib/staff-rate-i18n";
@@ -33,6 +45,19 @@ export default async function StaffPage() {
   const extra = profile as typeof profile & { plan?: string | null; plan_until?: string | null; trial_started_at?: string | null };
   const staff = staffOf(profile as Parameters<typeof staffOf>[0]);
   const face = faceUrl(staff.face);
+
+  if (STAFF_PAUSED) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-8 text-center">
+        <img src={face} alt="" className="mx-auto h-28 w-28 rounded-full object-cover opacity-60 grayscale" />
+        <h1 className="mt-4 text-2xl font-bold">{PAUSED[lang].title}</h1>
+        <p className="mt-2 text-slate-600">{PAUSED[lang].text}</p>
+        <Link href="/dashboard" className="mt-6 inline-block rounded-xl bg-orange-600 px-5 py-3 font-semibold text-white">
+          {PAUSED[lang].back}
+        </Link>
+      </main>
+    );
+  }
 
   if (planOf(extra) !== "ultra") {
     return (

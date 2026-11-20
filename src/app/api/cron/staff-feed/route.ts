@@ -4,6 +4,7 @@ import { runStaffFeed } from "@/lib/staff-feed";
 import { runStaffReminders } from "@/lib/staff-reminders";
 import { runStaffTips } from "@/lib/staff-tips";
 import { createServerAccountClient } from "@/lib/supabase/server";
+import { STAFF_PAUSED } from "@/lib/staff";
 
 export const maxDuration = 60;
 
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const server = await createServerAccountClient();
+  // Employee paused: only the worker's own reminders still go out (no AI is used for them).
+  if (STAFF_PAUSED) return NextResponse.json({ paused: true, ...(await runStaffReminders(server, await siteUrl()).catch(() => ({ reminders: -1 }))) });
   const site = await siteUrl();
   // Reminders first: they are quick and must not wait for the job drafts.
   const reminders = await runStaffReminders(server, site).catch((e) => (console.error("staff reminders failed", e instanceof Error ? e.message : e), { reminders: -1 }));

@@ -19,7 +19,7 @@ import { vapidPublicKey } from "@/lib/push";
 import { fill } from "@/lib/quotes-i18n";
 import { getSettingsDict } from "@/lib/settings-i18n";
 import { getSocialDict } from "@/lib/social-i18n";
-import { faceUrl, staffOf } from "@/lib/staff";
+import { faceUrl, STAFF_PAUSED, staffOf } from "@/lib/staff";
 import { getStaffDict, getStaffFeedDict } from "@/lib/staff-i18n";
 import { telegramEnabled } from "@/lib/telegram";
 import { suggestUsername } from "@/lib/username";
@@ -75,7 +75,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const staffRules = profile as { staff_feed?: boolean | null; staff_feed_max?: number | null };
   const jumps = [
     ["account", s.account],
-    ["staff", sd.nav],
+    ...(STAFF_PAUSED ? [] : [["staff", sd.nav]]),
     ["plan", s.plan],
     ["notify", s.notifyShort],
     ["feed", s.feedShort],
@@ -115,6 +115,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </div>
       </section>
 
+      {!STAFF_PAUSED && (
       <section id="staff" className={`${card} scroll-mt-20`}>
         <p className={head}>🤖 {sd.nav}</p>
         <Link href="/dashboard/staff/settings?from=settings" className={row}>
@@ -148,6 +149,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <span className="text-slate-300">›</span>
         </Link>
       </section>
+      )}
 
       <section id="plan" className={`${card} scroll-mt-20`}>
         <p className={head}>{s.plan}</p>

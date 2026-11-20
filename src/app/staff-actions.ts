@@ -8,7 +8,7 @@ import { claudeEnabled } from "@/lib/env";
 import { aiAllowed } from "@/lib/free-limits";
 import { isLang } from "@/lib/i18n";
 import { planOf } from "@/lib/plans";
-import { STAFF_FACES, STAFF_STYLES, staffOf, type StaffMessage } from "@/lib/staff";
+import { STAFF_FACES, STAFF_PAUSED, STAFF_STYLES, staffOf, type StaffMessage } from "@/lib/staff";
 import { siteUrl } from "@/lib/lang";
 import { askStaff, staffFacts, staffLang } from "@/lib/staff-ai";
 import { runStaffFeed, type StaffJob } from "@/lib/staff-feed";
@@ -54,7 +54,7 @@ export async function sendStaffMessage(input: { text: string; images: { path: st
     .eq("id", user.id)
     .single<Record<string, unknown> & Parameters<typeof staffOf>[0] & { plan: string | null; plan_until: string | null; language: string | null; full_name: string | null; company_name: string | null; trades: string[] | null; city: string | null }>();
   if (!profile || planOf(profile) !== "ultra") return { error: "plan" };
-  if (!claudeEnabled()) return { error: "off" };
+  if (STAFF_PAUSED || !claudeEnabled()) return { error: "off" };
 
   if (!(await aiAllowed(supabase))) return { error: "limit" };
   const { error: insertError } = await supabase.from("staff_messages").insert({ user_id: user.id, role: "user", body: text, image_path: imagePaths[0] ?? null, image_paths: imagePaths });
@@ -236,7 +236,7 @@ export async function staffSkipJob(messageId: string) {
 export async function staffCheckFeed(): Promise<{ cards: number } | { error: "plan" | "failed" }> {
   const { supabase, user } = await requireUser();
   const { data: profile } = await supabase.from("profiles").select("plan, plan_until").eq("id", user.id).single();
-  if (!profile || planOf(profile) !== "ultra") return { error: "plan" };
+  if (STAFF_PAUSED || !profile || planOf(profile) !== "ultra") return { error: "plan" };
   try {
     const server = await createServerAccountClient();
     const { cards } = await runStaffFeed(server, await siteUrl(), { userId: user.id, limit: 3 });
@@ -430,7 +430,7 @@ export async function saveStaffProfile(messageId: string): Promise<{ ok: true } 
 export async function fillWithStaff() {
   const { supabase, user } = await requireUser();
   const { data: p } = await supabase.from("profiles").select("plan, plan_until, language, staff_name, staff_lang, staff_face, staff_formal, staff_style").eq("id", user.id).single();
-  if (!p) redirect("/dashboard/onboarding");
+  if (!p || STAFF_PAUSED) redirect("/dashboard/onboarding");
   if (planOf(p) !== "ultra") {
     const { error } = await supabase.rpc("start_ultra_trial");
     if (error) {

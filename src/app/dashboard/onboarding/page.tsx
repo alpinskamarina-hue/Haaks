@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { planOf } from "@/lib/plans";
 import { getStaffFillDict } from "@/lib/staff-profile-i18n";
 import { fillWithStaff } from "../../staff-actions";
+import { STAFF_PAUSED } from "@/lib/staff";
 
 // Sign-up questions after the first login (?step=0..4, 0 = name and phone), or one of them from
 // "My profile" (&edit=1).
@@ -23,7 +24,7 @@ export default async function Onboarding({
   const ultra = planOf(plan) === "ultra";
   const fill = getStaffFillDict(lang);
   const staffSlot =
-    ultra || (!plan.trial_started_at && planOf(plan) === "free") ? (
+    !STAFF_PAUSED && (ultra || (!plan.trial_started_at && planOf(plan) === "free")) ? (
       <form action={fillWithStaff} className="rounded-xl border border-orange-200 bg-orange-50 p-3">
         <SubmitButton className="w-full rounded-xl bg-orange-600 px-4 py-3 font-semibold text-white">{fill.button}</SubmitButton>
         {!ultra && <p className="mt-2 text-sm text-slate-600">{fill.hint}</p>}

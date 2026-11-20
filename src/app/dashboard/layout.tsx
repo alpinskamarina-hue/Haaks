@@ -4,6 +4,7 @@ import { HelpButton } from "@/components/HelpButton";
 import { HtmlLang } from "@/components/HtmlLang";
 import { Icon } from "@/components/icons";
 import { StaffFab } from "@/components/StaffFab";
+import { STAFF_PAUSED } from "@/lib/staff";
 import { AutoCloseMenu } from "@/components/AutoCloseMenu";
 import { BottomNav, SideNav, type NavItem } from "@/components/NavLinks";
 import { loadFeed, newFittingCount } from "@/lib/feed-server";
@@ -56,7 +57,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/passport", label: t.navPassport, icon: "passport", also: ["/dashboard/works", "/dashboard/reviews"] },
     { href: "/dashboard/profile", label: w.navProfile, icon: "user" },
     { href: "/dashboard/helpers", label: getHelperDict(lang).nav, icon: "plus" },
-    { href: "/dashboard/staff", label: getStaffDict(lang).nav, icon: "sparkle" },
+    ...(STAFF_PAUSED ? [] : [{ href: "/dashboard/staff", label: getStaffDict(lang).nav, icon: "sparkle" as const }]),
     ...(isAdmin ? [{ href: "/dashboard/moderation", label: "Модерация", icon: "search" as const, badge: pendingJobs }, { href: "/dashboard/analytics", label: "Аналитика", icon: "chart" as const }] : []),
   ];
   const name = profile.company_name || profile.full_name || user.email;
@@ -164,7 +165,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       {/* The worker's digital employee, always one tap away in the bottom-right corner. */}
-      <StaffFab face={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} label={getStaffDict(lang).nav} />
+      {!STAFF_PAUSED && <StaffFab face={faceUrl(staffOf(profile as Parameters<typeof staffOf>[0]).face)} label={getStaffDict(lang).nav} />}
       <BottomNav items={items.filter((i) => !["/dashboard/profile", "/dashboard/materials", "/dashboard/accountant", "/dashboard/moderation", "/dashboard/analytics", "/dashboard/helpers", "/dashboard/staff"].includes(i.href))} />
     </div>
   );

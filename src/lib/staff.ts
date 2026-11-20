@@ -1,4 +1,9 @@
 // «Цифровой сотрудник» (Ultra): the worker's own AI employee. Pure data, safe for the browser.
+// «Цифровой сотрудник» switched off for now (Nasim, 2026-11-20: no money for the AI API).
+// To turn him back on: set this to false and deploy. Nothing was deleted: chats, memory,
+// reminders and settings stay in the database.
+export const STAFF_PAUSED = true;
+
 export const STAFF_FACES = [1, 2, 3, 4, 5, 6, 7] as const;
 export type StaffFace = (typeof STAFF_FACES)[number];
 export const STAFF_STYLES = ["short", "detailed", "humor"] as const;
