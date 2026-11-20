@@ -31,6 +31,7 @@ import { getAccountantDict } from "@/lib/accountant-i18n";
 import { cookies } from "next/headers";
 import { DailyQuote } from "@/components/DailyQuote";
 import { StaffHomeCard } from "@/components/StaffHomeCard";
+import { STAFF_PAUSED } from "@/lib/staff";
 import { planOf } from "@/lib/plans";
 import { getPricingDict } from "@/lib/pricing-i18n";
 import { faceUrl, staffOf } from "@/lib/staff";
@@ -526,7 +527,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <StaffHomeCard
+      {!STAFF_PAUSED && <StaffHomeCard
         s={getStaffLanding(lang)}
         f={getStaffFeedDict(lang)}
         face={faceUrl(staff.face)}
@@ -534,7 +535,7 @@ export default async function Home() {
         ultra={plan === "ultra"}
         canTrial={plan === "free" && !planProfile.trial_started_at}
         plansLabel={getPricingDict(lang).nav}
-      />
+      />}
     </main>
   );
 }
